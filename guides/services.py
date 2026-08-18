@@ -9,6 +9,9 @@ REWARD_TYPES = [
 ]
 
 
+MAX_CHARM_COST = 70
+
+
 def empty_counts():
     return {name: 0 for name in REWARD_TYPES}
 

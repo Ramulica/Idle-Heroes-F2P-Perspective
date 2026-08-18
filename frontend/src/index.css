@@ -1005,8 +1005,13 @@ button.option-row.pick {
   filter: grayscale(0.35);
 }
 
-.floor-locked .reward-box:disabled {
+.reward-box:disabled {
   cursor: not-allowed;
+}
+
+.reward:not(.selected) .reward-box:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.3);
 }
 
 .floor-lock-note {

@@ -22,6 +22,7 @@ from .models import (
     UserProfile,
 )
 from .services import (
+    MAX_CHARM_COST,
     case_payload,
     compute_option_stats,
     normalize_case_slots,
@@ -283,6 +284,7 @@ def bootstrap(request):
             "floors": meta.floors,
             "sg_table": meta.sg_table,
             "notes": meta.notes,
+            "max_charm_cost": MAX_CHARM_COST,
             "options": [_option_json(opt, mine) for opt in options],
             "cases": cases,
             "events": events,
@@ -322,6 +324,11 @@ def options_collection(request):
     total, sg_cost, counts = compute_option_stats(
         picks, meta.floors, meta.sg_table, floor_12_discount
     )
+    if total > MAX_CHARM_COST:
+        return JsonResponse(
+            {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
+            status=400,
+        )
     last = (
         CompletionOption.objects.filter(created_by=request.user)
         .order_by("-sort_order")
@@ -372,6 +379,11 @@ def option_detail(request, option_id):
     total, sg_cost, counts = compute_option_stats(
         option.floors, meta.floors, meta.sg_table, option.floor_12_discount
     )
+    if total > MAX_CHARM_COST:
+        return JsonResponse(
+            {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
+            status=400,
+        )
     option.total_cost = total
     option.sg_cost = sg_cost
     option.reward_counts = counts

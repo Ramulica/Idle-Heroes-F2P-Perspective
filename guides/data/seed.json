@@ -961,6 +961,7 @@
     "Pick one reward per floor. Normal rewards cost 10, discounted rewards cost 5, and Floor 13 is free after completing floors 1-12.",
     "Gold highlight = discounted reward (cost 5).",
     "Floor 7: Grim is normal cost; only Origin is discounted. Floor 13 Free costs 0.",
-    "SG Cost is looked up from total charm cost (20=0, 45=2750, 50=3750, 65=6500, 70=7500)."
+    "SG Cost is looked up from total charm cost (20=0, 45=2750, 50=3750, 65=6500, 70=7500).",
+    "70 charms is the maximum. You cannot pick more paid floors after the total reaches 70."
   ]
 }

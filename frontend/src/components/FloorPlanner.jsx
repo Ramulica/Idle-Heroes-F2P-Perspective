@@ -10,6 +10,26 @@ import { useAuth } from "../auth";
 import { REWARD_META, REWARD_ORDER, rewardPreview } from "../rewards";
 
 const DEFAULT_SORT = "csg-asc";
+const MAX_CHARM_COST = 70;
+
+function rewardCharmCost(floor, reward, floor12Discount) {
+  const cost = Number(reward?.cost || 0);
+  if (Number(floor.floor) === 12 && !floor12Discount && cost > 0) {
+    return 10;
+  }
+  return cost;
+}
+
+function totalCharmCost(picks, floors, floor12Discount) {
+  let total = 0;
+  for (const floor of floors || []) {
+    const pick = picks?.[String(floor.floor)];
+    if (!pick) continue;
+    const reward = floor.rewards.find((item) => item.reward_type === pick);
+    if (reward) total += rewardCharmCost(floor, reward, floor12Discount);
+  }
+  return total;
+}
 
 function sortOptions(rows, sortBy) {
   const copy = [...rows];
@@ -73,6 +93,13 @@ export default function FloorPlanner({ data, onChange }) {
   );
   const remaining = Math.max(0, 12 - filledFloors);
   const floor13Unlocked = filledFloors >= 12;
+  const maxCharm = Number(data.max_charm_cost || MAX_CHARM_COST);
+  const floor12Discount = Boolean(selected?.floor_12_discount);
+  const charmTotal = useMemo(
+    () => totalCharmCost(picks, data.floors, floor12Discount),
+    [picks, data.floors, floor12Discount]
+  );
+  const atCharmCap = charmTotal >= maxCharm;
 
   async function savePicks(nextPicks) {
     if (!selected) return;
@@ -87,6 +114,12 @@ export default function FloorPlanner({ data, onChange }) {
 
   async function toggleDiscount(opt, enabled) {
     if (!opt || opt.is_default) return;
+    if (
+      !enabled &&
+      totalCharmCost(opt.floors || {}, data.floors, false) > maxCharm
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       await api.updateOption(opt.id, { floor_12_discount: enabled });
@@ -105,6 +138,9 @@ export default function FloorPlanner({ data, onChange }) {
       delete next[key];
     } else {
       next[key] = rewardType;
+      if (totalCharmCost(next, data.floors, floor12Discount) > maxCharm) {
+        return;
+      }
     }
     if (floor < 13) {
       const stillFilled = data.floors.filter(
@@ -359,6 +395,7 @@ export default function FloorPlanner({ data, onChange }) {
             steps={[
               "Tap one reward per floor. Tap again to clear it.",
               "Fill floors 1–12 to unlock Floor 13 — Free.",
+              "70 charms is the maximum. At 70, remaining paid floors stay locked.",
               "Default completions are view only. Add your own to edit floors, rename, or delete.",
             ]}
           />
@@ -396,17 +433,30 @@ export default function FloorPlanner({ data, onChange }) {
       <div className="progress-line">
         {selected?.is_default
           ? "Default completion — view only. Add your own to change floors."
-          : remaining
-            ? `Complete ${remaining} more floor(s) to unlock Surprise Gift.`
-            : "Surprise Gift unlocked. Floor 13 is free."}
+          : atCharmCap && remaining
+            ? `Charm cap reached (${maxCharm}). Clear a pick to unlock more floors.`
+            : remaining
+              ? `Complete ${remaining} more floor(s) to unlock Surprise Gift.`
+              : atCharmCap
+                ? `Charm cap reached (${maxCharm}). Floor 13 is free.`
+                : "Surprise Gift unlocked. Floor 13 is free."}
         {busy ? " Saving..." : ""}
       </div>
       <div className="floors">
         {data.floors.map((floor) => {
+          const floorKey = String(floor.floor);
+          const floorPicked = Boolean(picks[floorKey]);
           const locked = floor.floor === 13 && !floor13Unlocked;
+          const capLocked =
+            !locked &&
+            !floorPicked &&
+            floor.rewards.every((reward) => {
+              const next = { ...picks, [floorKey]: reward.reward_type };
+              return totalCharmCost(next, data.floors, floor12Discount) > maxCharm;
+            });
           return (
           <div
-            className={`floor-row${locked ? " floor-locked" : ""}`}
+            className={`floor-row${locked || capLocked ? " floor-locked" : ""}`}
             key={floor.floor}
           >
             <div className="floor-label">{floor.label}</div>
@@ -415,7 +465,7 @@ export default function FloorPlanner({ data, onChange }) {
                 const meta = REWARD_META[reward.reward_type] || {
                   label: reward.reward_type,
                 };
-                const chosen = picks[String(floor.floor)] === reward.reward_type;
+                const chosen = picks[floorKey] === reward.reward_type;
                 const discounted =
                   floor.floor === 12
                     ? Boolean(selected?.floor_12_discount && reward.discounted)
@@ -424,6 +474,13 @@ export default function FloorPlanner({ data, onChange }) {
                   floor.floor === 12 && !selected?.floor_12_discount && reward.cost > 0
                     ? 10
                     : reward.cost;
+                const overCap =
+                  !chosen &&
+                  totalCharmCost(
+                    { ...picks, [floorKey]: reward.reward_type },
+                    data.floors,
+                    floor12Discount
+                  ) > maxCharm;
                 return (
                   <div
                     className={`reward${chosen ? " selected" : ""}${
@@ -435,7 +492,7 @@ export default function FloorPlanner({ data, onChange }) {
                     <button
                       className="reward-box"
                       type="button"
-                      disabled={locked || !canEditSelected}
+                      disabled={locked || capLocked || overCap || !canEditSelected}
                       onClick={() => toggleReward(floor.floor, reward.reward_type)}
                     >
                       <RewardIcon type={reward.reward_type} className="reward-icon-lg" />
@@ -459,6 +516,10 @@ export default function FloorPlanner({ data, onChange }) {
               <div className="floor-lock-note">
                 Complete all 12 floors to unlock Floor 13 — Free.
               </div>
+            ) : capLocked ? (
+              <div className="floor-lock-note">
+                Charm cap is {maxCharm}. Clear a pick to unlock more floors.
+              </div>
             ) : null}
           </div>
           );
@@ -466,8 +527,8 @@ export default function FloorPlanner({ data, onChange }) {
       </div>
       <div className="sale-foot">
         <p>
-          Can only select 1 item on every floor. Community completion options are
-          shared for all users. Charm total: {selected?.total_cost || 0}.
+          Can only select 1 item on every floor. Charm total cannot go above {maxCharm}.
+          Charm total: {charmTotal} / {maxCharm}.
         </p>
         <button className="gold-btn" type="button">
           <CsgAmount value={selected?.sg_cost || 0} />

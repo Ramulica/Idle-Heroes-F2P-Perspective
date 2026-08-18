@@ -13,7 +13,7 @@ export default function RewardsInfo({ data }) {
             steps={[
               "This page is a reference: floor costs, discount notes, and the SG charm table.",
               "Normal rewards cost 10, discounted cost 5, Floor 13 is free after 1–12.",
-              "Charm total is converted to CSG with the table below.",
+              "70 charms is the maximum. Charm total is converted to CSG with the table below.",
             ]}
           />
         </div>
