@@ -10,10 +10,43 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nunito:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="/assets/index-CQC0EP1_.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D69P2NYW.css">
+    <style>
+      .boot-loading {
+        min-height: 100vh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: linear-gradient(180deg, #9fd7f5, #8ec8ef);
+        font-family: Nunito, "Trebuchet MS", sans-serif;
+        font-weight: 800;
+        color: #4a2c14;
+      }
+      .boot-spin {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #efe0c4;
+        border-top-color: #f4c430;
+        border-radius: 50%;
+        animation: boot-spin 0.75s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-B00FKjIj.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-6YG2K03K.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-loading">
+        <div class="boot-spin" aria-hidden="true"></div>
+        <p>Loading...</p>
+      </div>
+    </div>
   </body>
 </html>

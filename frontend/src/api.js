@@ -3,25 +3,50 @@ function csrfToken() {
   return match ? decodeURIComponent(match[1]) : "";
 }
 
+let pending = 0;
+const listeners = new Set();
+
+function notifyPending() {
+  listeners.forEach((fn) => fn(pending));
+}
+
+export function subscribePending(fn) {
+  listeners.add(fn);
+  fn(pending);
+  return () => listeners.delete(fn);
+}
+
 async function request(url, options = {}) {
-  const method = options.method || "GET";
+  const { silent = false, ...fetchOptions } = options;
+  const method = fetchOptions.method || "GET";
   const headers = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
   };
   if (method !== "GET") {
     headers["X-CSRFToken"] = csrfToken();
   }
-  const response = await fetch(url, {
-    credentials: "include",
-    headers,
-    ...options,
-  });
-  const body = await response.json();
-  if (!response.ok) {
-    throw new Error(body.error || "Request failed");
+  if (!silent) {
+    pending += 1;
+    notifyPending();
   }
-  return body;
+  try {
+    const response = await fetch(url, {
+      credentials: "include",
+      ...fetchOptions,
+      headers,
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.error || "Request failed");
+    }
+    return body;
+  } finally {
+    if (!silent) {
+      pending = Math.max(0, pending - 1);
+      notifyPending();
+    }
+  }
 }
 
 export const api = {
@@ -36,6 +61,7 @@ export const api = {
   saveSgCalc: (state) =>
     request("/api/sg-calculator/", {
       method: "PUT",
+      silent: true,
       body: JSON.stringify({ state }),
     }),
   createOption: (payload) =>

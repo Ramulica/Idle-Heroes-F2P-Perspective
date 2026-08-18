@@ -1218,6 +1218,65 @@ th {
   font-weight: 800;
 }
 
+.spin-wrap {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff6e0, #ead7b4);
+  border: 3px solid #6b3e16;
+  box-shadow: 0 6px 0 rgba(90, 50, 20, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spin-circle {
+  width: 42px;
+  height: 42px;
+  border: 5px solid #efe0c4;
+  border-top-color: #f4c430;
+  border-right-color: #c4921a;
+  border-radius: 50%;
+  animation: spin-circle 0.75s linear infinite;
+}
+
+@keyframes spin-circle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bot));
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.loading-screen p,
+.loading-overlay p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(40, 24, 8, 0.32);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #fff6e0;
+}
+
 .calc-panel {
   display: flex;
   flex-direction: column;
