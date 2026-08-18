@@ -284,7 +284,7 @@ export default function SgCalculator() {
                 <span className="per-label">/ 5 weeks</span>
               </div>
               <p className="muted">
-                Soul Awakening ranking is based on your rank in Trial of the
+                Soul Awakening income is based on your rank in Trial of the
                 Champion arena. Everyone also gets +{BASE_WEEKLY_AWAKENS}{" "}
                 awakens from the arena store. Below account lv 140, rank awakens
                 are -1. Above lv 180 they are +1. Top 20 is{" "}
