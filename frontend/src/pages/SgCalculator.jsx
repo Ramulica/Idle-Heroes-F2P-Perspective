@@ -273,7 +273,7 @@ export default function SgCalculator() {
                   <HelpTip
                     title="Awakens"
                     steps={[
-                      "Pick your Auction House rank. Everyone also gets 3 from the arena store.",
+                      "Pick your Trial of the Champion arena rank. Everyone also gets 3 from the arena store.",
                       "Tick only the checkbox, not the whole row.",
                       "Sky Labyrinth adds 17 awakens / 5 weeks and costs 1000 CSG / 5 weeks.",
                       "Fantasy Factory every time or every other are mutually exclusive.",
@@ -284,10 +284,11 @@ export default function SgCalculator() {
                 <span className="per-label">/ 5 weeks</span>
               </div>
               <p className="muted">
-                Soul Awakening ranking is per Auction House trade zone. Everyone
-                also gets +{BASE_WEEKLY_AWAKENS} awakens from arena store.
-                Below account lv 140, rank awakens are -1. Above lv 180 they are
-                +1. Top 20 is {rankAwakens("10-20", state.accountLevel)}+
+                Soul Awakening ranking is based on your rank in Trial of the
+                Champion arena. Everyone also gets +{BASE_WEEKLY_AWAKENS}{" "}
+                awakens from the arena store. Below account lv 140, rank awakens
+                are -1. Above lv 180 they are +1. Top 20 is{" "}
+                {rankAwakens("10-20", state.accountLevel)}+
                 {BASE_WEEKLY_AWAKENS} ={" "}
                 {rankAwakens("10-20", state.accountLevel) + BASE_WEEKLY_AWAKENS}{" "}
                 weekly
