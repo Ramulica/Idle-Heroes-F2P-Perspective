@@ -287,16 +287,7 @@ export default function SgCalculator() {
               <p className="muted">
                 Soul Awakening income is based on your rank in Trial of the
                 Champion arena. Everyone also gets +{BASE_WEEKLY_AWAKENS}{" "}
-                awakens from the arena store. Below account lv 140, rank awakens
-                are -1. Above lv 180 they are +1. Top 20 is{" "}
-                {rankAwakens("10-20", state.accountLevel)}+
-                {BASE_WEEKLY_AWAKENS} ={" "}
-                {rankAwakens("10-20", state.accountLevel) + BASE_WEEKLY_AWAKENS}{" "}
-                weekly
-                {result.rankMod
-                  ? ` (${result.rankMod > 0 ? "lv 180+" : "below lv 140"})`
-                  : ""}
-                .
+                awakens from the arena store.
               </p>
               <div className="field-grid">
                 <label className="field">
