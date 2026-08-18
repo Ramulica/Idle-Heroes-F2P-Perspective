@@ -276,7 +276,7 @@ export default function SgCalculator() {
                     steps={[
                       "Pick your Trial of the Champion arena rank. Everyone also gets 3 from the arena store.",
                       "Tick only the checkbox, not the whole row.",
-                      `Sky Labyrinth adds ${LABYRINTH_AWAKENS} awakens / 5 weeks and costs 1000 CSG / 5 weeks.`,
+                      "Sky Labyrinth adds 10 soulbond + 8 normal awakens / 5 weeks and costs 1000 CSG / 5 weeks.",
                       "Fantasy Factory every time or every other are mutually exclusive.",
                     ]}
                   />
@@ -345,7 +345,7 @@ export default function SgCalculator() {
                     }
                   />
                   <span>
-                    {LABYRINTH_AWAKENS} awakens from Sky Labyrinth (
+                    10 soulbond + 8 normal awakens from Sky Labyrinth (
                     <AwakenAmount value={LABYRINTH_AWAKENS} /> every 5 weeks,{" "}
                     <CsgAmount value={-LABYRINTH_CSG_COST} /> every 5 weeks)
                   </span>
