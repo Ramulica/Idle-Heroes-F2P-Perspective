@@ -46,8 +46,6 @@ After frontend edits, run `npm run build` in `frontend/` again (Django serves th
 
 - Completions are shared community routes. Cases belong to your account.
 - Re-seed community floors/options with `python manage.py seed_data`. Use `--reset` only if you want to wipe that seed data.
-- Completions are shared community routes. Cases belong to your account.
-- Re-seed community floors/options with `python manage.py seed_data`. Use `--reset` only if you want to wipe that seed data.
 
 ## Render
 
@@ -56,6 +54,10 @@ Use a **Python 3** web service on the **Free** instance.
 - Root Directory: empty
 - Build Command: `bash build.sh`
 - Start Command: `gunicorn ih_f2p.wsgi:application --bind 0.0.0.0:$PORT --workers 1`
-- Environment: `DEBUG=False` and a generated `SECRET_KEY`. Add `PYTHON_VERSION=3.12.11` if the service still picks 3.14.
+- Environment: `DEBUG=False`, a generated `SECRET_KEY`, and `PYTHON_VERSION=3.12.11`
 
-Free instances sleep when idle. SQLite data on Render is wiped on each deploy.
+Render’s free disk is wiped on each deploy, so SQLite does not last. To keep accounts and cases, create a free Postgres database on [Neon](https://neon.tech) and add this environment variable on Render:
+
+- `DATABASE_URL` = the Neon connection string (URI)
+
+Local Cursor still uses `db.sqlite3`. Only the live site uses Neon.
