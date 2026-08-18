@@ -56,6 +56,6 @@ Use a **Python 3** web service on the **Free** instance.
 - Root Directory: empty
 - Build Command: `bash build.sh`
 - Start Command: `gunicorn ih_f2p.wsgi:application --bind 0.0.0.0:$PORT --workers 1`
-- Environment: `DEBUG=False` and a generated `SECRET_KEY`
+- Environment: `DEBUG=False` and a generated `SECRET_KEY`. Add `PYTHON_VERSION=3.12.11` if the service still picks 3.14.
 
 Free instances sleep when idle. SQLite data on Render is wiped on each deploy.
