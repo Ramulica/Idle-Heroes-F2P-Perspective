@@ -667,6 +667,70 @@
       "total_cost": 65,
       "sg_cost": 6500,
       "sort_order": 19
+    },
+    {
+      "name": "Balanced 65 No Discount",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Origin",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "DT",
+        "11": "DT",
+        "12": "Star Soul",
+        "13": "Grim"
+      },
+      "floor_12_discount": false,
+      "total_cost": 65,
+      "sg_cost": 6500,
+      "sort_order": 22
+    },
+    {
+      "name": "Grim Hunt No Discount",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Grim",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "Grim",
+        "11": "DT"
+      },
+      "floor_12_discount": false,
+      "total_cost": 65,
+      "sg_cost": 6500,
+      "sort_order": 23
+    },
+    {
+      "name": "Star Soul Hunt No Discount",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Star Soul",
+        "7": "Origin",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "DT",
+        "11": "DT",
+        "12": "Star Soul",
+        "13": "Star Soul"
+      },
+      "floor_12_discount": false,
+      "total_cost": 70,
+      "sg_cost": 7500,
+      "sort_order": 24
     }
   ],
   "cases": [
