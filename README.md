@@ -46,4 +46,16 @@ After frontend edits, run `npm run build` in `frontend/` again (Django serves th
 
 - Completions are shared community routes. Cases belong to your account.
 - Re-seed community floors/options with `python manage.py seed_data`. Use `--reset` only if you want to wipe that seed data.
-- The Django `SECRET_KEY` in `ih_f2p/settings.py` is for local development. Change it before any public host.
+- Completions are shared community routes. Cases belong to your account.
+- Re-seed community floors/options with `python manage.py seed_data`. Use `--reset` only if you want to wipe that seed data.
+
+## Render
+
+Use a **Python 3** web service on the **Free** instance.
+
+- Root Directory: empty
+- Build Command: `bash build.sh`
+- Start Command: `gunicorn ih_f2p.wsgi:application --bind 0.0.0.0:$PORT --workers 1`
+- Environment: `DEBUG=False` and a generated `SECRET_KEY`
+
+Free instances sleep when idle. SQLite data on Render is wiped on each deploy.

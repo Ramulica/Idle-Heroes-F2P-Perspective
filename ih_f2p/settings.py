@@ -1,10 +1,19 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "idle-heroes-f2p-perspective-local-dev-key"
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+SECRET_KEY = os.environ.get("SECRET_KEY", "idle-heroes-f2p-perspective-local-dev-key")
+DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes")
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "*").split(",")
+    if host.strip()
+]
+render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -55,5 +64,17 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8001",
     "http://localhost:8001",
 ]
+render_url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+if render_url:
+    CSRF_TRUSTED_ORIGINS.append(render_url)
+for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(","):
+    origin = origin.strip().rstrip("/")
+    if origin and origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
