@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+.env
+frontend/node_modules/
+frontend/dist/
+.venv/
+venv/
+*.log
+.DS_Store
+_gen_seed.py
+staticfiles/
+.cursor/

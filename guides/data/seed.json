@@ -1,0 +1,942 @@
+{
+  "renames": {
+    "Option 2": "Basic Free",
+    "Option 3": "2 Arti",
+    "Option 10": "Origin + Grim",
+    "Option 11": "Origin + DT 1",
+    "DT hunt 55": "DT Hunt 45",
+    "Option 13": "Origin + DT 2",
+    "Option 14": "Balanced 50",
+    "Option 17": "Balanced 70"
+  },
+  "floors": [
+    {
+      "floor": 1,
+      "label": "Floor 1",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 2,
+      "label": "Floor 2",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 3,
+      "label": "Floor 3",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 4,
+      "label": "Floor 4",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Origin Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "DT",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 5,
+      "label": "Floor 5",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Origin Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "DT",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 6,
+      "label": "Floor 6",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "DT",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "Star Soul",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 7,
+      "label": "Floor 7",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Grim",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 8,
+      "label": "Floor 8",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 9,
+      "label": "Floor 9",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 10,
+      "label": "Floor 10",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Origin Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Grim",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "DT",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 11,
+      "label": "Floor 11",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Origin Artifacts",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Void",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "DT",
+          "cost": 5,
+          "discounted": true
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 12,
+      "label": "Floor 12",
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "DT",
+          "cost": 10,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Origin",
+          "cost": 5,
+          "discounted": true
+        },
+        {
+          "slot": 3,
+          "reward_type": "Star Soul",
+          "cost": 10,
+          "discounted": false
+        }
+      ],
+      "is_free": false
+    },
+    {
+      "floor": 13,
+      "label": "Floor 13 - Free",
+      "is_free": true,
+      "rewards": [
+        {
+          "slot": 1,
+          "reward_type": "Void",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 2,
+          "reward_type": "Origin",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 3,
+          "reward_type": "DT",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 4,
+          "reward_type": "Star Soul",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 5,
+          "reward_type": "Artifacts",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 6,
+          "reward_type": "Origin Artifacts",
+          "cost": 0,
+          "discounted": false
+        },
+        {
+          "slot": 7,
+          "reward_type": "Grim",
+          "cost": 0,
+          "discounted": false
+        }
+      ]
+    }
+  ],
+  "options": [
+    {
+      "name": "Best Free",
+      "floors": {
+        "1": "Void",
+        "2": "Origin",
+        "3": "Origin"
+      },
+      "total_cost": 20,
+      "sg_cost": 0,
+      "sort_order": 1
+    },
+    {
+      "name": "Basic Free",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void"
+      },
+      "total_cost": 20,
+      "sg_cost": 0,
+      "sort_order": 2
+    },
+    {
+      "name": "2 Arti",
+      "floors": {
+        "1": "Artifacts",
+        "2": "Artifacts"
+      },
+      "total_cost": 20,
+      "sg_cost": 0,
+      "sort_order": 3
+    },
+    {
+      "name": "Best Endgame",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Star Soul",
+        "7": "Grim"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 4
+    },
+    {
+      "name": "Best Midgame",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Origin Artifacts",
+        "6": "Origin",
+        "7": "Grim"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 5
+    },
+    {
+      "name": "Origin Art Hunt 1",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Origin Artifacts",
+        "5": "Origin Artifacts",
+        "6": "Origin",
+        "7": "Origin"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 6
+    },
+    {
+      "name": "Origin Art Hunt 2",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Origin Artifacts",
+        "5": "Origin Artifacts",
+        "6": "DT"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 7
+    },
+    {
+      "name": "Origin Hunt",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Origin",
+        "8": "Origin",
+        "9": "Origin"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 8
+    },
+    {
+      "name": "Balanced 45",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "DT",
+        "6": "Origin",
+        "7": "Grim"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 9
+    },
+    {
+      "name": "Origin + Grim",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Grim",
+        "8": "Origin"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 10
+    },
+    {
+      "name": "Origin + DT 1",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "DT",
+        "6": "DT",
+        "7": "Origin"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 11
+    },
+    {
+      "name": "DT Hunt 45",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "DT",
+        "5": "DT",
+        "6": "DT"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 12
+    },
+    {
+      "name": "Origin + DT 2",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "DT",
+        "5": "DT",
+        "6": "Origin",
+        "7": "Origin"
+      },
+      "total_cost": 45,
+      "sg_cost": 2750,
+      "sort_order": 13
+    },
+    {
+      "name": "Balanced 50",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "DT",
+        "6": "DT",
+        "7": "Grim"
+      },
+      "total_cost": 50,
+      "sg_cost": 3750,
+      "sort_order": 14
+    },
+    {
+      "name": "Balanced 65",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Grim",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "DT",
+        "11": "DT",
+        "12": "Origin",
+        "13": "Grim"
+      },
+      "total_cost": 65,
+      "sg_cost": 6500,
+      "sort_order": 16
+    },
+    {
+      "name": "Balanced 70",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Grim",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "DT",
+        "11": "DT",
+        "12": "DT",
+        "13": "Grim"
+      },
+      "total_cost": 70,
+      "sg_cost": 7500,
+      "sort_order": 17
+    },
+    {
+      "name": "Grim Hunt",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "Void",
+        "6": "Origin",
+        "7": "Grim",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "Grim",
+        "11": "DT",
+        "12": "Origin",
+        "13": "Grim"
+      },
+      "total_cost": 70,
+      "sg_cost": 7500,
+      "sort_order": 18
+    },
+    {
+      "name": "DT/ORIGIN Hunt",
+      "floors": {
+        "1": "Void",
+        "2": "Void",
+        "3": "Origin",
+        "4": "Void",
+        "5": "DT",
+        "6": "Origin",
+        "7": "Origin",
+        "8": "Origin",
+        "9": "Origin",
+        "10": "DT",
+        "11": "DT",
+        "12": "Origin",
+        "13": "DT"
+      },
+      "total_cost": 65,
+      "sg_cost": 6500,
+      "sort_order": 19
+    }
+  ],
+  "cases": [
+    {
+      "name": "6 week Case 1",
+      "slots": [
+        {
+          "option_name": "Balanced 45",
+          "weeks": 6
+        }
+      ],
+      "total_sg_cost": 16500,
+      "sort_order": 1
+    },
+    {
+      "name": "12 weeks Case 16",
+      "slots": [
+        {
+          "option_name": "Grim Hunt",
+          "weeks": 4
+        },
+        {
+          "option_name": "Balanced 45",
+          "weeks": 1
+        },
+        {
+          "option_name": "Best Free",
+          "weeks": 7
+        }
+      ],
+      "total_sg_cost": 32750,
+      "sort_order": 16
+    },
+    {
+      "name": "17 weeks Case 22",
+      "slots": [
+        {
+          "option_name": "Grim Hunt",
+          "weeks": 6
+        },
+        {
+          "option_name": "Best Free",
+          "weeks": 11
+        }
+      ],
+      "total_sg_cost": 45000,
+      "sort_order": 22
+    },
+    {
+      "name": "17 weeks Case 23",
+      "slots": [
+        {
+          "option_name": "Balanced 45",
+          "weeks": 17
+        }
+      ],
+      "total_sg_cost": 46750,
+      "sort_order": 23
+    },
+    {
+      "name": "17 weeks Case 24",
+      "slots": [
+        {
+          "option_name": "Grim Hunt",
+          "weeks": 5
+        },
+        {
+          "option_name": "Balanced 45",
+          "weeks": 3
+        },
+        {
+          "option_name": "Best Free",
+          "weeks": 9
+        }
+      ],
+      "total_sg_cost": 45750,
+      "sort_order": 24
+    },
+    {
+      "name": "17 weeks Case 25",
+      "slots": [
+        {
+          "option_name": "Balanced 65",
+          "weeks": 7
+        },
+        {
+          "option_name": "Best Free",
+          "weeks": 10
+        }
+      ],
+      "total_sg_cost": 45500,
+      "sort_order": 25
+    },
+    {
+      "name": "17 week What I do",
+      "slots": [
+        {
+          "option_name": "Best Midgame",
+          "weeks": 6
+        },
+        {
+          "option_name": "Grim Hunt",
+          "weeks": 4
+        },
+        {
+          "option_name": "Best Free",
+          "weeks": 7
+        }
+      ],
+      "total_sg_cost": 46500,
+      "sort_order": 26
+    },
+    {
+      "name": "17 week What I did",
+      "slots": [
+        {
+          "option_name": "Best Midgame",
+          "weeks": 1
+        }
+      ],
+      "total_sg_cost": 2750,
+      "sort_order": 30
+    }
+  ],
+  "events": [
+    {
+      "event_number": "Last year",
+      "date": "2025-06-19",
+      "name": "Anniversary",
+      "resource_type": "Scrolls",
+      "sort_order": 1
+    },
+    {
+      "event_number": "1",
+      "date": "2025-07-17",
+      "name": "Tail Travel",
+      "resource_type": "PO",
+      "sort_order": 2
+    },
+    {
+      "event_number": "2",
+      "date": "2025-08-15",
+      "name": "Trans Ignacia Release",
+      "resource_type": "Scrolls",
+      "sort_order": 3
+    },
+    {
+      "event_number": "3",
+      "date": "2025-08-29",
+      "name": "Qixi Festival",
+      "resource_type": "Wishing Coins",
+      "sort_order": 4
+    },
+    {
+      "event_number": "4",
+      "date": "2025-09-12",
+      "name": "Basilisk Release Event",
+      "resource_type": "Scrolls",
+      "sort_order": 5
+    },
+    {
+      "event_number": "5",
+      "date": "2025-09-26",
+      "name": "RNG Celebration v2",
+      "resource_type": "PO",
+      "sort_order": 6
+    },
+    {
+      "event_number": "6",
+      "date": "2025-10-03",
+      "name": "Mid-Autumn Festival",
+      "resource_type": "Wishing Coins",
+      "sort_order": 7
+    },
+    {
+      "event_number": "7",
+      "date": "2025-10-31",
+      "name": "Halloween ",
+      "resource_type": "PO",
+      "sort_order": 8
+    },
+    {
+      "event_number": "8",
+      "date": "2025-11-21",
+      "name": "Madeleine Release Event",
+      "resource_type": "Scrolls",
+      "sort_order": 9
+    },
+    {
+      "event_number": "9",
+      "date": "2025-11-28",
+      "name": "Bound Friday",
+      "resource_type": "PO",
+      "sort_order": 10
+    },
+    {
+      "event_number": "9",
+      "date": "2025-12-19",
+      "name": "Trans Madeleine / Christmas Event",
+      "resource_type": "Scrolls",
+      "sort_order": 11
+    },
+    {
+      "event_number": "",
+      "date": "2025-12-26",
+      "name": "RNG Celebration v3 - Merry Carnival",
+      "resource_type": "Wishing Coins",
+      "sort_order": 12
+    },
+    {
+      "event_number": "10",
+      "date": "2026-01-02",
+      "name": "New Year Event",
+      "resource_type": "PO",
+      "sort_order": 13
+    },
+    {
+      "event_number": "11",
+      "date": "2026-01-15",
+      "name": "Revelation of Light / Oscar Release",
+      "resource_type": "Scrolls",
+      "sort_order": 14
+    },
+    {
+      "event_number": "12",
+      "date": "2026-02-13",
+      "name": "CNY/VDAY",
+      "resource_type": "Scrolls",
+      "sort_order": 15
+    },
+    {
+      "event_number": "13",
+      "date": "2026-03-19",
+      "name": "Journey of Purification",
+      "resource_type": "PO",
+      "sort_order": 16
+    },
+    {
+      "event_number": "14",
+      "date": "2026-04-02",
+      "name": "Easter Event",
+      "resource_type": "Wishing Coins",
+      "sort_order": 17
+    },
+    {
+      "event_number": "15",
+      "date": "2026-04-16",
+      "name": "Vibrant Sea World / Trans Mareia release",
+      "resource_type": "Scrolls",
+      "sort_order": 18
+    },
+    {
+      "event_number": "16",
+      "date": "2026-05-14",
+      "name": "Valiant Assault / Umbrion release",
+      "resource_type": "Scrolls",
+      "sort_order": 19
+    },
+    {
+      "event_number": "17",
+      "date": "2026-06-11",
+      "name": "Anniversary",
+      "resource_type": "Scrolls",
+      "sort_order": 20
+    }
+  ],
+  "sg_table": [
+    {
+      "max_cost": 20,
+      "sg": 0
+    },
+    {
+      "max_cost": 45,
+      "sg": 2750
+    },
+    {
+      "max_cost": 50,
+      "sg": 3750
+    },
+    {
+      "max_cost": 65,
+      "sg": 6500
+    },
+    {
+      "max_cost": 70,
+      "sg": 7500
+    }
+  ],
+  "normal_cost": 10,
+  "discounted_cost": 5,
+  "notes": [
+    "Pick one reward per floor. Normal rewards cost 10, discounted rewards cost 5, and Floor 13 is free after completing floors 1-12.",
+    "Gold highlight = discounted reward (cost 5).",
+    "Floor 7: Grim is normal cost; only Origin is discounted. Floor 13 Free costs 0.",
+    "SG Cost is looked up from total charm cost (20=0, 45=2750, 50=3750, 65=6500, 70=7500)."
+  ]
+}
