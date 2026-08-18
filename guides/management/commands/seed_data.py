@@ -36,7 +36,7 @@ class Command(BaseCommand):
             renamed = 0
             for old, new in seed.get("renames", {}).items():
                 renamed += CompletionOption.objects.filter(name=old).update(name=new)
-            created, promoted = self._ensure_default_options(seed)
+            created, promoted, updated = self._ensure_default_options(seed)
             self.stdout.write("Options already exist; skipped case seed.")
             if renamed:
                 self.stdout.write(self.style.SUCCESS(f"Renamed {renamed} completion options."))
@@ -44,6 +44,8 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Added {created} missing default completions."))
             if promoted:
                 self.stdout.write(self.style.SUCCESS(f"Promoted {promoted} user completions to defaults."))
+            if updated:
+                self.stdout.write(self.style.SUCCESS(f"Updated {updated} default completions from seed."))
             if not EventPreview.objects.exists():
                 self._seed_events(seed["events"])
             return
@@ -89,6 +91,7 @@ class Command(BaseCommand):
     def _ensure_default_options(self, seed):
         created = 0
         promoted = 0
+        updated = 0
         last = (
             CompletionOption.objects.filter(created_by__isnull=True)
             .order_by("-sort_order")
@@ -100,10 +103,14 @@ class Command(BaseCommand):
             default_match = next((opt for opt in matches if opt.created_by_id is None), None)
             user_match = next((opt for opt in matches if opt.created_by_id is not None), None)
             if default_match:
+                if self._sync_seed_discount(default_match, row, seed):
+                    updated += 1
                 continue
             if user_match:
                 user_match.created_by = None
                 user_match.save(update_fields=["created_by"])
+                if self._sync_seed_discount(user_match, row, seed):
+                    updated += 1
                 promoted += 1
                 continue
             discount = bool(row.get("floor_12_discount", bool(row["floors"].get("12"))))
@@ -125,7 +132,28 @@ class Command(BaseCommand):
                 created_by=None,
             )
             created += 1
-        return created, promoted
+        return created, promoted, updated
+
+    def _sync_seed_discount(self, option, row, seed):
+        if "floor_12_discount" not in row:
+            return False
+        discount = bool(row["floor_12_discount"])
+        if option.floor_12_discount == discount:
+            return False
+        total, sg_cost, counts = compute_option_stats(
+            option.floors,
+            seed["floors"],
+            seed["sg_table"],
+            discount,
+        )
+        option.floor_12_discount = discount
+        option.total_cost = total
+        option.sg_cost = sg_cost
+        option.reward_counts = counts
+        option.save(
+            update_fields=["floor_12_discount", "total_cost", "sg_cost", "reward_counts"]
+        )
+        return True
 
     def _seed_events(self, events):
         EventPreview.objects.all().delete()

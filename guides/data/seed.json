@@ -401,7 +401,7 @@
         "2": "Void",
         "3": "Origin"
       },
-      "floor_12_discount": true,
+      "floor_12_discount": false,
       "total_cost": 20,
       "sg_cost": 0,
       "sort_order": 20
@@ -413,7 +413,7 @@
         "2": "Void",
         "4": "Void"
       },
-      "floor_12_discount": true,
+      "floor_12_discount": false,
       "total_cost": 20,
       "sg_cost": 0,
       "sort_order": 21
