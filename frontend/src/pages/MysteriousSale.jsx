@@ -5,6 +5,7 @@ import EventPreview from "../components/EventPreview.jsx";
 import FloorPlanner from "../components/FloorPlanner.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import RewardsInfo from "../components/RewardsInfo.jsx";
+import { useAuth } from "../auth";
 
 const PAGES = [
   { id: "planner", label: "1. Floor Planner" },
@@ -16,6 +17,7 @@ const PAGES = [
 export default function MysteriousSale({ data, onChange }) {
   const [page, setPage] = useState("planner");
   const navigate = useNavigate();
+  const guest = Boolean(useAuth()?.user?.guest);
 
   return (
     <div className="sky-page">
@@ -43,6 +45,11 @@ export default function MysteriousSale({ data, onChange }) {
             Back to menu
           </button>
         </div>
+        {guest ? (
+          <p className="guest-banner">
+            Guest mode — you can look, but nothing is saved and you cannot rate.
+          </p>
+        ) : null}
         <div className="shell-body">
           <nav className="sidebar">
             {PAGES.map((item) => (

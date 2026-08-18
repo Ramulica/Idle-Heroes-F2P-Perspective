@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { api, subscribePending } from "./api";
-import { AuthContext } from "./auth";
+import { AuthContext, GUEST_KEY, GUEST_USER } from "./auth";
 import { LoadingOverlay, LoadingScreen } from "./components/LoadingSpinner.jsx";
 import Home from "./pages/Home.jsx";
 import MysteriousSale from "./pages/MysteriousSale.jsx";
@@ -33,12 +33,30 @@ export default function App() {
   useEffect(() => {
     api
       .me()
-      .then((result) => setUser(result.user))
-      .catch(() => setUser(null));
+      .then((result) => {
+        if (result.user) {
+          sessionStorage.removeItem(GUEST_KEY);
+          setUser(result.user);
+        } else if (sessionStorage.getItem(GUEST_KEY)) {
+          setUser(GUEST_USER);
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        if (sessionStorage.getItem(GUEST_KEY)) {
+          setUser(GUEST_USER);
+        } else {
+          setUser(null);
+        }
+      });
   }, []);
 
   async function logout() {
-    await api.logout();
+    sessionStorage.removeItem(GUEST_KEY);
+    if (!user?.guest) {
+      await api.logout();
+    }
     setUser(null);
   }
 

@@ -6,9 +6,11 @@ import HelpTip from "./HelpTip.jsx";
 import MenuIconButton from "./MenuIconButton.jsx";
 import RewardIcon from "./RewardIcon.jsx";
 import { Stars } from "./StarRating.jsx";
+import { useAuth } from "../auth";
 import { REWARD_META, rewardPreview } from "../rewards";
 
 export default function FloorPlanner({ data, onChange }) {
+  const guest = Boolean(useAuth()?.user?.guest);
   const [view, setView] = useState("list");
   const [selectedId, setSelectedId] = useState(null);
   const [modal, setModal] = useState(false);
@@ -59,7 +61,7 @@ export default function FloorPlanner({ data, onChange }) {
   }
 
   function toggleReward(floor, rewardType) {
-    if (!selected) return;
+    if (guest || !selected) return;
     if (floor === 13 && filledFloors < 12) return;
     const key = String(floor);
     const next = { ...picks };
@@ -149,9 +151,11 @@ export default function FloorPlanner({ data, onChange }) {
               ]}
             />
           </div>
-          <button className="gold-btn" type="button" onClick={() => setModal(true)}>
-            + Add option
-          </button>
+          {guest ? null : (
+            <button className="gold-btn" type="button" onClick={() => setModal(true)}>
+              + Add option
+            </button>
+          )}
         </div>
         <div className="option-list">
           {data.options.map((opt) => (
@@ -168,13 +172,15 @@ export default function FloorPlanner({ data, onChange }) {
                 <span className="rating-score">
                   {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
                 </span>
-                <button
-                  className="tan-btn"
-                  type="button"
-                  onClick={(event) => openMenu(opt, event)}
-                >
-                  Rate
-                </button>
+                {guest ? null : (
+                  <button
+                    className="tan-btn"
+                    type="button"
+                    onClick={(event) => openMenu(opt, event)}
+                  >
+                    Rate
+                  </button>
+                )}
               </div>
               <div className="option-preview-row">
                 <button
@@ -195,10 +201,12 @@ export default function FloorPlanner({ data, onChange }) {
                     )}
                   </span>
                 </button>
-                <DiscountToggle
-                  checked={Boolean(opt.floor_12_discount)}
-                  onChange={(enabled) => toggleDiscount(opt, enabled)}
-                />
+                {guest ? null : (
+                  <DiscountToggle
+                    checked={Boolean(opt.floor_12_discount)}
+                    onChange={(enabled) => toggleDiscount(opt, enabled)}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -249,10 +257,12 @@ export default function FloorPlanner({ data, onChange }) {
               {Number(selected.rating_avg || 0).toFixed(1)} (
               {selected.rating_count || 0})
             </span>
-            <MenuIconButton
-              label={`Menu for ${selected.name}`}
-              onClick={(event) => openMenu(selected, event)}
-            />
+            {guest ? null : (
+              <MenuIconButton
+                label={`Menu for ${selected.name}`}
+                onClick={(event) => openMenu(selected, event)}
+              />
+            )}
           </div>
         ) : null}
         <div className="cost-pill">
@@ -300,7 +310,7 @@ export default function FloorPlanner({ data, onChange }) {
                     <button
                       className="reward-box"
                       type="button"
-                      disabled={locked}
+                      disabled={locked || guest}
                       onClick={() => toggleReward(floor.floor, reward.reward_type)}
                     >
                       <RewardIcon type={reward.reward_type} className="reward-icon-lg" />

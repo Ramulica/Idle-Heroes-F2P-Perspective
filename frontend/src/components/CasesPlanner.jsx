@@ -6,6 +6,7 @@ import HelpTip from "./HelpTip.jsx";
 import MenuIconButton from "./MenuIconButton.jsx";
 import RewardIcon from "./RewardIcon.jsx";
 import { StarPicker, Stars } from "./StarRating.jsx";
+import { useAuth, GUEST_SG_KEY } from "../auth";
 import { REWARD_ORDER, rewardPreview } from "../rewards";
 import {
   DEFAULT_STATE,
@@ -76,6 +77,7 @@ function PeriodCalc({ weeks }) {
 }
 
 export default function CasesPlanner({ data, onChange }) {
+  const guest = Boolean(useAuth()?.user?.guest);
   const [view, setView] = useState("list");
   const [selectedId, setSelectedId] = useState(null);
   const [addCaseOpen, setAddCaseOpen] = useState(false);
@@ -115,13 +117,24 @@ export default function CasesPlanner({ data, onChange }) {
   const yearCsg = useMemo(() => yearlyCsg(sgState), [sgState]);
 
   useEffect(() => {
+    if (guest) {
+      try {
+        const raw = sessionStorage.getItem(GUEST_SG_KEY);
+        if (raw) {
+          setSgState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
+        }
+      } catch {
+        /* ignore */
+      }
+      return undefined;
+    }
     api
       .getSgCalc()
       .then((payload) => {
         setSgState({ ...DEFAULT_STATE, ...(payload.state || {}) });
       })
       .catch(() => {});
-  }, []);
+  }, [guest]);
 
   const visibleCases = useMemo(() => {
     let rows = [...data.cases];
@@ -349,9 +362,11 @@ export default function CasesPlanner({ data, onChange }) {
             >
               Filter / Sort
             </button>
-            <button className="gold-btn" type="button" onClick={() => setAddCaseOpen(true)}>
-              + Add case
-            </button>
+            {guest ? null : (
+              <button className="gold-btn" type="button" onClick={() => setAddCaseOpen(true)}>
+                + Add case
+              </button>
+            )}
           </div>
         </div>
         <div className="option-list">
@@ -370,13 +385,15 @@ export default function CasesPlanner({ data, onChange }) {
                   <span className="rating-score">
                     {Number(row.rating_avg || 0).toFixed(1)} ({row.rating_count || 0})
                   </span>
-                  <button
-                    className="tan-btn"
-                    type="button"
-                    onClick={(event) => openCaseRate(row, event)}
-                  >
-                    Rate
-                  </button>
+                  {guest ? null : (
+                    <button
+                      className="tan-btn"
+                      type="button"
+                      onClick={(event) => openCaseRate(row, event)}
+                    >
+                      Rate
+                    </button>
+                  )}
                 </div>
                 <div className="option-preview-row">
                   <button
@@ -449,7 +466,7 @@ export default function CasesPlanner({ data, onChange }) {
     );
   }
 
-  const addButton = (
+  const addButton = guest ? null : (
     <button
       className="gold-btn"
       type="button"
@@ -532,10 +549,12 @@ export default function CasesPlanner({ data, onChange }) {
               {Number(selected.rating_avg || 0).toFixed(1)} (
               {selected.rating_count || 0})
             </span>
-            <MenuIconButton
-              label={`Menu for ${selected.name}`}
-              onClick={(event) => openEdit(selected, event)}
-            />
+            {guest ? null : (
+              <MenuIconButton
+                label={`Menu for ${selected.name}`}
+                onClick={(event) => openEdit(selected, event)}
+              />
+            )}
           </div>
         ) : null}
         {addButton}
@@ -569,13 +588,15 @@ export default function CasesPlanner({ data, onChange }) {
                 <span className="rating-score">
                   {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
                 </span>
-                <button
-                  className="tan-btn danger"
-                  type="button"
-                  onClick={() => removeSlot(index)}
-                >
-                  Remove
-                </button>
+                {guest ? null : (
+                  <button
+                    className="tan-btn danger"
+                    type="button"
+                    onClick={() => removeSlot(index)}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
               <div className="option-preview-row">
                 <div className="option-open">
@@ -592,11 +613,15 @@ export default function CasesPlanner({ data, onChange }) {
                     )}
                   </span>
                 </div>
-                <TimesControl
-                  value={slot.weeks || 1}
-                  max={maxTimes}
-                  onChange={(weeks) => changeTimes(index, weeks)}
-                />
+                {guest ? (
+                  <strong className="times-control">× {slot.weeks || 1}</strong>
+                ) : (
+                  <TimesControl
+                    value={slot.weeks || 1}
+                    max={maxTimes}
+                    onChange={(weeks) => changeTimes(index, weeks)}
+                  />
+                )}
               </div>
             </div>
           );

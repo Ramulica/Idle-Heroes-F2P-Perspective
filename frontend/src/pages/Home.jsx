@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../auth";
+import { useAuth, GUEST_SG_KEY } from "../auth";
 import { api } from "../api";
 import HelpTip from "../components/HelpTip.jsx";
 import CsgAmount from "../components/CsgAmount.jsx";
@@ -18,16 +18,28 @@ export default function Home() {
   const [sgState, setSgState] = useState(DEFAULT_STATE);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const guest = Boolean(user?.guest);
   const yearCsg = useMemo(() => yearlyCsg(sgState), [sgState]);
 
   useEffect(() => {
+    if (guest) {
+      try {
+        const raw = sessionStorage.getItem(GUEST_SG_KEY);
+        if (raw) {
+          setSgState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
+        }
+      } catch {
+        /* ignore */
+      }
+      return undefined;
+    }
     api
       .getSgCalc()
       .then((payload) => {
         setSgState({ ...DEFAULT_STATE, ...(payload.state || {}) });
       })
       .catch(() => {});
-  }, []);
+  }, [guest]);
 
   return (
     <div className="sky-page">
@@ -42,6 +54,7 @@ export default function Home() {
                   "CSG / year comes from your CSG Calculator. Tap it to open and fill in your account.",
                   "Tools holds the CSG Calculator and Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
+                  "Guest mode does not save data and cannot rate.",
                 ]}
               />
             </div>
@@ -58,10 +71,16 @@ export default function Home() {
               <CsgAmount value={yearCsg} />
             </button>
             <button className="gold-btn" type="button">
-              {user?.username}
+              {guest ? "Guest" : user?.username}
             </button>
           </div>
         </div>
+        {guest ? (
+          <p className="guest-banner">
+            Guest mode — nothing is saved, and you cannot rate. Create an account
+            to keep your calculator, cases, and ratings.
+          </p>
+        ) : null}
         <div className="shell-body">
           <nav className="sidebar">
             {NAV.map((item) => (
@@ -192,7 +211,7 @@ export default function Home() {
         <div className="shell-foot">
           <strong>Idle Heroes F2P Perspective</strong>
           <button className="tan-btn" type="button" onClick={logout}>
-            Log out
+            {guest ? "Log in" : "Log out"}
           </button>
         </div>
       </div>

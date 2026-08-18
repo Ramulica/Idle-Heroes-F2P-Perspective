@@ -6,6 +6,7 @@ from functools import wraps
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 from django.db.models import Avg, Count
 from django.http import FileResponse, Http404, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -166,9 +167,20 @@ def register(request):
         return JsonResponse({"error": "Username must be at least 3 characters."}, status=400)
     if len(password) < 4:
         return JsonResponse({"error": "Password must be at least 4 characters."}, status=400)
-    if User.objects.filter(username__iexact=username).exists():
+    if username.lower() in {"guest", "admin"}:
         return JsonResponse({"error": "That username is already taken."}, status=400)
-    user = User.objects.create_user(username=username, password=password)
+    if User.objects.filter(username__iexact=username).exists():
+        return JsonResponse(
+            {"error": "That username is already taken. Log in, or pick another."},
+            status=400,
+        )
+    try:
+        user = User.objects.create_user(username=username, password=password)
+    except IntegrityError:
+        return JsonResponse(
+            {"error": "That username is already taken. Log in, or pick another."},
+            status=400,
+        )
     _profile(user)
     login(request, user)
     return JsonResponse({"user": _user_payload(user)}, status=201)
@@ -194,15 +206,28 @@ def logout_view(request):
     return JsonResponse({"ok": True})
 
 
-@login_required_json
+@ensure_csrf_cookie
 @require_GET
 def bootstrap(request):
     meta = _meta()
     options, mine = _rating_maps(request.user)
     options = list(options)
     options_by_id = {opt.id: opt for opt in options}
-    cases, case_mine = _case_rating_maps(request.user)
-    cases = [_case_json(case, options_by_id, case_mine) for case in cases]
+    if request.user.is_authenticated:
+        cases, case_mine = _case_rating_maps(request.user)
+        cases = [_case_json(case, options_by_id, case_mine) for case in cases]
+        user = _user_payload(request.user)
+    else:
+        templates = (
+            CasePlan.objects.filter(owner__isnull=True)
+            .annotate(
+                rating_avg=Avg("ratings__score"),
+                rating_count=Count("ratings", distinct=True),
+            )
+            .order_by("sort_order", "id")
+        )
+        cases = [_case_json(case, options_by_id, {}) for case in templates]
+        user = None
     events = [
         {
             "id": event.id,
@@ -216,7 +241,7 @@ def bootstrap(request):
     ]
     return JsonResponse(
         {
-            "user": _user_payload(request.user),
+            "user": user,
             "floors": meta.floors,
             "sg_table": meta.sg_table,
             "notes": meta.notes,
@@ -227,9 +252,12 @@ def bootstrap(request):
     )
 
 
-@login_required_json
 @require_http_methods(["GET", "PUT", "PATCH"])
 def sg_calculator(request):
+    if not request.user.is_authenticated:
+        if request.method == "GET":
+            return JsonResponse({"state": {}})
+        return JsonResponse({"error": "Please log in to save."}, status=401)
     profile = _profile(request.user)
     if request.method == "GET":
         return JsonResponse({"state": profile.sg_calculator or {}})

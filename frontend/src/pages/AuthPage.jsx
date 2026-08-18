@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import HelpTip from "../components/HelpTip.jsx";
+import { GUEST_KEY, GUEST_USER } from "../auth";
 
 export default function AuthPage({ onAuth }) {
   const [mode, setMode] = useState("register");
@@ -16,12 +17,18 @@ export default function AuthPage({ onAuth }) {
     try {
       const action = mode === "register" ? api.register : api.login;
       const result = await action({ username, password });
+      sessionStorage.removeItem(GUEST_KEY);
       onAuth(result.user);
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  function continueAsGuest() {
+    sessionStorage.setItem(GUEST_KEY, "1");
+    onAuth(GUEST_USER);
   }
 
   return (
@@ -35,12 +42,12 @@ export default function AuthPage({ onAuth }) {
                 title="Account"
                 steps={[
                   "Create account or log in with a username and password.",
-                  "Username at least 3 characters, password at least 4.",
-                  "Your CSG Calculator, ratings, and cases are saved on this account.",
+                  "Usernames must be unique. If it is taken, log in or pick another.",
+                  "Continue as guest to look around. Nothing is saved and you cannot rate.",
                 ]}
               />
             </div>
-            <p>Create an account to save your CSG calculator and completion options.</p>
+            <p>Create an account to save your CSG calculator, cases, and ratings.</p>
           </div>
         </div>
         <form className="auth-card" onSubmit={submit}>
@@ -91,6 +98,17 @@ export default function AuthPage({ onAuth }) {
                 ? "Create account"
                 : "Log in"}
           </button>
+          <button
+            className="tan-btn"
+            type="button"
+            disabled={busy}
+            onClick={continueAsGuest}
+          >
+            Continue as guest
+          </button>
+          <p className="muted" style={{ margin: 0 }}>
+            Guest mode does not save data and cannot rate.
+          </p>
         </form>
       </div>
     </div>

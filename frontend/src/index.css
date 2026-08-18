@@ -867,7 +867,22 @@ button.option-row.pick {
 }
 
 .auth-card .error {
-  padding: 0;
+  padding: 8px 10px;
+  margin: 0;
+  background: #fde8d8;
+  border: 2px solid #a33;
+  border-radius: 10px;
+  color: #7a1f12;
+}
+
+.guest-banner {
+  margin: 0 16px 10px;
+  padding: 10px 14px;
+  background: #fff4d0;
+  border: 2px solid #6b3e16;
+  border-radius: 12px;
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .loot-preview,

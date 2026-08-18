@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { GUEST_SG_KEY, useAuth } from "../auth";
 import AwakenAmount from "../components/AwakenAmount.jsx";
 import CsgAmount from "../components/CsgAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
@@ -31,6 +32,7 @@ const SECTIONS = [
 
 export default function SgCalculator() {
   const navigate = useNavigate();
+  const guest = Boolean(useAuth()?.user?.guest);
   const [state, setState] = useState(DEFAULT_STATE);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState("period");
@@ -38,6 +40,20 @@ export default function SgCalculator() {
 
   useEffect(() => {
     let cancelled = false;
+    if (guest) {
+      try {
+        const raw = sessionStorage.getItem(GUEST_SG_KEY);
+        if (raw && !cancelled) {
+          setState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
+        }
+      } catch {
+        /* ignore */
+      }
+      if (!cancelled) setLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
     api
       .getSgCalc()
       .then((payload) => {
@@ -52,15 +68,19 @@ export default function SgCalculator() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [guest]);
 
   useEffect(() => {
     if (!loaded) return;
+    if (guest) {
+      sessionStorage.setItem(GUEST_SG_KEY, JSON.stringify(state));
+      return undefined;
+    }
     const timer = setTimeout(() => {
       api.saveSgCalc(state).catch(() => {});
     }, 500);
     return () => clearTimeout(timer);
-  }, [state, loaded]);
+  }, [state, loaded, guest]);
 
   function patch(partial) {
     setState((current) => ({ ...current, ...partial }));
@@ -99,6 +119,12 @@ export default function SgCalculator() {
             Back to menu
           </button>
         </div>
+        {guest ? (
+          <p className="guest-banner">
+            Guest mode — this calculator is only for this visit. Create an account
+            to save it.
+          </p>
+        ) : null}
         <div className="shell-body">
           <nav className="sidebar">
             {SECTIONS.map((item) => (
