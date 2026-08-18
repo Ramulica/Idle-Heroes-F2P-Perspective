@@ -337,6 +337,17 @@ button {
   color: #fff;
 }
 
+.option-group-label {
+  margin: 12px 4px 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.option-group-label:first-child {
+  margin-top: 0;
+}
+
 .option-list {
   flex: 1;
   overflow: auto;

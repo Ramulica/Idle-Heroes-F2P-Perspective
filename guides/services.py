@@ -79,6 +79,7 @@ def option_payload(option, rating_avg=None, rating_count=0, my_rating=None):
         "rating_avg": round(float(avg), 2) if avg is not None else 0,
         "rating_count": count,
         "my_rating": None if my_rating is None else float(my_rating),
+        "is_default": option.created_by_id is None,
     }
 
 

@@ -51,6 +51,7 @@ export default function FloorPlanner({ data, onChange }) {
   }
 
   async function toggleDiscount(opt, enabled) {
+    if (!opt || opt.is_default) return;
     setBusy(true);
     try {
       await api.updateOption(opt.id, { floor_12_discount: enabled });
@@ -61,7 +62,7 @@ export default function FloorPlanner({ data, onChange }) {
   }
 
   function toggleReward(floor, rewardType) {
-    if (guest || !selected) return;
+    if (guest || !selected || selected.is_default) return;
     if (floor === 13 && filledFloors < 12) return;
     const key = String(floor);
     const next = { ...picks };
@@ -97,6 +98,68 @@ export default function FloorPlanner({ data, onChange }) {
     }
   }
 
+  const mineOptions = data.options.filter((opt) => !opt.is_default);
+  const defaultOptions = data.options.filter((opt) => opt.is_default);
+  const canEditSelected = Boolean(selected && !selected.is_default && !guest);
+
+  function renderOptionRow(opt) {
+    const editable = !guest && !opt.is_default;
+    return (
+      <div className="option-row" key={opt.id}>
+        <div className="option-title">
+          <button
+            className="option-name-btn"
+            type="button"
+            onClick={() => openOption(opt.id)}
+          >
+            {opt.name}
+          </button>
+          <Stars value={opt.rating_avg} />
+          <span className="rating-score">
+            {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
+          </span>
+          {guest ? null : (
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={(event) => openMenu(opt, event)}
+            >
+              Rate
+            </button>
+          )}
+        </div>
+        <div className="option-preview-row">
+          <button
+            className="option-open"
+            type="button"
+            onClick={() => openOption(opt.id)}
+          >
+            <CsgAmount value={opt.sg_cost} />
+            <span className="loot-preview">
+              {rewardPreview(opt.reward_counts).length ? (
+                rewardPreview(opt.reward_counts).map((item) => (
+                  <span className="loot-chip" key={item.type}>
+                    {item.count}x <RewardIcon type={item.type} />
+                  </span>
+                ))
+              ) : (
+                <span className="muted">No floors picked yet</span>
+              )}
+            </span>
+          </button>
+          {editable ? (
+            <DiscountToggle
+              checked={Boolean(opt.floor_12_discount)}
+              onChange={(enabled) => toggleDiscount(opt, enabled)}
+            />
+          ) : opt.floor_12_discount ? (
+            <span className="muted">12th floor Discount</span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   async function renameOption(opt) {
     if (!opt) return;
     const name = window.prompt("Rename this completion option", opt.name);
@@ -107,7 +170,7 @@ export default function FloorPlanner({ data, onChange }) {
 
   async function deleteOption(opt) {
     if (!opt) return;
-    if (!window.confirm(`Delete "${opt.name}" for everyone?`)) return;
+    if (!window.confirm(`Delete "${opt.name}"? Only you will lose it.`)) return;
     await api.deleteOption(opt.id);
     setRateOption(null);
     await onChange();
@@ -144,10 +207,9 @@ export default function FloorPlanner({ data, onChange }) {
             <HelpTip
               title="Completion options"
               steps={[
-                "Tap a name to open its 13-floor layout.",
-                "Rate with half stars. The score is the community average.",
-                "12th floor Discount is on or off per option. Tick only the checkbox.",
-                "+ Add option creates a new shared community route.",
+                "Default completions are shared and cannot be changed.",
+                "Tap + Add option to make a route that only you can see and edit.",
+                "Rate default routes with half stars. The score is the community average.",
               ]}
             />
           </div>
@@ -158,58 +220,14 @@ export default function FloorPlanner({ data, onChange }) {
           )}
         </div>
         <div className="option-list">
-          {data.options.map((opt) => (
-            <div className="option-row" key={opt.id}>
-              <div className="option-title">
-                <button
-                  className="option-name-btn"
-                  type="button"
-                  onClick={() => openOption(opt.id)}
-                >
-                  {opt.name}
-                </button>
-                <Stars value={opt.rating_avg} />
-                <span className="rating-score">
-                  {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
-                </span>
-                {guest ? null : (
-                  <button
-                    className="tan-btn"
-                    type="button"
-                    onClick={(event) => openMenu(opt, event)}
-                  >
-                    Rate
-                  </button>
-                )}
-              </div>
-              <div className="option-preview-row">
-                <button
-                  className="option-open"
-                  type="button"
-                  onClick={() => openOption(opt.id)}
-                >
-                  <CsgAmount value={opt.sg_cost} />
-                  <span className="loot-preview">
-                    {rewardPreview(opt.reward_counts).length ? (
-                      rewardPreview(opt.reward_counts).map((item) => (
-                        <span className="loot-chip" key={item.type}>
-                          {item.count}x <RewardIcon type={item.type} />
-                        </span>
-                      ))
-                    ) : (
-                      <span className="muted">No floors picked yet</span>
-                    )}
-                  </span>
-                </button>
-                {guest ? null : (
-                  <DiscountToggle
-                    checked={Boolean(opt.floor_12_discount)}
-                    onChange={(enabled) => toggleDiscount(opt, enabled)}
-                  />
-                )}
-              </div>
-            </div>
-          ))}
+          {mineOptions.length ? (
+            <>
+              <h4 className="option-group-label">Your completions</h4>
+              {mineOptions.map(renderOptionRow)}
+            </>
+          ) : null}
+          <h4 className="option-group-label">Default completions</h4>
+          {defaultOptions.map(renderOptionRow)}
         </div>
         {rateOption && (
           <RateModal
@@ -245,8 +263,7 @@ export default function FloorPlanner({ data, onChange }) {
             steps={[
               "Tap one reward per floor. Tap again to clear it.",
               "Fill floors 1–12 to unlock Floor 13 — Free.",
-              "Unselected rewards stay dark. Selected ones glow gold.",
-              "The three-line menu has rating, 12th floor Discount, Rename, and Delete.",
+              "Default completions are view only. Add your own to edit floors, rename, or delete.",
             ]}
           />
         </div>
@@ -257,7 +274,17 @@ export default function FloorPlanner({ data, onChange }) {
               {Number(selected.rating_avg || 0).toFixed(1)} (
               {selected.rating_count || 0})
             </span>
-            {guest ? null : (
+            {guest || selected?.is_default ? (
+              guest ? null : (
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={(event) => openMenu(selected, event)}
+                >
+                  Rate
+                </button>
+              )
+            ) : (
               <MenuIconButton
                 label={`Menu for ${selected.name}`}
                 onClick={(event) => openMenu(selected, event)}
@@ -271,9 +298,11 @@ export default function FloorPlanner({ data, onChange }) {
         </div>
       </div>
       <div className="progress-line">
-        {remaining
-          ? `Complete ${remaining} more floor(s) to unlock Surprise Gift.`
-          : "Surprise Gift unlocked. Floor 13 is free."}
+        {selected?.is_default
+          ? "Default completion — view only. Add your own to change floors."
+          : remaining
+            ? `Complete ${remaining} more floor(s) to unlock Surprise Gift.`
+            : "Surprise Gift unlocked. Floor 13 is free."}
         {busy ? " Saving..." : ""}
       </div>
       <div className="floors">
@@ -310,7 +339,7 @@ export default function FloorPlanner({ data, onChange }) {
                     <button
                       className="reward-box"
                       type="button"
-                      disabled={locked || guest}
+                      disabled={locked || !canEditSelected}
                       onClick={() => toggleReward(floor.floor, reward.reward_type)}
                     >
                       <RewardIcon type={reward.reward_type} className="reward-icon-lg" />
@@ -357,16 +386,26 @@ export default function FloorPlanner({ data, onChange }) {
         />
       )}
       {rateOption && (
-        <CompletionMenu
-          option={data.options.find((row) => row.id === rateOption.id) || rateOption}
-          value={draftRating}
-          onChange={setDraftRating}
-          onSaveRating={saveRating}
-          onToggleDiscount={(enabled) => toggleDiscount(rateOption, enabled)}
-          onRename={() => renameOption(rateOption)}
-          onDelete={() => deleteOption(rateOption)}
-          onClose={() => setRateOption(null)}
-        />
+        rateOption.is_default ? (
+          <RateModal
+            title={`Rate ${rateOption.name}`}
+            value={draftRating}
+            onChange={setDraftRating}
+            onSave={saveRating}
+            onClose={() => setRateOption(null)}
+          />
+        ) : (
+          <CompletionMenu
+            option={data.options.find((row) => row.id === rateOption.id) || rateOption}
+            value={draftRating}
+            onChange={setDraftRating}
+            onSaveRating={saveRating}
+            onToggleDiscount={(enabled) => toggleDiscount(rateOption, enabled)}
+            onRename={() => renameOption(rateOption)}
+            onDelete={() => deleteOption(rateOption)}
+            onClose={() => setRateOption(null)}
+          />
+        )
       )}
     </div>
   );
@@ -381,7 +420,7 @@ function AddModal({ newName, setNewName, onSave, onClose }) {
           <HelpTip
             title="Add completion option"
             steps={[
-              "Name the route, then save. It is shared with everyone.",
+              "Name the route, then save. Only you can see and edit it.",
               "Open it to pick one reward per floor. Floor 13 unlocks after 1–12.",
             ]}
           />

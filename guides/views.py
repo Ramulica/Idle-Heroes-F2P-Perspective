@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db import IntegrityError
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
@@ -45,8 +45,49 @@ def _meta():
     return meta
 
 
-def _options_map():
-    return {opt.id: opt for opt in CompletionOption.objects.all()}
+def _visible_options_qs(user):
+    if getattr(user, "is_authenticated", False):
+        qs = CompletionOption.objects.filter(
+            Q(created_by__isnull=True) | Q(created_by=user)
+        )
+    else:
+        qs = CompletionOption.objects.filter(created_by__isnull=True)
+    return qs.annotate(
+        rating_avg=Avg("ratings__score"),
+        rating_count=Count("ratings", distinct=True),
+    ).order_by("created_by_id", "sort_order", "id")
+
+
+def _options_map(user=None):
+    if user is None:
+        qs = CompletionOption.objects.filter(created_by__isnull=True)
+    elif getattr(user, "is_authenticated", False):
+        qs = CompletionOption.objects.filter(
+            Q(created_by__isnull=True) | Q(created_by=user)
+        )
+    else:
+        qs = CompletionOption.objects.filter(created_by__isnull=True)
+    return {opt.id: opt for opt in qs}
+
+
+def _get_visible_option(user, option_id):
+    try:
+        option = CompletionOption.objects.get(pk=option_id)
+    except CompletionOption.DoesNotExist:
+        return None
+    if option.created_by_id is None:
+        return option
+    if getattr(user, "is_authenticated", False) and option.created_by_id == user.id:
+        return option
+    return None
+
+
+def _can_edit_option(user, option):
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and option.created_by_id
+        and option.created_by_id == user.id
+    )
 
 
 def _ensure_user_cases(user):
@@ -127,12 +168,9 @@ def login_required_json(view):
 
 
 def _rating_maps(user):
-    options = CompletionOption.objects.annotate(
-        rating_avg=Avg("ratings__score"),
-        rating_count=Count("ratings", distinct=True),
-    )
+    options = _visible_options_qs(user)
     mine = {}
-    if user.is_authenticated:
+    if getattr(user, "is_authenticated", False):
         mine = {
             row.option_id: row.score
             for row in OptionRating.objects.filter(user=user)
@@ -284,7 +322,11 @@ def options_collection(request):
     total, sg_cost, counts = compute_option_stats(
         picks, meta.floors, meta.sg_table, floor_12_discount
     )
-    last = CompletionOption.objects.order_by("-sort_order").first()
+    last = (
+        CompletionOption.objects.filter(created_by=request.user)
+        .order_by("-sort_order")
+        .first()
+    )
     option = CompletionOption.objects.create(
         name=name,
         floors=picks,
@@ -301,10 +343,14 @@ def options_collection(request):
 @login_required_json
 @require_http_methods(["PATCH", "PUT", "DELETE"])
 def option_detail(request, option_id):
-    try:
-        option = CompletionOption.objects.get(pk=option_id)
-    except CompletionOption.DoesNotExist:
+    option = _get_visible_option(request.user, option_id)
+    if not option:
         return JsonResponse({"error": "Option not found."}, status=404)
+    if not _can_edit_option(request.user, option):
+        return JsonResponse(
+            {"error": "Default completions cannot be changed. Add your own instead."},
+            status=403,
+        )
 
     if request.method == "DELETE":
         option.delete()
@@ -338,9 +384,8 @@ def option_detail(request, option_id):
 @login_required_json
 @require_http_methods(["PUT", "POST", "DELETE"])
 def option_rate(request, option_id):
-    try:
-        option = CompletionOption.objects.get(pk=option_id)
-    except CompletionOption.DoesNotExist:
+    option = _get_visible_option(request.user, option_id)
+    if not option:
         return JsonResponse({"error": "Option not found."}, status=404)
 
     if request.method == "DELETE":
@@ -367,7 +412,7 @@ def option_rate(request, option_id):
 @login_required_json
 @require_http_methods(["GET", "POST"])
 def cases_collection(request):
-    options_by_id = _options_map()
+    options_by_id = _options_map(request.user)
     cases, mine = _case_rating_maps(request.user)
     if request.method == "GET":
         return JsonResponse(
@@ -406,7 +451,7 @@ def case_detail(request, case_id):
         return JsonResponse({"ok": True})
 
     data = _json_body(request)
-    options_by_id = _options_map()
+    options_by_id = _options_map(request.user)
     if "name" in data:
         name = (data.get("name") or "").strip()
         if not name:
@@ -450,7 +495,7 @@ def case_rate(request, case_id):
             defaults={"score": score},
         )
 
-    options_by_id = _options_map()
+    options_by_id = _options_map(request.user)
     cases, mine = _case_rating_maps(request.user)
     case = cases.get(pk=case_id)
     return JsonResponse(_case_json(case, options_by_id, mine))
