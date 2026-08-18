@@ -7,7 +7,38 @@ import MenuIconButton from "./MenuIconButton.jsx";
 import RewardIcon from "./RewardIcon.jsx";
 import { Stars } from "./StarRating.jsx";
 import { useAuth } from "../auth";
-import { REWARD_META, rewardPreview } from "../rewards";
+import { REWARD_META, REWARD_ORDER, rewardPreview } from "../rewards";
+
+const DEFAULT_SORT = "csg-asc";
+
+function sortOptions(rows, sortBy) {
+  const copy = [...rows];
+  const resourceSort = REWARD_ORDER.includes(sortBy) ? sortBy : null;
+  copy.sort((a, b) => {
+    if (sortBy === "csg-desc") {
+      const cost = Number(b.sg_cost || 0) - Number(a.sg_cost || 0);
+      if (cost) return cost;
+    } else if (sortBy === "rating-desc") {
+      const rating = Number(b.rating_avg || 0) - Number(a.rating_avg || 0);
+      if (rating) return rating;
+    } else if (sortBy === "rating-asc") {
+      const rating = Number(a.rating_avg || 0) - Number(b.rating_avg || 0);
+      if (rating) return rating;
+    } else if (resourceSort) {
+      const loot =
+        Number(b.reward_counts?.[resourceSort] || 0) -
+        Number(a.reward_counts?.[resourceSort] || 0);
+      if (loot) return loot;
+    } else {
+      const cost = Number(a.sg_cost || 0) - Number(b.sg_cost || 0);
+      if (cost) return cost;
+    }
+    const order = Number(a.sort_order || 0) - Number(b.sort_order || 0);
+    if (order) return order;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+  return copy;
+}
 
 export default function FloorPlanner({ data, onChange }) {
   const guest = Boolean(useAuth()?.user?.guest);
@@ -18,6 +49,10 @@ export default function FloorPlanner({ data, onChange }) {
   const [busy, setBusy] = useState(false);
   const [rateOption, setRateOption] = useState(null);
   const [draftRating, setDraftRating] = useState(0);
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT);
+  const [minRating, setMinRating] = useState(0);
+  const [resourceFilters, setResourceFilters] = useState([]);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const selected = data.options.find((opt) => opt.id === selectedId) || null;
   const picks = selected?.floors || {};
@@ -98,9 +133,37 @@ export default function FloorPlanner({ data, onChange }) {
     }
   }
 
-  const mineOptions = data.options.filter((opt) => !opt.is_default);
-  const defaultOptions = data.options.filter((opt) => opt.is_default);
+  const visibleOptions = useMemo(() => {
+    let rows = [...data.options];
+    if (minRating > 0) {
+      rows = rows.filter((row) => Number(row.rating_avg || 0) >= minRating);
+    }
+    if (resourceFilters.length) {
+      rows = rows.filter((row) =>
+        resourceFilters.every((type) => Number(row.reward_counts?.[type] || 0) > 0)
+      );
+    }
+    return sortOptions(rows, sortBy);
+  }, [data.options, minRating, resourceFilters, sortBy]);
+  const mineOptions = visibleOptions.filter((opt) => !opt.is_default);
+  const defaultOptions = visibleOptions.filter((opt) => opt.is_default);
   const canEditSelected = Boolean(selected && !selected.is_default && !guest);
+  const filtersActive =
+    sortBy !== DEFAULT_SORT || minRating > 0 || resourceFilters.length > 0;
+
+  function toggleResourceFilter(type) {
+    setResourceFilters((current) =>
+      current.includes(type)
+        ? current.filter((item) => item !== type)
+        : [...current, type]
+    );
+  }
+
+  function resetFilters() {
+    setSortBy(DEFAULT_SORT);
+    setMinRating(0);
+    setResourceFilters([]);
+  }
 
   function renderOptionRow(opt) {
     const editable = !guest && !opt.is_default;
@@ -210,14 +273,24 @@ export default function FloorPlanner({ data, onChange }) {
                 "Default completions are shared and cannot be changed.",
                 "Tap + Add option to make a route that only you can see and edit.",
                 "Rate default routes with half stars. The score is the community average.",
+                "Filter / Sort is a popup. Completions start sorted by CSG cost, cheapest first.",
               ]}
             />
           </div>
-          {guest ? null : (
-            <button className="gold-btn" type="button" onClick={() => setModal(true)}>
-              + Add option
+          <div className="sale-top-actions">
+            <button
+              className={filtersActive ? "gold-btn" : "tan-btn"}
+              type="button"
+              onClick={() => setFilterOpen(true)}
+            >
+              Filter / Sort
             </button>
-          )}
+            {guest ? null : (
+              <button className="gold-btn" type="button" onClick={() => setModal(true)}>
+                + Add option
+              </button>
+            )}
+          </div>
         </div>
         <div className="option-list">
           {mineOptions.length ? (
@@ -226,9 +299,32 @@ export default function FloorPlanner({ data, onChange }) {
               {mineOptions.map(renderOptionRow)}
             </>
           ) : null}
-          <h4 className="option-group-label">Default completions</h4>
-          {defaultOptions.map(renderOptionRow)}
+          {defaultOptions.length ? (
+            <>
+              <h4 className="option-group-label">Default completions</h4>
+              {defaultOptions.map(renderOptionRow)}
+            </>
+          ) : null}
+          {visibleOptions.length ? null : (
+            <p className="muted" style={{ padding: "8px 4px" }}>
+              {data.options.length
+                ? "No completions match these filters."
+                : "No completions yet."}
+            </p>
+          )}
         </div>
+        {filterOpen && (
+          <FilterSortModal
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            minRating={minRating}
+            setMinRating={setMinRating}
+            resourceFilters={resourceFilters}
+            toggleResourceFilter={toggleResourceFilter}
+            onReset={resetFilters}
+            onClose={() => setFilterOpen(false)}
+          />
+        )}
         {rateOption && (
           <RateModal
             title={`Rate ${rateOption.name}`}
@@ -407,6 +503,95 @@ export default function FloorPlanner({ data, onChange }) {
           />
         )
       )}
+    </div>
+  );
+}
+
+function FilterSortModal({
+  sortBy,
+  setSortBy,
+  minRating,
+  setMinRating,
+  resourceFilters,
+  toggleResourceFilter,
+  onReset,
+  onClose,
+}) {
+  return (
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal wide" onClick={(event) => event.stopPropagation()}>
+        <div className="head-with-help">
+          <h3>Filter / Sort</h3>
+          <HelpTip
+            title="Filter / Sort"
+            steps={[
+              "Sort starts at CSG cost, cheapest first.",
+              "Min rating hides lower-rated completions.",
+              "Resource chips keep routes that include all selected rewards.",
+              "Reset clears everything. Done closes this popup.",
+            ]}
+          />
+        </div>
+        <div className="case-filters in-modal">
+          <label className="case-filter-field">
+            Sort
+            <select
+              className="cell-select"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <option value="csg-asc">CSG cost: low to high</option>
+              <option value="csg-desc">CSG cost: high to low</option>
+              <option value="rating-desc">Rating: high to low</option>
+              <option value="rating-asc">Rating: low to high</option>
+              {REWARD_ORDER.map((type) => (
+                <option value={type} key={type}>
+                  Most {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="case-filter-field">
+            <span>Min rating</span>
+            <div className="filter-chips">
+              {[0, 1, 2, 3, 4, 5].map((score) => (
+                <button
+                  key={score}
+                  className={minRating === score ? "gold-btn" : "tan-btn"}
+                  type="button"
+                  onClick={() => setMinRating(score)}
+                >
+                  {score === 0 ? "Any" : `${score}+`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="case-filter-field">
+            <span>Resources</span>
+            <div className="filter-chips resource-chips">
+              {REWARD_ORDER.map((type) => (
+                <button
+                  key={type}
+                  className={resourceFilters.includes(type) ? "gold-btn" : "tan-btn"}
+                  type="button"
+                  onClick={() => toggleResourceFilter(type)}
+                >
+                  <RewardIcon type={type} />
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="row-actions">
+          <button className="gold-btn" type="button" onClick={onClose}>
+            Done
+          </button>
+          <button className="tan-btn" type="button" onClick={onReset}>
+            Reset
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

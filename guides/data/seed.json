@@ -395,6 +395,30 @@
       "sort_order": 3
     },
     {
+      "name": "BALANCED 20",
+      "floors": {
+        "1": "Artifacts",
+        "2": "Void",
+        "3": "Origin"
+      },
+      "floor_12_discount": true,
+      "total_cost": 20,
+      "sg_cost": 0,
+      "sort_order": 20
+    },
+    {
+      "name": "ARTI + COT",
+      "floors": {
+        "1": "Artifacts",
+        "2": "Void",
+        "4": "Void"
+      },
+      "floor_12_discount": true,
+      "total_cost": 20,
+      "sg_cost": 0,
+      "sort_order": 21
+    },
+    {
       "name": "Best Endgame",
       "floors": {
         "1": "Void",
