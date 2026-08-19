@@ -6,16 +6,29 @@ import HelpTip from "./HelpTip.jsx";
 export const EVENT_RESOURCE_TYPES = ["PO", "Scrolls", "Wishing Coins"];
 const EVENT_EDITOR_USERNAME = "Ramulica";
 
-function eventYear(value) {
-  if (!value) return null;
-  const year = Number(String(value).slice(0, 4));
-  return Number.isInteger(year) && year > 0 ? year : null;
+function dateParts(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? match[0] : "";
+}
+
+function cutoffOneYearAgo() {
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  const year = cutoff.getFullYear();
+  const month = String(cutoff.getMonth() + 1).padStart(2, "0");
+  const day = String(cutoff.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isOlderThanOneYear(value, cutoff) {
+  const date = dateParts(value);
+  return Boolean(date) && date < cutoff;
 }
 
 function sortEventsByDateDesc(events) {
   return [...(events || [])].sort((a, b) => {
-    const first = a.date || "";
-    const second = b.date || "";
+    const first = dateParts(a.date);
+    const second = dateParts(b.date);
     if (!first && !second) return (b.id || 0) - (a.id || 0);
     if (!first) return 1;
     if (!second) return -1;
@@ -24,11 +37,9 @@ function sortEventsByDateDesc(events) {
   });
 }
 
-function eventNumberLabel(event, numberedIds) {
-  const year = eventYear(event.date);
-  const currentYear = new Date().getFullYear();
-  if (year == null) return "—";
-  if (year < currentYear) return "last year";
+function eventNumberLabel(event, numberedIds, cutoff) {
+  if (!dateParts(event.date)) return "—";
+  if (isOlderThanOneYear(event.date, cutoff)) return "last year";
   const index = numberedIds.get(event.id);
   return index != null ? String(index) : "—";
 }
@@ -39,23 +50,23 @@ export default function EventPreview({ events, onChange }) {
     Boolean(user?.username === EVENT_EDITOR_USERNAME) && !user?.guest;
   const [addOpen, setAddOpen] = useState(false);
   const rows = useMemo(() => {
+    const cutoff = cutoffOneYearAgo();
     const sorted = sortEventsByDateDesc(events);
-    const currentYear = new Date().getFullYear();
     const numbered = [...sorted]
       .filter((event) => {
-        const year = eventYear(event.date);
-        return year != null && year >= currentYear;
+        const date = dateParts(event.date);
+        return date && !isOlderThanOneYear(date, cutoff);
       })
       .sort((a, b) => {
-        const first = a.date || "";
-        const second = b.date || "";
+        const first = dateParts(a.date);
+        const second = dateParts(b.date);
         if (first === second) return (a.id || 0) - (b.id || 0);
         return first.localeCompare(second);
       });
     const numberedIds = new Map(
       numbered.map((event, index) => [event.id, index + 1])
     );
-    return { sorted, numberedIds };
+    return { sorted, numberedIds, cutoff };
   }, [events]);
 
   return (
@@ -67,14 +78,16 @@ export default function EventPreview({ events, onChange }) {
             title="Event preview"
             steps={[
               "Newest events are at the top.",
-              "Dates from last year show last year. This year’s events are numbered 1 until they end.",
+              "Dates older than one year from today show last year.",
+              "Events from the last year are numbered 1 until they end.",
               "Use it as a calendar hint for PO / scrolls / wishing coins.",
             ]}
           />
         </div>
         <p>
-          Event list by date, newest first. Last year’s dates stay marked last
-          year. This year’s events are numbered from 1 until they end.
+          Event list by date, newest first. Anything older than one year from
+          today is last year. Events from the last year are numbered from 1
+          until they end.
         </p>
         {canAdd ? (
           <div className="sale-top-actions" style={{ marginTop: 12 }}>
@@ -97,7 +110,7 @@ export default function EventPreview({ events, onChange }) {
         </div>
         {rows.sorted.map((event) => (
           <div className="event-row" key={event.id}>
-            <span>{eventNumberLabel(event, rows.numberedIds)}</span>
+            <span>{eventNumberLabel(event, rows.numberedIds, rows.cutoff)}</span>
             <span>{event.date || "—"}</span>
             <strong>{event.name}</strong>
             <span>{event.resource_type || "—"}</span>
