@@ -12,9 +12,30 @@ const NAV = [
   { id: "resources", label: "Resources" },
   { id: "events", label: "Events" },
 ];
+const MENU_TAB_KEY = "ih-menu-tab";
+const TAB_IDS = new Set(NAV.map((item) => item.id));
+
+function readMenuTab() {
+  try {
+    const value = sessionStorage.getItem(MENU_TAB_KEY);
+    if (TAB_IDS.has(value)) return value;
+  } catch {
+    /* ignore */
+  }
+  return "home";
+}
 
 export default function Home() {
-  const [tab, setTab] = useState("home");
+  const [tab, setTab] = useState(readMenuTab);
+
+  function selectTab(id) {
+    setTab(id);
+    try {
+      sessionStorage.setItem(MENU_TAB_KEY, id);
+    } catch {
+      /* ignore */
+    }
+  }
   const [sgState, setSgState] = useState(DEFAULT_STATE);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -88,7 +109,7 @@ export default function Home() {
                 key={item.id}
                 className={`nav-btn${tab === item.id ? " active" : ""}`}
                 type="button"
-                onClick={() => setTab(item.id)}
+                onClick={() => selectTab(item.id)}
               >
                 {item.label}
               </button>
@@ -122,7 +143,7 @@ export default function Home() {
                 <button
                   className="gold-btn"
                   type="button"
-                  onClick={() => setTab("tools")}
+                  onClick={() => selectTab("tools")}
                 >
                   Get started
                 </button>
