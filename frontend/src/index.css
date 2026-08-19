@@ -541,6 +541,14 @@ button {
   padding: 2px;
 }
 
+.create-planner-btn {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
 button.option-row.pick {
   font: inherit;
   text-align: left;

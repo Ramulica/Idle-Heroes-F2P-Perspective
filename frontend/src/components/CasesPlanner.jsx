@@ -76,7 +76,7 @@ function PeriodCalc({ weeks }) {
   );
 }
 
-export default function CasesPlanner({ data, onChange }) {
+export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
   const guest = Boolean(useAuth()?.user?.guest);
   const [view, setView] = useState("list");
   const [selectedId, setSelectedId] = useState(null);
@@ -339,14 +339,14 @@ export default function CasesPlanner({ data, onChange }) {
       <div className="sale-wrap case-list-page">
         <div className="sale-top">
           <div className="head-with-help">
-            <h3 style={{ margin: 0 }}>Your cases</h3>
+            <h3 style={{ margin: 0 }}>Your event plans</h3>
             <HelpTip
-              title="Cases"
+              title="Event Plans"
               steps={[
-                "A case is your plan for a number of Mysterious Sale event weeks.",
+                "An event plan is how you spend Mysterious Sale event weeks.",
                 "17 event weeks = 1 year. CSG / year comes from the CSG Calculator.",
-                "Tap a case to add completions and how many times you run each one.",
-                "Filter / Sort is a popup. Resource filters keep cases that include those rewards.",
+                "Tap a plan to add completions and how many times you run each one.",
+                "Filter / Sort is a popup. Resource filters keep plans that include those rewards.",
               ]}
             />
           </div>
@@ -364,7 +364,7 @@ export default function CasesPlanner({ data, onChange }) {
             </button>
             {guest ? null : (
               <button className="gold-btn" type="button" onClick={() => setAddCaseOpen(true)}>
-                + Add case
+                + Add event plan
               </button>
             )}
           </div>
@@ -424,8 +424,8 @@ export default function CasesPlanner({ data, onChange }) {
           ) : (
             <p className="muted" style={{ padding: "8px 4px" }}>
               {data.cases.length
-                ? "No cases match these filters."
-                : "No cases yet. Add one and pick a time period."}
+                ? "No event plans match these filters."
+                : "No event plans yet. Add one and pick a time period."}
             </p>
           )}
         </div>
@@ -512,7 +512,7 @@ export default function CasesPlanner({ data, onChange }) {
         >
           <span className="muted">
             {estimatedCsg >= (selected?.total_sg_cost || 0)
-              ? "Left after case"
+              ? "Left after this plan"
               : "Short by"}
           </span>
           <CsgAmount
@@ -527,17 +527,17 @@ export default function CasesPlanner({ data, onChange }) {
     <div className="sale-wrap">
       <div className="sale-top">
         <button className="tan-btn" type="button" onClick={() => setView("list")}>
-          ← All cases
+          ← All event plans
         </button>
         <div className="head-with-help">
-          <strong>{selected?.name || "Case"}</strong>
+          <strong>{selected?.name || "Event plan"}</strong>
           <HelpTip
-            title="Case page"
+            title="Event plan"
             steps={[
-              "All rewards at the top is the total loot and CSG cost of this case.",
-              "Est. CSG is what the CSG Calculator says you earn in this case’s period (17 event weeks = 1 year).",
+              "All rewards at the top is the total loot and CSG cost of this event plan.",
+              "Est. CSG is what the CSG Calculator says you earn in this plan’s period (17 event weeks = 1 year).",
               "Gold cards below are single completions. Use × times to set how many event weeks you run that route.",
-              "The three-line menu edits this case: name, duration, rating, or delete.",
+              "The three-line menu edits this plan: name, duration, rating, or delete.",
               "+ Add completion option is at the top and the bottom.",
             ]}
           />
@@ -571,7 +571,7 @@ export default function CasesPlanner({ data, onChange }) {
       <div className="progress-line">
         {remaining
           ? `${remaining} time${remaining === 1 ? "" : "s"} left to add.`
-          : "This case period is full."}
+          : "This event plan period is full."}
         {busy ? "  Saving..." : ""}
       </div>
       <div className="option-list case-slots">
@@ -652,6 +652,7 @@ export default function CasesPlanner({ data, onChange }) {
           setSlotTimes={setSlotTimes}
           onSave={addSlot}
           onClose={() => setAddSlotOpen(false)}
+          onOpenPlanner={onOpenPlanner}
         />
       )}
     </div>
@@ -705,8 +706,8 @@ function FilterSortModal({
             steps={[
               "Sort by rating, duration, or most of a resource.",
               "Duration filters to that event-week length. 17 weeks is 1 year.",
-              "Min rating hides lower-rated cases.",
-              "Resource chips keep cases that include all selected rewards.",
+              "Min rating hides lower-rated event plans.",
+              "Resource chips keep plans that include all selected rewards.",
               "Reset clears everything. Done closes this popup.",
             ]}
           />
@@ -807,14 +808,14 @@ function EditCaseModal({
     <div className="modal-back" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <div className="head-with-help">
-          <h3>Edit case</h3>
+          <h3>Edit event plan</h3>
           <HelpTip
-            title="Edit case"
+            title="Edit event plan"
             steps={[
-              "Rename the case, set event weeks, and rate it here.",
+              "Rename the plan, set event weeks, and rate it here.",
               "Duration cannot go below the times already used.",
               "17 event weeks = 1 year. The calendar length is shown under the week count.",
-              "Delete removes this case from your account only.",
+              "Delete removes this event plan from your account only.",
             ]}
           />
         </div>
@@ -882,9 +883,9 @@ function AddCaseModal({
     <div className="modal-back" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <div className="head-with-help">
-          <h3>Add case</h3>
+          <h3>Add event plan</h3>
           <HelpTip
-            title="Add case"
+            title="Add event plan"
             steps={[
               "Name the plan, then pick how many Mysterious Sale event weeks it covers.",
               "17 event weeks = 1 year. Other week counts convert to months/years automatically.",
@@ -896,7 +897,7 @@ function AddCaseModal({
           className="cell-input"
           value={newName}
           onChange={(event) => setNewName(event.target.value)}
-          placeholder="Name this case"
+          placeholder="Name this event plan"
           autoFocus
         />
         <p className="muted" style={{ margin: "12px 0 6px" }}>
@@ -937,6 +938,7 @@ function AddSlotModal({
   setSlotTimes,
   onSave,
   onClose,
+  onOpenPlanner,
 }) {
   return (
     <div className="modal-back" onClick={onClose}>
@@ -944,17 +946,18 @@ function AddSlotModal({
         <div className="head-with-help">
           <h3>Add completion option</h3>
           <HelpTip
-            title="Add completion to a case"
+            title="Add completion to an event plan"
             steps={[
               "Pick a default or custom completion from the list.",
-              "Set how many times (event weeks) you run it in this case.",
-              "You cannot add more times than the case has left.",
+              "Set how many times (event weeks) you run it in this event plan.",
+              "You cannot add more times than the plan has left.",
+              "Scroll to the bottom to create your own route in Floor Planner.",
             ]}
           />
         </div>
         <p className="muted">
           Pick a default or custom completion. {remaining} time
-          {remaining === 1 ? "" : "s"} left in this case.
+          {remaining === 1 ? "" : "s"} left in this event plan.
         </p>
         <div className="option-pick-list">
           {options.map((opt) => (
@@ -989,6 +992,18 @@ function AddSlotModal({
               </div>
             </button>
           ))}
+          {onOpenPlanner ? (
+            <button
+              className="gold-btn create-planner-btn"
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenPlanner();
+              }}
+            >
+              Create your own Floor Planner
+            </button>
+          ) : null}
         </div>
         <label className="muted" style={{ display: "block", marginTop: 12 }}>
           How many times

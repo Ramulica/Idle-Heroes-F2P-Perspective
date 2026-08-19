@@ -75,7 +75,7 @@ export default function CompletionMenu({
           </button>
           {onRemoveSlot ? (
             <button className="tan-btn danger" type="button" onClick={onRemoveSlot}>
-              Remove from case
+              Remove from event plan
             </button>
           ) : null}
           <button className="tan-btn" type="button" onClick={onClose}>

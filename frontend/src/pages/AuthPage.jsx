@@ -47,7 +47,7 @@ export default function AuthPage({ onAuth }) {
                 ]}
               />
             </div>
-            <p>Create an account to save your CSG calculator, cases, and ratings.</p>
+            <p>Create an account to save your CSG calculator, event plans, and ratings.</p>
           </div>
         </div>
         <form className="auth-card" onSubmit={submit}>

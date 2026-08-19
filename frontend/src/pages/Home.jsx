@@ -78,7 +78,7 @@ export default function Home() {
         {guest ? (
           <p className="guest-banner">
             Guest mode — nothing is saved, and you cannot rate. Create an account
-            to keep your calculator, cases, and ratings.
+            to keep your calculator, event plans, and ratings.
           </p>
         ) : null}
         <div className="shell-body">
@@ -103,7 +103,7 @@ export default function Home() {
                     title="Home"
                     steps={[
                       "This app is an F2P helper. Use Tools for CSG, Awakens, Pages of Destiny, Monster Tickets, and Mysterious Sale.",
-                      "Create an account so your calculator and cases stay saved.",
+                      "Create an account so your calculator and event plans stay saved.",
                       "Press any (i) button in the app for short how-to steps.",
                     ]}
                   />
@@ -111,7 +111,7 @@ export default function Home() {
                 <p>
                   This is a small F2P-first helper for Idle Heroes. Start with
                   the CSG Calculator to plan Contract Starry Gem income, then
-                  open Mysterious Sale for floor routes and cases.
+                  open Mysterious Sale for floor routes and event plans.
                 </p>
               </div>
             )}
@@ -124,7 +124,7 @@ export default function Home() {
                       title="CSG Calculator"
                       steps={[
                         "Open this tool and fill Void Corruption, awakens, and extra CSG sources.",
-                        "The total is saved to your account and shown as CSG / year on the main menu and Cases.",
+                        "The total is saved to your account and shown as CSG / year on the main menu and Event Plans.",
                         "Change the time period inside the calculator to see 1 month up to 5 years.",
                       ]}
                     />
@@ -150,15 +150,15 @@ export default function Home() {
                     <HelpTip
                       title="Mysterious Sale"
                       steps={[
+                        "Event Plans: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
                         "Floor Planner: pick or create a completion, then tap one reward per floor.",
-                        "Cases: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
-                        "CSG cost of a case is compared with the CSG you earn in that period from the calculator.",
+                        "CSG cost of an event plan is compared with the CSG you earn in that period from the calculator.",
                       ]}
                     />
                   </div>
                   <p>
                     Plan 13 floors, save completion options, and build your own
-                    cases with CSG cost, loot, and a time period.
+                    event plans with CSG cost, loot, and a time period.
                   </p>
                   <button
                     className="gold-btn"
