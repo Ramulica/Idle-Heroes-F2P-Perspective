@@ -898,6 +898,13 @@ button.option-row.pick {
   color: #7a1f12;
 }
 
+.auth-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
 .guest-banner {
   margin: 0 16px 10px;
   padding: 10px 14px;

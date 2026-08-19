@@ -41,13 +41,17 @@ export default function AuthPage({ onAuth }) {
               <HelpTip
                 title="Account"
                 steps={[
-                  "Create account or log in with a username and password.",
+                  "This is not a game login. Any username and password is fine, even 1234 and 1234.",
+                  "The only reason for an account is to save your calculator setups, event plans, and ratings.",
                   "Usernames must be unique. If it is taken, log in or pick another.",
                   "Continue as guest to look around. Nothing is saved and you cannot rate.",
                 ]}
               />
             </div>
-            <p>Create an account to save your CSG calculator, event plans, and ratings.</p>
+            <p>
+              Create an account only to save your calculator setups. This is not
+              a game login.
+            </p>
           </div>
         </div>
         <form className="auth-card" onSubmit={submit}>
@@ -91,6 +95,11 @@ export default function AuthPage({ onAuth }) {
             />
           </label>
           {error ? <p className="error">{error}</p> : null}
+          <p className="auth-note">
+            * You can pick any username and password, even 1234 and 1234. This
+            is not an Idle Heroes login and is not used anywhere else. The only
+            purpose of a user here is to save your calculator setups.
+          </p>
           <button className="gold-btn" type="submit" disabled={busy}>
             {busy
               ? "Please wait..."

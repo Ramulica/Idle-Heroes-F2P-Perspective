@@ -98,23 +98,26 @@ export default function Home() {
             {tab === "home" && (
               <div className="info-card">
                 <div className="head-with-help">
-                  <h3>Welcome, summoner</h3>
+                  <h3>Welcome, idler</h3>
                   <HelpTip
                     title="Home"
                     steps={[
-                      "Start with Pages of Destiny, Monster Tickets, and the Awakens Calculator.",
-                      "Then open the CSG Calculator to see how many Contract Starry Gems you earn.",
-                      "After that, use Mysterious Sale for floor routes and event plans.",
+                      "Start with Pages of Destiny, Monster Tickets, and the Awakens Calculator to see income over months and years.",
+                      "Then open the CSG Calculator to see how many Contract Starry Gems you earn over that same longer period.",
+                      "After that, use Mysterious Sale for floor routes and event plans over time.",
                       "Get started opens Tools.",
                     ]}
                   />
                 </div>
                 <p>
-                  This is a small F2P-first helper for Idle Heroes. Start with
-                  the Pages of Destiny, Monster Tickets, and Awakens
-                  calculators. Then open the CSG Calculator to see how many
-                  Contract Starry Gems you earn. After that, use Mysterious Sale
-                  for floor routes and event plans.
+                  This is a small F2P-first helper for Idle Heroes. It is meant
+                  for a longer period of time: months and years, not just one
+                  event week. Start with the Pages of Destiny, Monster Tickets,
+                  and Awakens calculators to see what you get over that stretch.
+                  Then open the CSG Calculator to see how many Contract Starry
+                  Gems you earn across the same months and years. After that,
+                  use Mysterious Sale for floor routes and event plans over that
+                  longer period.
                 </p>
                 <button
                   className="gold-btn"
