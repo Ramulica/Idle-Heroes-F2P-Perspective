@@ -102,7 +102,7 @@ export default function Home() {
                   <HelpTip
                     title="Home"
                     steps={[
-                      "This app is an F2P helper. Use Tools for CSG, Awakens, Pages of Destiny, and Mysterious Sale.",
+                      "This app is an F2P helper. Use Tools for CSG, Awakens, Pages of Destiny, Monster Tickets, and Mysterious Sale.",
                       "Create an account so your calculator and cases stay saved.",
                       "Press any (i) button in the app for short how-to steps.",
                     ]}
@@ -175,13 +175,14 @@ export default function Home() {
                       title="Awakens Calculator"
                       steps={[
                         "Same awaken ticks as the CSG Calculator. Changes save to both.",
-                        "Tick Pages of Destiny to add 30 awakens per 100-page event into the total.",
+                        "Tick Pages of Destiny or Monster Tickets to add 30 awakens per 100-spend event into the total.",
                       ]}
                     />
                   </div>
                   <p>
-                    Plan Trial of the Champion rank, chests, Sky Labyrinth, and
-                    Pages of Destiny awakens. Synced with the CSG Calculator.
+                    Plan Trial of the Champion rank, chests, Sky Labyrinth, Pages
+                    of Destiny, and Monster Ticket awakens. Synced with the CSG
+                    Calculator.
                   </p>
                   <button
                     className="gold-btn"
@@ -222,13 +223,14 @@ export default function Home() {
                       title="Monster Tickets Calculator"
                       steps={[
                         "Tick other sources from special events, Reverie keys, and CD keys.",
-                        "The default is 100 tickets / year. Change the number if yours is different.",
+                        "Every 100 tickets is one event: 30 awakens plus a special box.",
+                        "Tick those awakens in the Awakens Calculator if you want them in CSG.",
                       ]}
                     />
                   </div>
                   <p>
-                    Count Monster Tickets from special events, Reverie keys, and
-                    CD keys over a time period.
+                    Count Monster Tickets, then see how many 100-ticket events
+                    you can run. Same rewards as Pages of Destiny.
                   </p>
                   <button
                     className="gold-btn"

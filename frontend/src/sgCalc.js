@@ -21,6 +21,7 @@ export const PAGES_OTHER_YEARLY_DEFAULT = 40;
 export const PAGES_PER_EVENT = 100;
 export const PAGES_EVENT_AWAKENS = 30;
 export const MONSTER_TICKETS_YEARLY_DEFAULT = 100;
+export const MONSTER_TICKETS_PER_EVENT = 100;
 
 export const PERIOD_PRESETS = [
   { months: 1, label: "1 month" },
@@ -81,6 +82,7 @@ export const DEFAULT_STATE = {
   includePagesAwakens: false,
   monsterTicketsOn: true,
   monsterTicketsYearly: MONSTER_TICKETS_YEARLY_DEFAULT,
+  includeMonsterTicketAwakens: false,
 };
 
 export function clampMonths(value) {
@@ -190,9 +192,28 @@ export function calculateMonsterTickets(state = {}) {
     : 0;
   const months = clampMonths(state.months);
   const years = months / MONTHS_PER_YEAR;
+  const eventsYearly = Math.floor(yearly / MONSTER_TICKETS_PER_EVENT);
+  const leftoverYearly = yearly - eventsYearly * MONSTER_TICKETS_PER_EVENT;
+  const boxesYearly = eventsYearly;
+  const awakensYearly = eventsYearly * PAGES_EVENT_AWAKENS;
+  const awakensCycle = awakensYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
+  const period = yearly * years;
+  const eventsPeriod = Math.floor(period / MONSTER_TICKETS_PER_EVENT);
+  const leftoverPeriod = period - eventsPeriod * MONSTER_TICKETS_PER_EVENT;
+  const boxesPeriod = eventsPeriod;
+  const awakensPeriod = eventsPeriod * PAGES_EVENT_AWAKENS;
   return {
     yearly,
-    period: yearly * years,
+    period,
+    eventsYearly,
+    leftoverYearly,
+    boxesYearly,
+    awakensYearly,
+    awakensCycle,
+    eventsPeriod,
+    leftoverPeriod,
+    boxesPeriod,
+    awakensPeriod,
   };
 }
 
@@ -220,6 +241,9 @@ export function calculateSg(state) {
   const pages = calculatePages(state);
   const monsterTickets = calculateMonsterTickets(state);
   const pagesAwakensCycle = state.includePagesAwakens ? pages.awakensCycle : 0;
+  const ticketAwakensCycle = state.includeMonsterTicketAwakens
+    ? monsterTickets.awakensCycle
+    : 0;
   const awakensPerCycle =
     weekly * AWAKEN_CYCLE_WEEKS +
     chest +
@@ -227,7 +251,8 @@ export function calculateSg(state) {
     free +
     deluxe +
     factoryEvery +
-    pagesAwakensCycle;
+    pagesAwakensCycle +
+    ticketAwakensCycle;
   const csgPerAwaken = Math.max(0, Number(state.csgPerAwaken) || 0);
   const labyrinthCsgCost = state.skyLabyrinth ? LABYRINTH_CSG_COST : 0;
   const awakenCsgPerCycle =
@@ -275,6 +300,7 @@ export function calculateSg(state) {
     pages,
     monsterTickets,
     pagesAwakensCycle,
+    ticketAwakensCycle,
     awakensPerCycle,
     csgPerAwaken,
     awakenCsgPerCycle,

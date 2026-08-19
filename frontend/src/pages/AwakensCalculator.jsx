@@ -22,6 +22,7 @@ export default function AwakensCalculator() {
                   "This is the same awakens block as the CSG Calculator. Changes save to both.",
                   "Account level still changes Trial of the Champion rank awakens.",
                   "Tick Pages of Destiny if you want those event awakens in the total.",
+                  "Tick Monster Tickets the same way for 100-ticket events.",
                 ]}
               />
             </div>

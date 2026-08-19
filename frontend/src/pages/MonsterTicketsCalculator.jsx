@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom";
+import AwakenAmount from "../components/AwakenAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import MonsterTicketAmount from "../components/MonsterTicketAmount.jsx";
+import SpecialBoxAmount from "../components/SpecialBoxAmount.jsx";
 import { useSgCalc } from "../useSgCalc";
 import {
   clampMonths,
+  MONSTER_TICKETS_PER_EVENT,
   MONSTER_TICKETS_YEARLY_DEFAULT,
+  PAGES_EVENT_AWAKENS,
   PERIOD_PRESETS,
   periodLabel,
 } from "../sgCalc";
@@ -25,14 +29,14 @@ export default function MonsterTicketsCalculator() {
                 title="Monster Tickets"
                 steps={[
                   "Tick only the checkbox for the income source.",
-                  "The default is 100 tickets / year from special events, Reverie keys, and CD keys.",
-                  "Pick a time period to see how many tickets you get in that window.",
+                  `Every ${MONSTER_TICKETS_PER_EVENT} tickets runs one event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
+                  "Open Awakens Calculator and tick Monster Tickets to add those awakens to CSG income.",
                 ]}
               />
             </div>
             <p>
-              Track Monster Ticket income from special events, Reverie keys, and
-              CD keys.
+              Track Monster Ticket income, pick a time period, then see how many
+              100-ticket events you can run.
             </p>
           </div>
           <button className="tan-btn" type="button" onClick={() => navigate("/")}>
@@ -47,20 +51,35 @@ export default function MonsterTicketsCalculator() {
         ) : null}
         <div className="shell-body no-sidebar">
           <section className="main-panel calc-panel">
-            <div className="total-banner preview-banner">
+            <div className="total-banner preview-banner pages-event-banner">
               <div>
-                <h3>Monster tickets</h3>
+                <h3>100-ticket event</h3>
                 <p>
-                  In {periodLabel(state.months)}:{" "}
+                  Consume{" "}
+                  <MonsterTicketAmount value={MONSTER_TICKETS_PER_EVENT} /> to
+                  get <AwakenAmount value={PAGES_EVENT_AWAKENS} /> +{" "}
+                  <SpecialBoxAmount value={1} />
+                </p>
+                <p>
+                  Tickets in {periodLabel(state.months)}:{" "}
                   <MonsterTicketAmount value={tickets.period} />
+                </p>
+                <p>
+                  Leftover in {periodLabel(state.months)}:{" "}
+                  <MonsterTicketAmount value={tickets.leftoverPeriod} />
                 </p>
               </div>
               <div className="pages-event-total">
-                <span>/ year</span>
-                <MonsterTicketAmount
-                  value={tickets.yearly}
-                  className="preview-hero"
-                />
+                <span>Times / {periodLabel(state.months)}</span>
+                <strong>{tickets.eventsPeriod}</strong>
+                <span className="pages-event-rewards">
+                  <AwakenAmount value={tickets.awakensPeriod} />
+                  <SpecialBoxAmount value={tickets.boxesPeriod} />
+                </span>
+                <span>
+                  {tickets.eventsYearly} / year ·{" "}
+                  <MonsterTicketAmount value={tickets.yearly} /> / year
+                </span>
               </div>
             </div>
 
@@ -72,7 +91,7 @@ export default function MonsterTicketsCalculator() {
                     title="Time period"
                     steps={[
                       "Choose 1 month to 5 years, or drag the slider.",
-                      "The preview above scales tickets to this window.",
+                      "The preview above scales tickets, events, awakens, and boxes to this window.",
                     ]}
                   />
                 </div>

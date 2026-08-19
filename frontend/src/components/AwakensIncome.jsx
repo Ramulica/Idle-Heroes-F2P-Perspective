@@ -13,6 +13,7 @@ import {
 
 export default function AwakensIncome({ state, result, patch }) {
   const pages = result.pages || {};
+  const tickets = result.monsterTickets || {};
 
   return (
     <article className="calc-row" id="sg-awakens">
@@ -26,7 +27,7 @@ export default function AwakensIncome({ state, result, patch }) {
               "Tick only the checkbox, not the whole row.",
               "Sky Labyrinth adds 10 soulbond + 8 normal awakens / 5 weeks and costs 1000 CSG / 5 weeks.",
               "Fantasy Factory every time or every other are mutually exclusive.",
-              "Pages of Destiny adds 30 awakens per 100-page event if that tick is on.",
+              "Pages of Destiny and Monster Tickets add 30 awakens per 100-spend event if those ticks are on.",
             ]}
           />
         </div>
@@ -176,6 +177,20 @@ export default function AwakensIncome({ state, result, patch }) {
             Awakens from Pages of Destiny events (
             <AwakenAmount value={pages.awakensYearly} /> / year +{" "}
             <SpecialBoxAmount value={pages.boxesYearly} /> / year)
+          </span>
+        </div>
+        <div className="check-card">
+          <input
+            type="checkbox"
+            checked={state.includeMonsterTicketAwakens}
+            onChange={(event) =>
+              patch({ includeMonsterTicketAwakens: event.target.checked })
+            }
+          />
+          <span>
+            Awakens from Monster Ticket events (
+            <AwakenAmount value={tickets.awakensYearly} /> / year +{" "}
+            <SpecialBoxAmount value={tickets.boxesYearly} /> / year)
           </span>
         </div>
       </div>
