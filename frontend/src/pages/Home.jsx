@@ -14,7 +14,7 @@ const NAV = [
 ];
 
 export default function Home() {
-  const [tab, setTab] = useState("tools");
+  const [tab, setTab] = useState("home");
   const [sgState, setSgState] = useState(DEFAULT_STATE);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -102,17 +102,27 @@ export default function Home() {
                   <HelpTip
                     title="Home"
                     steps={[
-                      "This app is an F2P helper. Use Tools for CSG, Awakens, Pages of Destiny, Monster Tickets, and Mysterious Sale.",
-                      "Create an account so your calculator and event plans stay saved.",
-                      "Press any (i) button in the app for short how-to steps.",
+                      "Start with Pages of Destiny, Monster Tickets, and the Awakens Calculator.",
+                      "Then open the CSG Calculator to see how many Contract Starry Gems you earn.",
+                      "After that, use Mysterious Sale for floor routes and event plans.",
+                      "Get started opens Tools.",
                     ]}
                   />
                 </div>
                 <p>
                   This is a small F2P-first helper for Idle Heroes. Start with
-                  the CSG Calculator to plan Contract Starry Gem income, then
-                  open Mysterious Sale for floor routes and event plans.
+                  the Pages of Destiny, Monster Tickets, and Awakens
+                  calculators. Then open the CSG Calculator to see how many
+                  Contract Starry Gems you earn. After that, use Mysterious Sale
+                  for floor routes and event plans.
                 </p>
+                <button
+                  className="gold-btn"
+                  type="button"
+                  onClick={() => setTab("tools")}
+                >
+                  Get started
+                </button>
               </div>
             )}
             {tab === "tools" && (
