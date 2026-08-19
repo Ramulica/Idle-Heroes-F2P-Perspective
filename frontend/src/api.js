@@ -90,4 +90,6 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ score }),
     }),
+  createEvent: (payload) =>
+    request("/api/events/", { method: "POST", body: JSON.stringify(payload) }),
 };

@@ -111,4 +111,7 @@ class EventPreview(models.Model):
     sort_order = models.IntegerField(default=0)
 
     class Meta:
-        ordering = ["sort_order", "id"]
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return self.name

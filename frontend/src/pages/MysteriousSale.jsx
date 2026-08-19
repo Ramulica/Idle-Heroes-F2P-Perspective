@@ -76,7 +76,9 @@ export default function MysteriousSale({ data, onChange }) {
               />
             )}
             {page === "rewards" && <RewardsInfo data={data} />}
-            {page === "preview" && <EventPreview events={data.events} />}
+            {page === "preview" && (
+              <EventPreview events={data.events} onChange={onChange} />
+            )}
           </section>
         </div>
       </div>

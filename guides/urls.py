@@ -15,4 +15,5 @@ urlpatterns = [
     path("cases/", views.cases_collection),
     path("cases/<int:case_id>/", views.case_detail),
     path("cases/<int:case_id>/rate/", views.case_rate),
+    path("events/", views.events_collection),
 ]

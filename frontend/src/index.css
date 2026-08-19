@@ -1241,7 +1241,7 @@ th {
 
 .event-row {
   display: grid;
-  grid-template-columns: 90px 120px 1fr 140px;
+  grid-template-columns: 110px 120px 1fr 140px;
   gap: 8px;
   background: #fffaf0;
   border: 1px solid #d7bf93;

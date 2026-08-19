@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 
@@ -31,6 +32,8 @@ from .services import (
 )
 
 VALID_SCORES = {Decimal(str(x / 2)) for x in range(0, 11)}
+EVENT_EDITOR_USERNAME = "Ramulica"
+EVENT_RESOURCE_TYPES = ("PO", "Scrolls", "Wishing Coins")
 
 
 def _json_body(request):
@@ -276,7 +279,7 @@ def bootstrap(request):
             "resource_type": event.resource_type,
             "sort_order": event.sort_order,
         }
-        for event in EventPreview.objects.all()
+        for event in EventPreview.objects.order_by("-date", "-id")
     ]
     return JsonResponse(
         {
@@ -511,6 +514,51 @@ def case_rate(request, case_id):
     cases, mine = _case_rating_maps(request.user)
     case = cases.get(pk=case_id)
     return JsonResponse(_case_json(case, options_by_id, mine))
+
+
+def _can_edit_events(user):
+    return (
+        getattr(user, "is_authenticated", False)
+        and getattr(user, "username", "") == EVENT_EDITOR_USERNAME
+    )
+
+
+def _event_json(event):
+    return {
+        "id": event.id,
+        "event_number": event.event_number,
+        "date": event.date.isoformat() if event.date else None,
+        "name": event.name,
+        "resource_type": event.resource_type,
+        "sort_order": event.sort_order,
+    }
+
+
+@login_required_json
+@require_http_methods(["POST"])
+def events_collection(request):
+    if not _can_edit_events(request.user):
+        return JsonResponse({"error": "Only Ramulica can add events."}, status=403)
+    data = _json_body(request)
+    name = (data.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"error": "Name is required."}, status=400)
+    resource_type = (data.get("resource_type") or "").strip()
+    if resource_type not in EVENT_RESOURCE_TYPES:
+        return JsonResponse(
+            {"error": "Pick PO, Scrolls, or Wishing Coins."}, status=400
+        )
+    raw_date = (data.get("date") or "").strip()
+    try:
+        event_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse({"error": "Pick a valid date."}, status=400)
+    event = EventPreview.objects.create(
+        date=event_date,
+        name=name,
+        resource_type=resource_type,
+    )
+    return JsonResponse(_event_json(event), status=201)
 
 
 @ensure_csrf_cookie
