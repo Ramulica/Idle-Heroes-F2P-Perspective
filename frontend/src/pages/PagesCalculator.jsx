@@ -82,7 +82,6 @@ export default function PagesCalculator() {
                   <SpecialBoxAmount value={pages.boxesPeriod} />
                 </span>
                 <span>
-                  {pages.eventsYearly} / year ·{" "}
                   <PagesAmount value={pages.pagesYearly} /> / year
                 </span>
               </div>

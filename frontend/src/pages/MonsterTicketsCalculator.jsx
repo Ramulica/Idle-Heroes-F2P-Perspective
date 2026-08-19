@@ -77,7 +77,6 @@ export default function MonsterTicketsCalculator() {
                   <SpecialBoxAmount value={tickets.boxesPeriod} />
                 </span>
                 <span>
-                  {tickets.eventsYearly} / year ·{" "}
                   <MonsterTicketAmount value={tickets.yearly} /> / year
                 </span>
               </div>
