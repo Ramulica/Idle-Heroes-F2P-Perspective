@@ -102,22 +102,22 @@ export default function Home() {
                   <HelpTip
                     title="Home"
                     steps={[
-                      "Start with Pages of Destiny, Monster Tickets, and the Awakens Calculator to see income over months and years.",
-                      "Then open the CSG Calculator to see how many Contract Starry Gems you earn over that same longer period.",
-                      "After that, use Mysterious Sale for floor routes and event plans over time.",
+                      "This helper is for resource income over a longer stretch, such as 1 year or more.",
+                      "Start with Pages of Destiny, Monster Tickets, and the Awakens Calculator.",
+                      "Then open the CSG Calculator to see how many Contract Starry Gems that income gives you.",
+                      "After that, use Mysterious Sale for floor routes and event plans.",
                       "Get started opens Tools.",
                     ]}
                   />
                 </div>
                 <p>
-                  This is a small F2P-first helper for Idle Heroes. It is meant
-                  for a longer period of time: months and years, not just one
-                  event week. Start with the Pages of Destiny, Monster Tickets,
-                  and Awakens calculators to see what you get over that stretch.
-                  Then open the CSG Calculator to see how many Contract Starry
-                  Gems you earn across the same months and years. After that,
-                  use Mysterious Sale for floor routes and event plans over that
-                  longer period.
+                  This is a small F2P helper for Idle Heroes. It helps an idler
+                  calculate resource income over a longer stretch, such as 1
+                  year or more. Start with the Pages of Destiny, Monster
+                  Tickets, and Awakens calculators. Then open the CSG Calculator
+                  to see how many Contract Starry Gems that income gives you.
+                  After that, use Mysterious Sale to plan floor routes and event
+                  plans.
                 </p>
                 <button
                   className="gold-btn"
