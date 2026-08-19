@@ -205,6 +205,11 @@ export function calculateSg(state) {
   const awakenPeriod =
     (awakensPerCycle * csgPerAwaken - labyrinthCsgCost) * cycles5 +
     factoryOther * csgPerAwaken * cycles10;
+  const awakensYearly =
+    awakensPerCycle * (WEEKS_PER_YEAR / AWAKEN_CYCLE_WEEKS) +
+    factoryOther * (WEEKS_PER_YEAR / B_STONE_WEEKS);
+  const awakensPeriodCount =
+    awakensPerCycle * cycles5 + factoryOther * cycles10;
 
   const bStonePerCycle = state.bStone ? B_STONE_CSG : 0;
   const bStonePeriod = bStonePerCycle * cycles10;
@@ -241,6 +246,8 @@ export function calculateSg(state) {
     csgPerAwaken,
     awakenCsgPerCycle,
     awakenPeriod,
+    awakensYearly,
+    awakensPeriodCount,
     bStonePerCycle,
     bStonePeriod,
     otherYearly,

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import AwakenAmount from "../components/AwakenAmount.jsx";
 import AwakensIncome from "../components/AwakensIncome.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import { useSgCalc } from "../useSgCalc";
@@ -40,6 +41,34 @@ export default function AwakensCalculator() {
         ) : null}
         <div className="shell-body no-sidebar">
           <section className="main-panel calc-panel">
+            <div className="total-banner preview-banner awakens-preview-banner">
+              <div>
+                <h3>Awakens preview</h3>
+                <p>
+                  Weekly: <AwakenAmount value={result.weekly} />
+                </p>
+                <p>
+                  Every 5 weeks: <AwakenAmount value={result.awakensPerCycle} />
+                  {state.factoryMode === "other" ? (
+                    <>
+                      {" "}
+                      + <AwakenAmount value={10} /> every 10 weeks
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <div className="pages-event-total">
+                <span>/ year</span>
+                <AwakenAmount
+                  value={result.awakensYearly}
+                  className="preview-hero"
+                />
+                <span>
+                  Over {periodLabel(state.months)}:{" "}
+                  <AwakenAmount value={result.awakensPeriodCount} />
+                </span>
+              </div>
+            </div>
             <article className="calc-row" id="sg-period">
               <div className="calc-row-head">
                 <div className="head-with-help">
