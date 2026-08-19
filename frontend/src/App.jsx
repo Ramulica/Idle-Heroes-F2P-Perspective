@@ -6,6 +6,8 @@ import { LoadingOverlay, LoadingScreen } from "./components/LoadingSpinner.jsx";
 import Home from "./pages/Home.jsx";
 import MysteriousSale from "./pages/MysteriousSale.jsx";
 import SgCalculator from "./pages/SgCalculator.jsx";
+import AwakensCalculator from "./pages/AwakensCalculator.jsx";
+import PagesCalculator from "./pages/PagesCalculator.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 
 function PendingOverlay() {
@@ -77,6 +79,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/guides/sg-calculator" element={<SgCalculator />} />
+        <Route path="/guides/awakens-calculator" element={<AwakensCalculator />} />
+        <Route path="/guides/pages-calculator" element={<PagesCalculator />} />
         <Route path="/guides/mysterious-sale" element={<MysteriousSaleGate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

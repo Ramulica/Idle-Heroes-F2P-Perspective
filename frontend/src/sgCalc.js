@@ -12,6 +12,14 @@ export const LABYRINTH_AWAKENS = 18;
 export const LABYRINTH_CSG_COST = 1000;
 export const FACTORY_AWAKENS = 10;
 export const MAX_VOID_CYCLE = 600;
+export const PAGES_ARENA_WEEKLY = 3;
+export const PAGES_GEMS_MONTHLY = 10;
+export const PAGES_FACTORY_YEARLY = 50;
+export const PAGES_FACTORY_EVENTS_PER_YEAR = 5;
+export const PAGES_FACTORY_PER_EVENT = 10;
+export const PAGES_OTHER_YEARLY_DEFAULT = 40;
+export const PAGES_PER_EVENT = 100;
+export const PAGES_EVENT_AWAKENS = 30;
 
 export const PERIOD_PRESETS = [
   { months: 1, label: "1 month" },
@@ -64,6 +72,12 @@ export const DEFAULT_STATE = {
   bStone: false,
   otherYearly: 0,
   p2wYearly: 0,
+  pagesArenaStore: true,
+  pagesGemsMonthly: false,
+  pagesFactory: true,
+  pagesOtherOn: true,
+  pagesOtherYearly: PAGES_OTHER_YEARLY_DEFAULT,
+  includePagesAwakens: false,
 };
 
 export function clampMonths(value) {
@@ -101,6 +115,56 @@ export function rankAwakens(rankId, accountLevel) {
   return Math.max(0, base + rankLevelMod(accountLevel));
 }
 
+export function calculatePages(state = {}) {
+  const arenaWeekly = state.pagesArenaStore ? PAGES_ARENA_WEEKLY : 0;
+  const arenaYearly = arenaWeekly * WEEKS_PER_YEAR;
+  const arenaCycle = arenaWeekly * AWAKEN_CYCLE_WEEKS;
+
+  const gemsMonthly = state.pagesGemsMonthly ? PAGES_GEMS_MONTHLY : 0;
+  const gemsYearly = gemsMonthly * MONTHS_PER_YEAR;
+  const gemsCycle = state.pagesGemsMonthly
+    ? PAGES_GEMS_MONTHLY * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_MONTH)
+    : 0;
+
+  const factoryYearly = state.pagesFactory ? PAGES_FACTORY_YEARLY : 0;
+  const factoryPerEvent = state.pagesFactory ? PAGES_FACTORY_PER_EVENT : 0;
+  const factoryEventsPerYear = state.pagesFactory ? PAGES_FACTORY_EVENTS_PER_YEAR : 0;
+
+  const otherYearly = state.pagesOtherOn
+    ? Math.max(0, Number(state.pagesOtherYearly) || 0)
+    : 0;
+  const otherCycle = otherYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
+
+  const pagesYearly = arenaYearly + gemsYearly + factoryYearly + otherYearly;
+  const pagesCycle = arenaCycle + gemsCycle + factoryPerEvent + otherCycle;
+  const eventsYearly = Math.floor(pagesYearly / PAGES_PER_EVENT);
+  const leftoverPages = pagesYearly - eventsYearly * PAGES_PER_EVENT;
+  const boxesYearly = eventsYearly;
+  const awakensYearly = eventsYearly * PAGES_EVENT_AWAKENS;
+  const awakensCycle = awakensYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
+
+  return {
+    arenaWeekly,
+    arenaYearly,
+    arenaCycle,
+    gemsMonthly,
+    gemsYearly,
+    gemsCycle,
+    factoryYearly,
+    factoryPerEvent,
+    factoryEventsPerYear,
+    otherYearly,
+    otherCycle,
+    pagesYearly,
+    pagesCycle,
+    eventsYearly,
+    leftoverPages,
+    boxesYearly,
+    awakensYearly,
+    awakensCycle,
+  };
+}
+
 export function calculateSg(state) {
   const months = clampMonths(state.months);
   const years = months / MONTHS_PER_YEAR;
@@ -122,13 +186,16 @@ export function calculateSg(state) {
   const labyrinth = state.skyLabyrinth ? LABYRINTH_AWAKENS : 0;
   const factoryEvery = state.factoryMode === "every" ? FACTORY_AWAKENS : 0;
   const factoryOther = state.factoryMode === "other" ? FACTORY_AWAKENS : 0;
+  const pages = calculatePages(state);
+  const pagesAwakensCycle = state.includePagesAwakens ? pages.awakensCycle : 0;
   const awakensPerCycle =
     weekly * AWAKEN_CYCLE_WEEKS +
     chest +
     labyrinth +
     free +
     deluxe +
-    factoryEvery;
+    factoryEvery +
+    pagesAwakensCycle;
   const csgPerAwaken = Math.max(0, Number(state.csgPerAwaken) || 0);
   const labyrinthCsgCost = state.skyLabyrinth ? LABYRINTH_CSG_COST : 0;
   const awakenCsgPerCycle =
@@ -168,6 +235,8 @@ export function calculateSg(state) {
     factoryOther,
     free,
     deluxe,
+    pages,
+    pagesAwakensCycle,
     awakensPerCycle,
     csgPerAwaken,
     awakenCsgPerCycle,

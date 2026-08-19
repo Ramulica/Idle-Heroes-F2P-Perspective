@@ -52,7 +52,7 @@ export default function Home() {
                 title="Main menu"
                 steps={[
                   "CSG / year comes from your CSG Calculator. Tap it to open and fill in your account.",
-                  "Tools holds the CSG Calculator and Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, and Pages of Destiny calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -102,7 +102,7 @@ export default function Home() {
                   <HelpTip
                     title="Home"
                     steps={[
-                      "This app is an F2P helper. Use Tools to open the CSG Calculator and Mysterious Sale.",
+                      "This app is an F2P helper. Use Tools for CSG, Awakens, Pages of Destiny, and Mysterious Sale.",
                       "Create an account so your calculator and cases stay saved.",
                       "Press any (i) button in the app for short how-to steps.",
                     ]}
@@ -140,6 +140,53 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/sg-calculator")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Awakens Calculator</h3>
+                    <HelpTip
+                      title="Awakens Calculator"
+                      steps={[
+                        "Same awaken ticks as the CSG Calculator. Changes save to both.",
+                        "Tick Pages of Destiny to add 30 awakens per 100-page event into the total.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Plan Trial of the Champion rank, chests, Sky Labyrinth, and
+                    Pages of Destiny awakens. Synced with the CSG Calculator.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/awakens-calculator")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Pages of Destiny Calculator</h3>
+                    <HelpTip
+                      title="Pages of Destiny Calculator"
+                      steps={[
+                        "Tick arena store, monthly gems, Fantasy Factory, and other sources.",
+                        "Every 100 pages is one event: 30 awakens plus a special box.",
+                        "Tick those awakens in the Awakens Calculator if you want them in CSG.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Add up Pages of Destiny income, then see how many 100-page
+                    events you can run each year.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/pages-calculator")}
                   >
                     Open tool
                   </button>
