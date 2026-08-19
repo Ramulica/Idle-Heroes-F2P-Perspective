@@ -214,7 +214,8 @@ export default function PagesCalculator() {
                     }
                   />
                   <span>
-                    Other sources (special events / Revery boxes), about{" "}
+                    Other sources (special events / Reverie keys / cd keys),
+                    about{" "}
                     {PAGES_OTHER_YEARLY_DEFAULT} / year
                   </span>
                   <input

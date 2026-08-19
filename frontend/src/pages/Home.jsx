@@ -52,7 +52,7 @@ export default function Home() {
                 title="Main menu"
                 steps={[
                   "CSG / year comes from your CSG Calculator. Tap it to open and fill in your account.",
-                  "Tools holds the CSG, Awakens, and Pages of Destiny calculators, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages of Destiny, and Monster Tickets calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -211,6 +211,29 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/pages-calculator")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Monster Tickets Calculator</h3>
+                    <HelpTip
+                      title="Monster Tickets Calculator"
+                      steps={[
+                        "Tick other sources from special events, Reverie keys, and CD keys.",
+                        "The default is 40 tickets / year. Change the number if yours is different.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Count Monster Tickets from special events, Reverie keys, and
+                    CD keys over a time period.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/monster-tickets")}
                   >
                     Open tool
                   </button>

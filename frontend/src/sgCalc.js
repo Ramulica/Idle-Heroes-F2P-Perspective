@@ -20,6 +20,7 @@ export const PAGES_FACTORY_PER_EVENT = 10;
 export const PAGES_OTHER_YEARLY_DEFAULT = 40;
 export const PAGES_PER_EVENT = 100;
 export const PAGES_EVENT_AWAKENS = 30;
+export const MONSTER_TICKETS_YEARLY_DEFAULT = 40;
 
 export const PERIOD_PRESETS = [
   { months: 1, label: "1 month" },
@@ -78,6 +79,8 @@ export const DEFAULT_STATE = {
   pagesOtherOn: true,
   pagesOtherYearly: PAGES_OTHER_YEARLY_DEFAULT,
   includePagesAwakens: false,
+  monsterTicketsOn: true,
+  monsterTicketsYearly: MONSTER_TICKETS_YEARLY_DEFAULT,
 };
 
 export function clampMonths(value) {
@@ -180,6 +183,18 @@ export function calculatePages(state = {}) {
   };
 }
 
+export function calculateMonsterTickets(state = {}) {
+  const yearly = state.monsterTicketsOn
+    ? Math.max(0, Number(state.monsterTicketsYearly) || 0)
+    : 0;
+  const months = clampMonths(state.months);
+  const years = months / MONTHS_PER_YEAR;
+  return {
+    yearly,
+    period: yearly * years,
+  };
+}
+
 export function calculateSg(state) {
   const months = clampMonths(state.months);
   const years = months / MONTHS_PER_YEAR;
@@ -202,6 +217,7 @@ export function calculateSg(state) {
   const factoryEvery = state.factoryMode === "every" ? FACTORY_AWAKENS : 0;
   const factoryOther = state.factoryMode === "other" ? FACTORY_AWAKENS : 0;
   const pages = calculatePages(state);
+  const monsterTickets = calculateMonsterTickets(state);
   const pagesAwakensCycle = state.includePagesAwakens ? pages.awakensCycle : 0;
   const awakensPerCycle =
     weekly * AWAKEN_CYCLE_WEEKS +
@@ -256,6 +272,7 @@ export function calculateSg(state) {
     free,
     deluxe,
     pages,
+    monsterTickets,
     pagesAwakensCycle,
     awakensPerCycle,
     csgPerAwaken,
