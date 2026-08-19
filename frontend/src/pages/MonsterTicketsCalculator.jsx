@@ -25,7 +25,7 @@ export default function MonsterTicketsCalculator() {
                 title="Monster Tickets"
                 steps={[
                   "Tick only the checkbox for the income source.",
-                  "The default is 40 tickets / year from special events, Reverie keys, and CD keys.",
+                  "The default is 100 tickets / year from special events, Reverie keys, and CD keys.",
                   "Pick a time period to see how many tickets you get in that window.",
                 ]}
               />

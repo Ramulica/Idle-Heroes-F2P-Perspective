@@ -222,7 +222,7 @@ export default function Home() {
                       title="Monster Tickets Calculator"
                       steps={[
                         "Tick other sources from special events, Reverie keys, and CD keys.",
-                        "The default is 40 tickets / year. Change the number if yours is different.",
+                        "The default is 100 tickets / year. Change the number if yours is different.",
                       ]}
                     />
                   </div>
