@@ -38,7 +38,7 @@ export default function AwakensCalculator() {
             account to save it.
           </p>
         ) : null}
-        <div className="shell-body">
+        <div className="shell-body no-sidebar">
           <section className="main-panel calc-panel">
             <article className="calc-row" id="sg-period">
               <div className="calc-row-head">

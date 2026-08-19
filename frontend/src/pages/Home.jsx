@@ -146,6 +146,30 @@ export default function Home() {
                 </article>
                 <article className="guide-card">
                   <div className="head-with-help">
+                    <h3>Mysterious Sale</h3>
+                    <HelpTip
+                      title="Mysterious Sale"
+                      steps={[
+                        "Floor Planner: pick or create a completion, then tap one reward per floor.",
+                        "Cases: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
+                        "CSG cost of a case is compared with the CSG you earn in that period from the calculator.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Plan 13 floors, save completion options, and build your own
+                    cases with CSG cost, loot, and a time period.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/mysterious-sale")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
                     <h3>Awakens Calculator</h3>
                     <HelpTip
                       title="Awakens Calculator"
@@ -187,30 +211,6 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/pages-calculator")}
-                  >
-                    Open tool
-                  </button>
-                </article>
-                <article className="guide-card">
-                  <div className="head-with-help">
-                    <h3>Mysterious Sale</h3>
-                    <HelpTip
-                      title="Mysterious Sale"
-                      steps={[
-                        "Floor Planner: pick or create a completion, then tap one reward per floor.",
-                        "Cases: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
-                        "CSG cost of a case is compared with the CSG you earn in that period from the calculator.",
-                      ]}
-                    />
-                  </div>
-                  <p>
-                    Plan 13 floors, save completion options, and build your own
-                    cases with CSG cost, loot, and a time period.
-                  </p>
-                  <button
-                    className="gold-btn"
-                    type="button"
-                    onClick={() => navigate("/guides/mysterious-sale")}
                   >
                     Open tool
                   </button>

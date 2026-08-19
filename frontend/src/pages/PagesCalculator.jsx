@@ -51,7 +51,7 @@ export default function PagesCalculator() {
             account to save it.
           </p>
         ) : null}
-        <div className="shell-body">
+        <div className="shell-body no-sidebar">
           <section className="main-panel calc-panel">
             <div className="total-banner pages-event-banner">
               <div>
