@@ -5,6 +5,7 @@ import PagesAmount from "../components/PagesAmount.jsx";
 import SpecialBoxAmount from "../components/SpecialBoxAmount.jsx";
 import { useSgCalc } from "../useSgCalc";
 import {
+  clampMonths,
   PAGES_ARENA_WEEKLY,
   PAGES_EVENT_AWAKENS,
   PAGES_FACTORY_EVENTS_PER_YEAR,
@@ -13,6 +14,8 @@ import {
   PAGES_GEMS_MONTHLY,
   PAGES_OTHER_YEARLY_DEFAULT,
   PAGES_PER_EVENT,
+  PERIOD_PRESETS,
+  periodLabel,
 } from "../sgCalc";
 
 export default function PagesCalculator() {
@@ -31,14 +34,15 @@ export default function PagesCalculator() {
                 title="Pages of Destiny"
                 steps={[
                   "Tick only the checkbox for each income source.",
+                  "Pick a time period to see pages, events, awakens, and boxes in that window.",
                   `Every ${PAGES_PER_EVENT} pages runs one event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
                   "Open Awakens Calculator and tick Pages of Destiny to add those awakens to CSG income.",
                 ]}
               />
             </div>
             <p>
-              Track yearly Pages of Destiny, then see how many 100-page events
-              you can run.
+              Track Pages of Destiny income, pick a time period, then see how
+              many 100-page events you can run.
             </p>
           </div>
           <button className="tan-btn" type="button" onClick={() => navigate("/")}>
@@ -62,18 +66,78 @@ export default function PagesCalculator() {
                   <SpecialBoxAmount value={1} />
                 </p>
                 <p>
-                  Leftover this year: <PagesAmount value={pages.leftoverPages} />
+                  Pages in {periodLabel(state.months)}:{" "}
+                  <PagesAmount value={pages.pagesPeriod} />
+                </p>
+                <p>
+                  Leftover in {periodLabel(state.months)}:{" "}
+                  <PagesAmount value={pages.leftoverPeriod} />
                 </p>
               </div>
               <div className="pages-event-total">
-                <span>Times / year</span>
-                <strong>{pages.eventsYearly}</strong>
+                <span>Times / {periodLabel(state.months)}</span>
+                <strong>{pages.eventsPeriod}</strong>
                 <span className="pages-event-rewards">
-                  <AwakenAmount value={pages.awakensYearly} />
-                  <SpecialBoxAmount value={pages.boxesYearly} />
+                  <AwakenAmount value={pages.awakensPeriod} />
+                  <SpecialBoxAmount value={pages.boxesPeriod} />
+                </span>
+                <span>
+                  {pages.eventsYearly} / year ·{" "}
+                  <PagesAmount value={pages.pagesYearly} /> / year
                 </span>
               </div>
             </div>
+
+            <article className="calc-row">
+              <div className="calc-row-head">
+                <div className="head-with-help">
+                  <h3>Time period</h3>
+                  <HelpTip
+                    title="Time period"
+                    steps={[
+                      "Choose 1 month to 5 years, or drag the slider.",
+                      "The preview above scales pages, events, awakens, and boxes to this window.",
+                    ]}
+                  />
+                </div>
+                <span className="calc-badge">{periodLabel(state.months)}</span>
+              </div>
+              <div className="period-presets">
+                {PERIOD_PRESETS.map((preset) => (
+                  <button
+                    key={preset.months}
+                    className={state.months === preset.months ? "gold-btn" : "tan-btn"}
+                    type="button"
+                    onClick={() => patch({ months: preset.months })}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              <label className="field">
+                <span>Months (1-60)</span>
+                <input
+                  className="cell-input"
+                  type="range"
+                  min="1"
+                  max="60"
+                  value={state.months}
+                  onChange={(event) =>
+                    patch({ months: clampMonths(event.target.value) })
+                  }
+                />
+                <input
+                  className="cell-input weeks-input"
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={state.months}
+                  onChange={(event) =>
+                    patch({ months: clampMonths(event.target.value) })
+                  }
+                />
+              </label>
+            </article>
 
             <article className="calc-row">
               <div className="calc-row-head">
@@ -89,12 +153,13 @@ export default function PagesCalculator() {
                     ]}
                   />
                 </div>
-                <PagesAmount value={pages.pagesYearly} />
-                <span className="per-label">/ year</span>
+                <PagesAmount value={pages.pagesPeriod} />
+                <span className="per-label">/ {periodLabel(state.months)}</span>
               </div>
               <p className="muted">
-                Tick the sources you use. Totals are per year. Prophet orb
-                events also show the 5-week cycle as a reference.
+                Tick the sources you use. The period above scales how many pages
+                and 100-page events you get. Prophet orb events also show the
+                5-week cycle as a reference.
               </p>
               <div className="check-grid">
                 <div className="check-card">

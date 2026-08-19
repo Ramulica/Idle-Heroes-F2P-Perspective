@@ -143,6 +143,14 @@ export function calculatePages(state = {}) {
   const awakensYearly = eventsYearly * PAGES_EVENT_AWAKENS;
   const awakensCycle = awakensYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
 
+  const months = clampMonths(state.months);
+  const years = months / MONTHS_PER_YEAR;
+  const pagesPeriod = pagesYearly * years;
+  const eventsPeriod = Math.floor(pagesPeriod / PAGES_PER_EVENT);
+  const leftoverPeriod = pagesPeriod - eventsPeriod * PAGES_PER_EVENT;
+  const boxesPeriod = eventsPeriod;
+  const awakensPeriod = eventsPeriod * PAGES_EVENT_AWAKENS;
+
   return {
     arenaWeekly,
     arenaYearly,
@@ -162,6 +170,13 @@ export function calculatePages(state = {}) {
     boxesYearly,
     awakensYearly,
     awakensCycle,
+    months,
+    years,
+    pagesPeriod,
+    eventsPeriod,
+    leftoverPeriod,
+    boxesPeriod,
+    awakensPeriod,
   };
 }
 
