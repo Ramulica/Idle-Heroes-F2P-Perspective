@@ -29,14 +29,14 @@ export default function MonsterTicketsCalculator() {
                 title="Monster Tickets"
                 steps={[
                   "Tick only the checkbox for the income source.",
-                  `Every ${MONSTER_TICKETS_PER_EVENT} tickets runs one event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
+                  `Every ${MONSTER_TICKETS_PER_EVENT} tickets runs one Conductors Offer event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
                   "Open Awakens Calculator and tick Monster Tickets to add those awakens to CSG income.",
                 ]}
               />
             </div>
             <p>
               Track Monster Ticket income, pick a time period, then see how many
-              100-ticket events you can run.
+              100-ticket Conductors Offer events you can run.
             </p>
           </div>
           <button className="tan-btn" type="button" onClick={() => navigate("/")}>
@@ -53,7 +53,7 @@ export default function MonsterTicketsCalculator() {
           <section className="main-panel calc-panel">
             <div className="total-banner preview-banner pages-event-banner">
               <div>
-                <h3>100-ticket event</h3>
+                <h3>100-ticket Conductors Offer event</h3>
                 <p>
                   Consume{" "}
                   <MonsterTicketAmount value={MONSTER_TICKETS_PER_EVENT} /> to

@@ -175,7 +175,7 @@ export default function Home() {
                       title="Awakens Calculator"
                       steps={[
                         "Same awaken ticks as the CSG Calculator. Changes save to both.",
-                        "Tick Pages of Destiny or Monster Tickets to add 30 awakens per 100-spend event into the total.",
+                        "Tick Pages of Destiny or Monster Tickets to add 30 awakens per 100-spend Conductors Offer event into the total.",
                       ]}
                     />
                   </div>
@@ -199,14 +199,14 @@ export default function Home() {
                       title="Pages of Destiny Calculator"
                       steps={[
                         "Tick arena store, monthly gems, Fantasy Factory, and other sources.",
-                        "Every 100 pages is one event: 30 awakens plus a special box.",
+                        "Every 100 pages is one Conductors Offer event: 30 awakens plus a special box.",
                         "Tick those awakens in the Awakens Calculator if you want them in CSG.",
                       ]}
                     />
                   </div>
                   <p>
                     Add up Pages of Destiny income, then see how many 100-page
-                    events you can run each year.
+                    Conductors Offer events you can run each year.
                   </p>
                   <button
                     className="gold-btn"
@@ -223,14 +223,15 @@ export default function Home() {
                       title="Monster Tickets Calculator"
                       steps={[
                         "Tick other sources from special events, Reverie keys, and CD keys.",
-                        "Every 100 tickets is one event: 30 awakens plus a special box.",
+                        "Every 100 tickets is one Conductors Offer event: 30 awakens plus a special box.",
                         "Tick those awakens in the Awakens Calculator if you want them in CSG.",
                       ]}
                     />
                   </div>
                   <p>
-                    Count Monster Tickets, then see how many 100-ticket events
-                    you can run. Same rewards as Pages of Destiny.
+                    Count Monster Tickets, then see how many 100-ticket
+                    Conductors Offer events you can run. Same rewards as Pages of
+                    Destiny.
                   </p>
                   <button
                     className="gold-btn"

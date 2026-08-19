@@ -21,8 +21,8 @@ export default function AwakensCalculator() {
                 steps={[
                   "This is the same awakens block as the CSG Calculator. Changes save to both.",
                   "Account level still changes Trial of the Champion rank awakens.",
-                  "Tick Pages of Destiny if you want those event awakens in the total.",
-                  "Tick Monster Tickets the same way for 100-ticket events.",
+                  "Tick Pages of Destiny if you want those Conductors Offer event awakens in the total.",
+                  "Tick Monster Tickets the same way for 100-ticket Conductors Offer events.",
                 ]}
               />
             </div>
@@ -58,12 +58,14 @@ export default function AwakensCalculator() {
                   ) : null}
                 </p>
               </div>
-              <div className="pages-event-total">
-                <span>/ year</span>
-                <AwakenAmount
-                  value={result.awakensYearly}
-                  className="preview-hero"
-                />
+              <div className="pages-event-total awakens-year-total">
+                <span className="preview-year-line">
+                  <AwakenAmount
+                    value={result.awakensYearly}
+                    className="preview-hero"
+                  />
+                  <span>/ year</span>
+                </span>
                 <span>
                   Over {periodLabel(state.months)}:{" "}
                   <AwakenAmount value={result.awakensPeriodCount} />

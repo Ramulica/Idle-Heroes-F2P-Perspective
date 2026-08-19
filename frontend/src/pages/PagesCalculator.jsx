@@ -35,14 +35,14 @@ export default function PagesCalculator() {
                 steps={[
                   "Tick only the checkbox for each income source.",
                   "Pick a time period to see pages, events, awakens, and boxes in that window.",
-                  `Every ${PAGES_PER_EVENT} pages runs one event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
+                  `Every ${PAGES_PER_EVENT} pages runs one Conductors Offer event for ${PAGES_EVENT_AWAKENS} awakens plus a special box.`,
                   "Open Awakens Calculator and tick Pages of Destiny to add those awakens to CSG income.",
                 ]}
               />
             </div>
             <p>
               Track Pages of Destiny income, pick a time period, then see how
-              many 100-page events you can run.
+              many 100-page Conductors Offer events you can run.
             </p>
           </div>
           <button className="tan-btn" type="button" onClick={() => navigate("/")}>
@@ -59,7 +59,7 @@ export default function PagesCalculator() {
           <section className="main-panel calc-panel">
             <div className="total-banner preview-banner pages-event-banner">
               <div>
-                <h3>100-page event</h3>
+                <h3>100-page Conductors Offer event</h3>
                 <p>
                   Consume <PagesAmount value={PAGES_PER_EVENT} /> to get{" "}
                   <AwakenAmount value={PAGES_EVENT_AWAKENS} /> +{" "}
@@ -158,7 +158,7 @@ export default function PagesCalculator() {
               </div>
               <p className="muted">
                 Tick the sources you use. The period above scales how many pages
-                and 100-page events you get.
+                and 100-page Conductors Offer events you get.
               </p>
               <div className="check-grid">
                 <div className="check-card">

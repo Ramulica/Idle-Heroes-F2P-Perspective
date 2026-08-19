@@ -27,7 +27,7 @@ export default function AwakensIncome({ state, result, patch }) {
               "Tick only the checkbox, not the whole row.",
               "Sky Labyrinth adds 10 soulbond + 8 normal awakens / 5 weeks and costs 1000 CSG / 5 weeks.",
               "Fantasy Factory every time or every other are mutually exclusive.",
-              "Pages of Destiny and Monster Tickets add 30 awakens per 100-spend event if those ticks are on.",
+              "Pages of Destiny and Monster Tickets add 30 awakens per 100-spend Conductors Offer event if those ticks are on.",
             ]}
           />
         </div>
@@ -174,7 +174,7 @@ export default function AwakensIncome({ state, result, patch }) {
             }
           />
           <span>
-            Awakens from Pages of Destiny events (
+            Awakens from Pages of Destiny Conductors Offer event (
             <AwakenAmount value={pages.awakensYearly} /> / year +{" "}
             <SpecialBoxAmount value={pages.boxesYearly} /> / year)
           </span>
@@ -188,7 +188,7 @@ export default function AwakensIncome({ state, result, patch }) {
             }
           />
           <span>
-            Awakens from Monster Ticket events (
+            Awakens from Monster Ticket Conductors Offer event (
             <AwakenAmount value={tickets.awakensYearly} /> / year +{" "}
             <SpecialBoxAmount value={tickets.boxesYearly} /> / year)
           </span>
