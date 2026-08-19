@@ -20,7 +20,7 @@ export const PAGES_FACTORY_PER_EVENT = 10;
 export const PAGES_OTHER_YEARLY_DEFAULT = 40;
 export const PAGES_PER_EVENT = 100;
 export const PAGES_EVENT_AWAKENS = 30;
-export const MONSTER_TICKETS_YEARLY_DEFAULT = 100;
+export const MONSTER_TICKETS_YEARLY_DEFAULT = 50;
 export const MONSTER_TICKETS_PER_EVENT = 100;
 
 export const PERIOD_PRESETS = [
