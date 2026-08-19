@@ -148,7 +148,7 @@ export default function PagesCalculator() {
                     steps={[
                       "Arena store is 3 pages every week.",
                       "The gem pack is 10 pages a month for 20k gems.",
-                      "Fantasy Factory is about 5 prophet orb events a year, 10 pages each, 50 / year. The 5-week cycle is shown as a reference.",
+                      "Fantasy Factory is about 5 prophet orb events a year, 10 pages each, 50 / year.",
                       "Other sources start at 40 / year and can be changed.",
                     ]}
                   />
@@ -158,8 +158,7 @@ export default function PagesCalculator() {
               </div>
               <p className="muted">
                 Tick the sources you use. The period above scales how many pages
-                and 100-page events you get. Prophet orb events also show the
-                5-week cycle as a reference.
+                and 100-page events you get.
               </p>
               <div className="check-grid">
                 <div className="check-card">
@@ -200,9 +199,8 @@ export default function PagesCalculator() {
                   <span>
                     {PAGES_FACTORY_YEARLY} pages / year from Fantasy Factory
                     prophet orb events (about {PAGES_FACTORY_EVENTS_PER_YEAR}{" "}
-                    events / year). Reference:{" "}
-                    <PagesAmount value={PAGES_FACTORY_PER_EVENT} /> per 5-week
-                    event cycle.
+                    events / year,{" "}
+                    <PagesAmount value={PAGES_FACTORY_PER_EVENT} /> each).
                   </span>
                 </div>
                 <div className="check-card">

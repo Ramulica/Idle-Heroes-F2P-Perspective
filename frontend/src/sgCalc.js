@@ -132,6 +132,7 @@ export function calculatePages(state = {}) {
   const factoryYearly = state.pagesFactory ? PAGES_FACTORY_YEARLY : 0;
   const factoryPerEvent = state.pagesFactory ? PAGES_FACTORY_PER_EVENT : 0;
   const factoryEventsPerYear = state.pagesFactory ? PAGES_FACTORY_EVENTS_PER_YEAR : 0;
+  const factoryCycle = factoryYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
 
   const otherYearly = state.pagesOtherOn
     ? Math.max(0, Number(state.pagesOtherYearly) || 0)
@@ -139,7 +140,7 @@ export function calculatePages(state = {}) {
   const otherCycle = otherYearly * (AWAKEN_CYCLE_WEEKS / WEEKS_PER_YEAR);
 
   const pagesYearly = arenaYearly + gemsYearly + factoryYearly + otherYearly;
-  const pagesCycle = arenaCycle + gemsCycle + factoryPerEvent + otherCycle;
+  const pagesCycle = arenaCycle + gemsCycle + factoryCycle + otherCycle;
   const eventsYearly = Math.floor(pagesYearly / PAGES_PER_EVENT);
   const leftoverPages = pagesYearly - eventsYearly * PAGES_PER_EVENT;
   const boxesYearly = eventsYearly;
