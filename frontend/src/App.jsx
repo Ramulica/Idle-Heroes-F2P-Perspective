@@ -9,6 +9,7 @@ import SgCalculator from "./pages/SgCalculator.jsx";
 import AwakensCalculator from "./pages/AwakensCalculator.jsx";
 import PagesCalculator from "./pages/PagesCalculator.jsx";
 import MonsterTicketsCalculator from "./pages/MonsterTicketsCalculator.jsx";
+import TreasureCouponsCalculator from "./pages/TreasureCouponsCalculator.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 
 function PendingOverlay() {
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="/guides/awakens-calculator" element={<AwakensCalculator />} />
         <Route path="/guides/pages-calculator" element={<PagesCalculator />} />
         <Route path="/guides/monster-tickets" element={<MonsterTicketsCalculator />} />
+        <Route path="/guides/treasure-coupons" element={<TreasureCouponsCalculator />} />
         <Route path="/guides/mysterious-sale" element={<MysteriousSaleGate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

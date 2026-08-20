@@ -80,6 +80,13 @@ button {
   flex-wrap: wrap;
 }
 
+.home-estimates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .home-year-csg {
   display: flex;
   flex-direction: column;
@@ -104,6 +111,15 @@ button {
 
 .home-year-csg .csg-amount {
   color: #fff;
+}
+
+.home-estimates .home-year-csg {
+  padding: 6px 10px 5px;
+}
+
+.home-estimates .csg-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .sale-top .home-year-csg {

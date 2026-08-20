@@ -22,6 +22,16 @@ export const PAGES_PER_EVENT = 100;
 export const PAGES_EVENT_AWAKENS = 30;
 export const MONSTER_TICKETS_YEARLY_DEFAULT = 50;
 export const MONSTER_TICKETS_PER_EVENT = 100;
+export const TREASURE_ARENA_WEEKLY = 3;
+export const TREASURE_OTHER_YEARLY_DEFAULT = 300;
+export const TREASURE_COUPONS_PER_COMPLETION = 150;
+export const TREASURE_CHESTS = [
+  { at: 10, color: "purple", label: "Purple Treasure selection chest" },
+  { at: 30, color: "green", label: "Green Treasure selection chest" },
+  { at: 60, color: "red", label: "Red Treasure selection chest" },
+  { at: 100, color: "orange", label: "Orange Treasure selection chest" },
+  { at: 150, color: "pink", label: "Pink Treasure selection chest" },
+];
 
 export const PERIOD_PRESETS = [
   { months: 1, label: "1 month" },
@@ -83,6 +93,9 @@ export const DEFAULT_STATE = {
   monsterTicketsOn: true,
   monsterTicketsYearly: MONSTER_TICKETS_YEARLY_DEFAULT,
   includeMonsterTicketAwakens: false,
+  treasureArenaStore: true,
+  treasureOtherOn: true,
+  treasureOtherYearly: TREASURE_OTHER_YEARLY_DEFAULT,
 };
 
 export function clampMonths(value) {
@@ -186,6 +199,35 @@ export function calculatePages(state = {}) {
   };
 }
 
+export function calculateTreasureCoupons(state = {}) {
+  const arenaWeekly = state.treasureArenaStore ? TREASURE_ARENA_WEEKLY : 0;
+  const arenaYearly = arenaWeekly * WEEKS_PER_YEAR;
+  const otherYearly = state.treasureOtherOn
+    ? Math.max(0, Number(state.treasureOtherYearly) || 0)
+    : 0;
+  const yearly = arenaYearly + otherYearly;
+  const months = clampMonths(state.months);
+  const years = months / MONTHS_PER_YEAR;
+  const completionsYearly = Math.floor(yearly / TREASURE_COUPONS_PER_COMPLETION);
+  const leftoverYearly = yearly - completionsYearly * TREASURE_COUPONS_PER_COMPLETION;
+  const period = yearly * years;
+  const completionsPeriod = Math.floor(period / TREASURE_COUPONS_PER_COMPLETION);
+  const leftoverPeriod = period - completionsPeriod * TREASURE_COUPONS_PER_COMPLETION;
+  return {
+    arenaWeekly,
+    arenaYearly,
+    otherYearly,
+    yearly,
+    period,
+    completionsYearly,
+    leftoverYearly,
+    completionsPeriod,
+    leftoverPeriod,
+    chestsYearly: completionsYearly,
+    chestsPeriod: completionsPeriod,
+  };
+}
+
 export function calculateMonsterTickets(state = {}) {
   const yearly = state.monsterTicketsOn
     ? Math.max(0, Number(state.monsterTicketsYearly) || 0)
@@ -240,6 +282,7 @@ export function calculateSg(state) {
   const factoryOther = state.factoryMode === "other" ? FACTORY_AWAKENS : 0;
   const pages = calculatePages(state);
   const monsterTickets = calculateMonsterTickets(state);
+  const treasureCoupons = calculateTreasureCoupons(state);
   const pagesAwakensCycle = state.includePagesAwakens ? pages.awakensCycle : 0;
   const ticketAwakensCycle = state.includeMonsterTicketAwakens
     ? monsterTickets.awakensCycle
@@ -299,6 +342,7 @@ export function calculateSg(state) {
     deluxe,
     pages,
     monsterTickets,
+    treasureCoupons,
     pagesAwakensCycle,
     ticketAwakensCycle,
     awakensPerCycle,

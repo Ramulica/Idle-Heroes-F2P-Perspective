@@ -3,8 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth, GUEST_SG_KEY } from "../auth";
 import { api } from "../api";
 import HelpTip from "../components/HelpTip.jsx";
+import AwakenAmount from "../components/AwakenAmount.jsx";
 import CsgAmount from "../components/CsgAmount.jsx";
-import { DEFAULT_STATE, yearlyCsg } from "../sgCalc";
+import MonsterTicketAmount from "../components/MonsterTicketAmount.jsx";
+import PagesAmount from "../components/PagesAmount.jsx";
+import TreasureCouponAmount from "../components/TreasureCouponAmount.jsx";
+import { DEFAULT_STATE, calculateSg } from "../sgCalc";
 
 const NAV = [
   { id: "home", label: "Home" },
@@ -40,7 +44,10 @@ export default function Home() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const guest = Boolean(user?.guest);
-  const yearCsg = useMemo(() => yearlyCsg(sgState), [sgState]);
+  const yearResult = useMemo(
+    () => calculateSg({ ...sgState, months: 12 }),
+    [sgState]
+  );
 
   useEffect(() => {
     if (guest) {
@@ -72,8 +79,8 @@ export default function Home() {
               <HelpTip
                 title="Main menu"
                 steps={[
-                  "CSG / year comes from your CSG Calculator. Tap it to open and fill in your account.",
-                  "Tools holds the CSG, Awakens, Pages of Destiny, and Monster Tickets calculators, plus Mysterious Sale.",
+                  "Yearly estimates come from the calculators. Tap one to open that tool.",
+                  "Tools holds the CSG, Awakens, Pages of Destiny, Monster Tickets, and Treasure Coupons calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -82,15 +89,55 @@ export default function Home() {
             <p>Community guides for resources, events, and how to play them.</p>
           </div>
           <div className="shell-head-right">
-            <button
-              className="home-year-csg"
-              type="button"
-              onClick={() => navigate("/guides/sg-calculator")}
-              title="From your CSG Calculator"
-            >
-              <span>CSG / year</span>
-              <CsgAmount value={yearCsg} />
-            </button>
+            <div className="home-estimates">
+              <button
+                className="home-year-csg"
+                type="button"
+                onClick={() => navigate("/guides/sg-calculator")}
+                title="From your CSG Calculator"
+              >
+                <span>CSG / year</span>
+                <CsgAmount value={yearResult.total} />
+              </button>
+              <button
+                className="home-year-csg"
+                type="button"
+                onClick={() => navigate("/guides/awakens-calculator")}
+                title="From your Awakens Calculator"
+              >
+                <span>Awakens / year</span>
+                <AwakenAmount value={yearResult.awakensYearly} />
+              </button>
+              <button
+                className="home-year-csg"
+                type="button"
+                onClick={() => navigate("/guides/pages-calculator")}
+                title="From your Pages of Destiny Calculator"
+              >
+                <span>Pages / year</span>
+                <PagesAmount value={yearResult.pages.pagesYearly} />
+              </button>
+              <button
+                className="home-year-csg"
+                type="button"
+                onClick={() => navigate("/guides/monster-tickets")}
+                title="From your Monster Tickets Calculator"
+              >
+                <span>Tickets / year</span>
+                <MonsterTicketAmount value={yearResult.monsterTickets.yearly} />
+              </button>
+              <button
+                className="home-year-csg"
+                type="button"
+                onClick={() => navigate("/guides/treasure-coupons")}
+                title="From your Treasure Coupons Calculator"
+              >
+                <span>Coupons / year</span>
+                <TreasureCouponAmount
+                  value={yearResult.treasureCoupons.yearly}
+                />
+              </button>
+            </div>
             <button className="gold-btn" type="button">
               {guest ? "Guest" : user?.username}
             </button>
@@ -168,7 +215,7 @@ export default function Home() {
                     see CSG income from 1 month to 5 years.
                   </p>
                   <p className="guide-csg-line">
-                    Your estimate: <CsgAmount value={yearCsg} /> / year
+                    Your estimate: <CsgAmount value={yearResult.total} /> / year
                   </p>
                   <button
                     className="gold-btn"
@@ -218,6 +265,10 @@ export default function Home() {
                     of Destiny, and Monster Ticket awakens. Synced with the CSG
                     Calculator.
                   </p>
+                  <p className="guide-csg-line">
+                    Your estimate:{" "}
+                    <AwakenAmount value={yearResult.awakensYearly} /> / year
+                  </p>
                   <button
                     className="gold-btn"
                     type="button"
@@ -241,6 +292,10 @@ export default function Home() {
                   <p>
                     Add up Pages of Destiny income, then see how many 100-page
                     Conductors Offer events you can run each year.
+                  </p>
+                  <p className="guide-csg-line">
+                    Your estimate:{" "}
+                    <PagesAmount value={yearResult.pages.pagesYearly} /> / year
                   </p>
                   <button
                     className="gold-btn"
@@ -267,10 +322,48 @@ export default function Home() {
                     Conductors Offer events you can run. Same rewards as Pages of
                     Destiny.
                   </p>
+                  <p className="guide-csg-line">
+                    Your estimate:{" "}
+                    <MonsterTicketAmount
+                      value={yearResult.monsterTickets.yearly}
+                    />{" "}
+                    / year
+                  </p>
                   <button
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/monster-tickets")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Treasure Coupons Calculator</h3>
+                    <HelpTip
+                      title="Treasure Coupons Calculator"
+                      steps={[
+                        "Tick arena store and other sources.",
+                        "Every 150 coupons is one full completion.",
+                        "Only full completions count. Each one gives purple, green, red, orange, and pink Treasure selection chests.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Count Treasure Coupons, then see how many full 150-coupon
+                    completions you can run.
+                  </p>
+                  <p className="guide-csg-line">
+                    Your estimate:{" "}
+                    <TreasureCouponAmount
+                      value={yearResult.treasureCoupons.yearly}
+                    />{" "}
+                    / year
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/treasure-coupons")}
                   >
                     Open tool
                   </button>
