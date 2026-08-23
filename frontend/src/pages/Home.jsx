@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, GUEST_SG_KEY } from "../auth";
+import { useAuth } from "../auth";
 import { api } from "../api";
+import AllRewardsPreview from "../components/AllRewardsPreview.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import AwakenAmount from "../components/AwakenAmount.jsx";
 import CsgAmount from "../components/CsgAmount.jsx";
 import MonsterTicketAmount from "../components/MonsterTicketAmount.jsx";
 import PagesAmount from "../components/PagesAmount.jsx";
 import TreasureCouponAmount from "../components/TreasureCouponAmount.jsx";
-import { DEFAULT_STATE, calculateSg } from "../sgCalc";
+import { calculateSg } from "../sgCalc";
+import { useSgCalc } from "../useSgCalc";
 
 const NAV = [
   { id: "home", label: "Home" },
   { id: "tools", label: "Tools" },
+  { id: "rewards", label: "All rewards" },
   { id: "resources", label: "Resources" },
   { id: "events", label: "Events" },
 ];
@@ -40,34 +43,21 @@ export default function Home() {
       /* ignore */
     }
   }
-  const [sgState, setSgState] = useState(DEFAULT_STATE);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const guest = Boolean(user?.guest);
+  const { guest, state, patch, result } = useSgCalc();
+  const [cases, setCases] = useState([]);
   const yearResult = useMemo(
-    () => calculateSg({ ...sgState, months: 12 }),
-    [sgState]
+    () => calculateSg({ ...state, months: 12 }),
+    [state]
   );
 
   useEffect(() => {
-    if (guest) {
-      try {
-        const raw = sessionStorage.getItem(GUEST_SG_KEY);
-        if (raw) {
-          setSgState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
-        }
-      } catch {
-        /* ignore */
-      }
-      return undefined;
-    }
     api
-      .getSgCalc()
-      .then((payload) => {
-        setSgState({ ...DEFAULT_STATE, ...(payload.state || {}) });
-      })
+      .bootstrap()
+      .then((payload) => setCases(payload.cases || []))
       .catch(() => {});
-  }, [guest]);
+  }, []);
 
   return (
     <div className="sky-page">
@@ -79,8 +69,9 @@ export default function Home() {
               <HelpTip
                 title="Main menu"
                 steps={[
-                  "Yearly estimates come from the calculators. Tap one to open that tool.",
-                  "Tools holds the CSG, Awakens, Pages of Destiny, Monster Tickets, and Treasure Coupons calculators, plus Mysterious Sale.",
+                  "All rewards adds up calculator income for 1 year or the period you pick.",
+                  "Tick one Event Plan there to include that Mysterious Sale loot.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, and Treasure Coupons calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -89,55 +80,13 @@ export default function Home() {
             <p>Community guides for resources, events, and how to play them.</p>
           </div>
           <div className="shell-head-right">
-            <div className="home-estimates">
-              <button
-                className="home-year-csg"
-                type="button"
-                onClick={() => navigate("/guides/sg-calculator")}
-                title="From your CSG Calculator"
-              >
-                <span>CSG / year</span>
-                <CsgAmount value={yearResult.total} />
-              </button>
-              <button
-                className="home-year-csg"
-                type="button"
-                onClick={() => navigate("/guides/awakens-calculator")}
-                title="From your Awakens Calculator"
-              >
-                <span>Awakens / year</span>
-                <AwakenAmount value={yearResult.awakensYearly} />
-              </button>
-              <button
-                className="home-year-csg"
-                type="button"
-                onClick={() => navigate("/guides/pages-calculator")}
-                title="From your Pages of Destiny Calculator"
-              >
-                <span>Pages / year</span>
-                <PagesAmount value={yearResult.pages.pagesYearly} />
-              </button>
-              <button
-                className="home-year-csg"
-                type="button"
-                onClick={() => navigate("/guides/monster-tickets")}
-                title="From your Monster Tickets Calculator"
-              >
-                <span>Tickets / year</span>
-                <MonsterTicketAmount value={yearResult.monsterTickets.yearly} />
-              </button>
-              <button
-                className="home-year-csg"
-                type="button"
-                onClick={() => navigate("/guides/treasure-coupons")}
-                title="From your Treasure Coupons Calculator"
-              >
-                <span>Coupons / year</span>
-                <TreasureCouponAmount
-                  value={yearResult.treasureCoupons.yearly}
-                />
-              </button>
-            </div>
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => selectTab("rewards")}
+            >
+              All rewards
+            </button>
             <button className="gold-btn" type="button">
               {guest ? "Guest" : user?.username}
             </button>
@@ -195,6 +144,14 @@ export default function Home() {
                   Get started
                 </button>
               </div>
+            )}
+            {tab === "rewards" && (
+              <AllRewardsPreview
+                state={state}
+                result={result}
+                patch={patch}
+                cases={cases}
+              />
             )}
             {tab === "tools" && (
               <div className="card-grid">

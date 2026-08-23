@@ -69,7 +69,11 @@ export const REWARD_ORDER = [
 ];
 
 export function formatNumber(value) {
-  return Number(value || 0).toLocaleString();
+  const amount = Number(value || 0);
+  if (Math.abs(amount - Math.round(amount)) < 0.001) {
+    return Math.round(amount).toLocaleString();
+  }
+  return amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
 export function rewardPreview(counts) {

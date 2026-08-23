@@ -32,6 +32,13 @@ export const TREASURE_CHESTS = [
   { at: 100, color: "orange", label: "Orange Treasure selection chest" },
   { at: 150, color: "pink", label: "Pink Treasure selection chest" },
 ];
+export const AWAKEN_EVENT_POINTS_PER = 6;
+export const AWAKEN_EVENT_MILESTONES = [
+  { points: 100, type: "Artifacts", amount: 1 },
+  { points: 150, type: "Origin", amount: 0.5 },
+  { points: 300, type: "Origin", amount: 1 },
+  { points: 600, type: "DT", amount: 1 },
+];
 
 export const PERIOD_PRESETS = [
   { months: 1, label: "1 month" },
@@ -96,6 +103,8 @@ export const DEFAULT_STATE = {
   treasureArenaStore: true,
   treasureOtherOn: true,
   treasureOtherYearly: TREASURE_OTHER_YEARLY_DEFAULT,
+  includeAwakenEvent: true,
+  eventPlanId: null,
 };
 
 export function clampMonths(value) {
@@ -310,6 +319,14 @@ export function calculateSg(state) {
     factoryOther * (WEEKS_PER_YEAR / B_STONE_WEEKS);
   const awakensPeriodCount =
     awakensPerCycle * cycles5 + factoryOther * cycles10;
+  const awakenEvent = awakenEventRewards(awakensPerCycle);
+  const awakenEventOn = state.includeAwakenEvent !== false;
+  const awakenEventPeriod = awakenEventOn
+    ? scaleRewardCounts(awakenEvent.counts, cycles5)
+    : {};
+  const awakenEventYearly = awakenEventOn
+    ? scaleRewardCounts(awakenEvent.counts, WEEKS_PER_YEAR / AWAKEN_CYCLE_WEEKS)
+    : {};
 
   const bStonePerCycle = state.bStone ? B_STONE_CSG : 0;
   const bStonePeriod = bStonePerCycle * cycles10;
@@ -351,6 +368,9 @@ export function calculateSg(state) {
     awakenPeriod,
     awakensYearly,
     awakensPeriodCount,
+    awakenEvent,
+    awakenEventPeriod,
+    awakenEventYearly,
     bStonePerCycle,
     bStonePeriod,
     otherYearly,
@@ -358,6 +378,52 @@ export function calculateSg(state) {
     p2wYearly,
     p2wPeriod,
     total,
+  };
+}
+
+export function scaleRewardCounts(counts, times) {
+  const out = {};
+  const factor = Number(times) || 0;
+  Object.entries(counts || {}).forEach(([type, value]) => {
+    const amount = Number(value) || 0;
+    if (amount) out[type] = amount * factor;
+  });
+  return out;
+}
+
+export function mergeRewardCounts(...lists) {
+  const out = {};
+  lists.forEach((counts) => {
+    Object.entries(counts || {}).forEach(([type, value]) => {
+      const amount = Number(value) || 0;
+      if (amount) out[type] = (out[type] || 0) + amount;
+    });
+  });
+  return out;
+}
+
+export function awakenEventRewards(awakensPerCycle) {
+  const points = Math.max(0, Number(awakensPerCycle) || 0) * AWAKEN_EVENT_POINTS_PER;
+  const counts = {};
+  AWAKEN_EVENT_MILESTONES.forEach((row) => {
+    if (points >= row.points) {
+      counts[row.type] = (counts[row.type] || 0) + row.amount;
+    }
+  });
+  return { points, counts };
+}
+
+export function scaleEventPlan(plan, months) {
+  if (!plan) {
+    return { runs: 0, counts: {}, csgCost: 0 };
+  }
+  const periodWeeks = Math.max(1, Number(plan.period_weeks) || 1);
+  const eventWeeks = EVENT_WEEKS_PER_YEAR * (clampMonths(months) / MONTHS_PER_YEAR);
+  const runs = eventWeeks / periodWeeks;
+  return {
+    runs,
+    counts: scaleRewardCounts(plan.reward_counts, runs),
+    csgCost: Math.max(0, Number(plan.total_sg_cost) || 0) * runs,
   };
 }
 

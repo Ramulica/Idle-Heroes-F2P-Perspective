@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import AwakenAmount from "../components/AwakenAmount.jsx";
+import AwakenEvent from "../components/AwakenEvent.jsx";
 import AwakensIncome from "../components/AwakensIncome.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import { useSgCalc } from "../useSgCalc";
@@ -23,6 +24,7 @@ export default function AwakensCalculator() {
                   "Account level still changes Trial of the Champion rank awakens.",
                   "Tick Pages of Destiny if you want those Conductors Offer event awakens in the total.",
                   "Tick Monster Tickets the same way for 100-ticket Conductors Offer events.",
+                  "The 5-week awaken event turns awakens into points for Mysterious Artifact, Origin, and Destiny.",
                 ]}
               />
             </div>
@@ -122,6 +124,7 @@ export default function AwakensCalculator() {
               />
             </article>
             <AwakensIncome state={state} result={result} patch={patch} />
+            <AwakenEvent state={state} result={result} patch={patch} />
           </section>
         </div>
       </div>
