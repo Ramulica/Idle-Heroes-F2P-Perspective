@@ -34,7 +34,8 @@ export default function AllRewardsPreview({
   const coupons = result.treasureCoupons || {};
   const boxes = (pages.boxesPeriod || 0) + (tickets.boxesPeriod || 0);
   const leftCsg = result.total - plan.csgCost;
-  const allLoot = mergeRewardCounts(result.awakenEventPeriod, plan.counts);
+  const awakenLoot = result.awakenEventPeriod || {};
+  const allLoot = mergeRewardCounts(awakenLoot.counts, plan.counts);
 
   return (
     <div className="all-rewards">
@@ -198,9 +199,20 @@ export default function AllRewardsPreview({
           One event every 5 weeks. Tick it on the Awakens Calculator to include
           it here.
         </p>
+        <p className="muted">
+          Best rewards: {awakenLoot.n600 || 0} × 600 and {awakenLoot.n300 || 0} ×
+          300
+          {awakenLoot.n150
+            ? ` · ${awakenLoot.n150} × 150`
+            : ""}
+          {awakenLoot.n100
+            ? ` · ${awakenLoot.n100} × 100`
+            : ""}
+          .
+        </p>
         <LootChips
-          counts={result.awakenEventPeriod}
-          empty="Off, or not enough points this cycle."
+          counts={awakenLoot.counts}
+          empty="Off, or not enough awakens for a 300 completion."
         />
       </article>
 

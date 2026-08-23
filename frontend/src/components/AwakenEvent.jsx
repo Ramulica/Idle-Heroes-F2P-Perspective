@@ -8,8 +8,17 @@ import {
 import { formatNumber } from "../rewards";
 import RewardIcon from "./RewardIcon.jsx";
 
+function tierLabel(plan) {
+  if (plan.n600) return "600 completion this cycle (Destiny)";
+  if (plan.n300) return "300 completion this cycle";
+  if (plan.n150) return "150 this cycle (1/2 Origin)";
+  if (plan.n100) return "100 this cycle (Mysterious Artifact)";
+  return "No completion this cycle";
+}
+
 export default function AwakenEvent({ state, result, patch }) {
-  const event = result.awakenEvent || { points: 0, counts: {} };
+  const cycle = result.awakenEvent || {};
+  const period = result.awakenEventPeriod || {};
 
   return (
     <article className="calc-row" id="sg-awaken-event">
@@ -19,10 +28,10 @@ export default function AwakenEvent({ state, result, patch }) {
           <HelpTip
             title="5-week awaken event"
             steps={[
-              "This event runs once every 5-week cycle.",
-              `Each awaken is ${AWAKEN_EVENT_POINTS_PER} points.`,
-              "100 points: 1 Mysterious Artifact. 150: 1/2 Origin. 300: 1 Origin. 600: 1 Destiny.",
-              "Tick this if you want those rewards in All rewards.",
+              "This event runs once every 5 weeks. Whole events only, no averages.",
+              `Each awaken is ${AWAKEN_EVENT_POINTS_PER} points. A 300 completion needs 50 awakens. A 600 needs 100.`,
+              "First fill as many 300 completions as you can. If every event hits 300, leftover awakens upgrade some to 600.",
+              "100: 1 Mysterious Artifact. 150: 1/2 Origin. 300: 1 Origin. 600: 1 Destiny.",
             ]}
           />
         </div>
@@ -38,7 +47,7 @@ export default function AwakenEvent({ state, result, patch }) {
           />
           <span>
             Count this event. {formatNumber(result.awakensPerCycle)} awakens
-            this cycle = {formatNumber(event.points)} points.
+            this cycle = {formatNumber(cycle.points)} points. {tierLabel(cycle)}.
           </span>
         </div>
       </div>
@@ -46,7 +55,7 @@ export default function AwakenEvent({ state, result, patch }) {
         {AWAKEN_EVENT_MILESTONES.map((row) => (
           <span
             key={`${row.points}-${row.type}-${row.amount}`}
-            className={event.points >= row.points ? "ok" : "muted"}
+            className="muted"
           >
             {row.points} pts · {formatNumber(row.amount)}x{" "}
             <RewardIcon type={row.type} />
@@ -54,12 +63,19 @@ export default function AwakenEvent({ state, result, patch }) {
         ))}
       </div>
       <p>
-        This cycle: <LootChips counts={event.counts} empty="No milestone yet." />
+        Over {periodLabel(state.months)}: {period.n600 || 0} × 600 and{" "}
+        {period.n300 || 0} × 300
+        {period.n150 ? ` · ${period.n150} × 150` : ""}
+        {period.n100 ? ` · ${period.n100} × 100` : ""}
+        {period.allAt300
+          ? " · every event reached 300, extras went to 600"
+          : ""}
+        .
       </p>
       <p>
-        Over {periodLabel(state.months)}:{" "}
+        Best rewards:{" "}
         <LootChips
-          counts={result.awakenEventPeriod}
+          counts={period.counts}
           empty="Tick the event to count these rewards."
         />
       </p>

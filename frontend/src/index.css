@@ -1712,6 +1712,11 @@ th {
   color: #fff;
 }
 
+.total-banner .loot-preview,
+.total-banner .loot-chip {
+  color: #4a2c14;
+}
+
 input[type="range"] {
   accent-color: #f4c430;
   width: min(340px, 100%);

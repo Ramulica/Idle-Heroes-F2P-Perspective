@@ -319,14 +319,17 @@ export function calculateSg(state) {
     factoryOther * (WEEKS_PER_YEAR / B_STONE_WEEKS);
   const awakensPeriodCount =
     awakensPerCycle * cycles5 + factoryOther * cycles10;
-  const awakenEvent = awakenEventRewards(awakensPerCycle);
+  const awakenEvent = planAwakenEvents(Math.floor(awakensPerCycle), 1);
   const awakenEventOn = state.includeAwakenEvent !== false;
   const awakenEventPeriod = awakenEventOn
-    ? scaleRewardCounts(awakenEvent.counts, cycles5)
-    : {};
+    ? planAwakenEvents(Math.floor(awakensPeriodCount), Math.floor(weeks / AWAKEN_CYCLE_WEEKS))
+    : emptyAwakenEventPlan();
   const awakenEventYearly = awakenEventOn
-    ? scaleRewardCounts(awakenEvent.counts, WEEKS_PER_YEAR / AWAKEN_CYCLE_WEEKS)
-    : {};
+    ? planAwakenEvents(
+        Math.floor(awakensYearly),
+        Math.floor(WEEKS_PER_YEAR / AWAKEN_CYCLE_WEEKS)
+      )
+    : emptyAwakenEventPlan();
 
   const bStonePerCycle = state.bStone ? B_STONE_CSG : 0;
   const bStonePeriod = bStonePerCycle * cycles10;
@@ -403,14 +406,85 @@ export function mergeRewardCounts(...lists) {
 }
 
 export function awakenEventRewards(awakensPerCycle) {
-  const points = Math.max(0, Number(awakensPerCycle) || 0) * AWAKEN_EVENT_POINTS_PER;
+  return planAwakenEvents(Math.floor(Number(awakensPerCycle) || 0), 1);
+}
+
+export function emptyAwakenEventPlan() {
+  return {
+    events: 0,
+    n600: 0,
+    n300: 0,
+    n150: 0,
+    n100: 0,
+    counts: {},
+    leftoverAwakens: 0,
+    allAt300: false,
+    points: 0,
+  };
+}
+
+export function rewardsForAwakenTier(tier) {
   const counts = {};
   AWAKEN_EVENT_MILESTONES.forEach((row) => {
-    if (points >= row.points) {
+    if (tier >= row.points) {
       counts[row.type] = (counts[row.type] || 0) + row.amount;
     }
   });
-  return { points, counts };
+  return counts;
+}
+
+export function planAwakenEvents(totalAwakens, eventCount) {
+  const awakens = Math.max(0, Math.floor(Number(totalAwakens) || 0));
+  const events = Math.max(0, Math.floor(Number(eventCount) || 0));
+  const cost100 = 100 / AWAKEN_EVENT_POINTS_PER;
+  const cost150 = 150 / AWAKEN_EVENT_POINTS_PER;
+  const cost300 = 300 / AWAKEN_EVENT_POINTS_PER;
+  const empty = {
+    ...emptyAwakenEventPlan(),
+    events,
+    leftoverAwakens: awakens,
+    points: awakens * AWAKEN_EVENT_POINTS_PER,
+  };
+  if (!events) return empty;
+
+  let remaining = awakens;
+  let n300 = Math.min(events, Math.floor(remaining / cost300));
+  remaining -= n300 * cost300;
+  let unused = events - n300;
+  let n600 = 0;
+  const allAt300 = n300 === events && events > 0;
+  if (allAt300) {
+    n600 = Math.min(n300, Math.floor(remaining / cost300));
+    n300 -= n600;
+    remaining -= n600 * cost300;
+  }
+  let n150 = 0;
+  let n100 = 0;
+  if (unused > 0) {
+    n150 = Math.min(unused, Math.floor(remaining / cost150));
+    remaining -= n150 * cost150;
+    unused -= n150;
+    n100 = Math.min(unused, Math.floor(remaining / cost100));
+    remaining -= n100 * cost100;
+  }
+
+  const counts = mergeRewardCounts(
+    scaleRewardCounts(rewardsForAwakenTier(600), n600),
+    scaleRewardCounts(rewardsForAwakenTier(300), n300),
+    scaleRewardCounts(rewardsForAwakenTier(150), n150),
+    scaleRewardCounts(rewardsForAwakenTier(100), n100)
+  );
+  return {
+    events,
+    n600,
+    n300,
+    n150,
+    n100,
+    counts,
+    leftoverAwakens: remaining,
+    allAt300,
+    points: awakens * AWAKEN_EVENT_POINTS_PER,
+  };
 }
 
 export function scaleEventPlan(plan, months) {
