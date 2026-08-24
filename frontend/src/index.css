@@ -149,6 +149,34 @@ button {
   gap: 4px;
 }
 
+.all-rewards-preview {
+  align-items: flex-start;
+}
+
+.all-rewards-preview-resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px 16px;
+  margin: 14px 0 8px;
+}
+
+.all-rewards-preview-resources > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.all-rewards-preview-resources > div > span:first-child {
+  color: #d7d0ff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.awakens-year-total .loot-preview {
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
 .awaken-event-milestones {
   display: flex;
   flex-wrap: wrap;
@@ -1715,6 +1743,14 @@ th {
 .total-banner .loot-preview,
 .total-banner .loot-chip {
   color: #4a2c14;
+}
+
+.total-banner .muted {
+  color: #d7d0ff;
+}
+
+.all-rewards-preview .pages-event-rewards {
+  justify-content: flex-start;
 }
 
 input[type="range"] {

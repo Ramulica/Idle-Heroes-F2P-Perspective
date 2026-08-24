@@ -3,12 +3,29 @@ import AwakenAmount from "../components/AwakenAmount.jsx";
 import AwakenEvent from "../components/AwakenEvent.jsx";
 import AwakensIncome from "../components/AwakensIncome.jsx";
 import HelpTip from "../components/HelpTip.jsx";
+import LootChips from "../components/LootChips.jsx";
 import { useSgCalc } from "../useSgCalc";
-import { clampMonths, PERIOD_PRESETS, periodLabel } from "../sgCalc";
+import {
+  awakenEventPlanLabel,
+  clampMonths,
+  PERIOD_PRESETS,
+  periodLabel,
+} from "../sgCalc";
+
+function cycleEventLabel(plan) {
+  if (plan.n600) return "600 this cycle (Destiny)";
+  if (plan.n300) return "300 this cycle";
+  if (plan.n150) return "150 this cycle (1/2 Origin)";
+  if (plan.n100) return "100 this cycle (Mysterious Artifact)";
+  return "No completion this cycle";
+}
 
 export default function AwakensCalculator() {
   const navigate = useNavigate();
   const { guest, state, patch, result } = useSgCalc();
+  const cycle = result.awakenEvent || {};
+  const period = result.awakenEventPeriod || {};
+  const eventOn = state.includeAwakenEvent !== false;
 
   return (
     <div className="sky-page">
@@ -59,6 +76,11 @@ export default function AwakensCalculator() {
                     </>
                   ) : null}
                 </p>
+                <p>
+                  {eventOn
+                    ? `Event this cycle: ${cycleEventLabel(cycle)} · ${cycle.points || 0} pts`
+                    : "5-week awaken event is off."}
+                </p>
               </div>
               <div className="pages-event-total awakens-year-total">
                 <span className="preview-year-line">
@@ -72,6 +94,17 @@ export default function AwakensCalculator() {
                   Over {periodLabel(state.months)}:{" "}
                   <AwakenAmount value={result.awakensPeriodCount} />
                 </span>
+                <span>
+                  {eventOn
+                    ? `Best rewards: ${awakenEventPlanLabel(period)}`
+                    : "Event off"}
+                  {eventOn && period.allAt300
+                    ? " · every event reached 300"
+                    : ""}
+                </span>
+                {eventOn ? (
+                  <LootChips counts={period.counts} empty="" />
+                ) : null}
               </div>
             </div>
             <article className="calc-row" id="sg-period">

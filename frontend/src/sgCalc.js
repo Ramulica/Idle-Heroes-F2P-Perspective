@@ -423,6 +423,15 @@ export function emptyAwakenEventPlan() {
   };
 }
 
+export function awakenEventPlanLabel(plan = {}) {
+  const parts = [];
+  if (plan.n600) parts.push(`${plan.n600} × 600`);
+  if (plan.n300) parts.push(`${plan.n300} × 300`);
+  if (plan.n150) parts.push(`${plan.n150} × 150`);
+  if (plan.n100) parts.push(`${plan.n100} × 100`);
+  return parts.join(" · ") || "No completion";
+}
+
 export function rewardsForAwakenTier(tier) {
   const counts = {};
   AWAKEN_EVENT_MILESTONES.forEach((row) => {
