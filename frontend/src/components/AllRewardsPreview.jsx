@@ -48,7 +48,7 @@ export default function AllRewardsPreview({
             <HelpTip
               title="All rewards"
               steps={[
-                "The top line is everything added together: CSG left, loot, and treasure chests.",
+                "The top line is everything added together: CSG left, awakens, pages, coupons, boxes, loot, and treasure chests.",
                 "The lines under that are the sources: calculator income, treasure completions, awaken-event loot, and the Event Plan.",
                 "Tick one Event Plan below to add its Mysterious Sale loot. 17 event weeks = 1 year.",
               ]}
@@ -57,6 +57,16 @@ export default function AllRewardsPreview({
           <div className="all-rewards-final-line">
             <span>CSG left</span>
             <CsgAmount value={leftCsg} className="preview-hero" />
+            <AwakenAmount
+              value={result.awakensPeriodCount}
+              className="preview-hero"
+            />
+            <PagesAmount value={pages.pagesPeriod} className="preview-hero" />
+            <TreasureCouponAmount
+              value={coupons.period}
+              className="preview-hero"
+            />
+            <SpecialBoxAmount value={boxes} className="preview-hero" />
             <LootChips counts={allLoot} empty="" />
             <span className="pages-event-rewards">
               {TREASURE_CHESTS.map((chest) => (
