@@ -41,23 +41,36 @@ export default function AllRewardsPreview({
 
   return (
     <div className="all-rewards">
-      <div className="total-banner preview-banner pages-event-banner all-rewards-preview">
-        <div>
+      <div className="total-banner preview-banner all-rewards-preview">
+        <div className="all-rewards-final">
           <div className="head-with-help">
             <h3>All rewards / {periodLabel(state.months)}</h3>
             <HelpTip
               title="All rewards"
               steps={[
-                "This preview adds up calculator income for the period you pick.",
+                "The top line is everything added together: CSG left, loot, and treasure chests.",
+                "The lines under that are the sources: calculator income, treasure completions, awaken-event loot, and the Event Plan.",
                 "Tick one Event Plan below to add its Mysterious Sale loot. 17 event weeks = 1 year.",
-                "Awaken event rewards come from the Awakens Calculator 5-week completion.",
               ]}
             />
           </div>
-          <p>
-            All resources in {periodLabel(state.months)}
-            {selected ? `, including ${selected.name}` : ""}.
-          </p>
+          <div className="all-rewards-final-line">
+            <span>CSG left</span>
+            <CsgAmount value={leftCsg} className="preview-hero" />
+            <LootChips counts={allLoot} empty="" />
+            <span className="pages-event-rewards">
+              {TREASURE_CHESTS.map((chest) => (
+                <TreasureChestAmount
+                  key={chest.color}
+                  color={chest.color}
+                  value={coupons.chestsPeriod}
+                />
+              ))}
+            </span>
+          </div>
+        </div>
+
+        <div className="all-rewards-sources">
           <div className="all-rewards-preview-resources">
             <div>
               <span>CSG</span>
@@ -94,15 +107,6 @@ export default function AllRewardsPreview({
             {completions} treasure completion
             {completions === 1 ? "" : "s"}
           </p>
-          <p className="pages-event-rewards">
-            {TREASURE_CHESTS.map((chest) => (
-              <TreasureChestAmount
-                key={chest.color}
-                color={chest.color}
-                value={coupons.chestsPeriod}
-              />
-            ))}
-          </p>
           <p>
             Awaken event:{" "}
             {state.includeAwakenEvent === false
@@ -124,12 +128,9 @@ export default function AllRewardsPreview({
               </p>
               <LootChips counts={plan.counts} empty="No loot on this plan." />
             </>
-          ) : null}
-        </div>
-        <div className="pages-event-total">
-          <span>CSG left</span>
-          <CsgAmount value={leftCsg} className="preview-hero" />
-          <LootChips counts={allLoot} empty="" />
+          ) : (
+            <p>No Event Plan ticked.</p>
+          )}
         </div>
       </div>
 

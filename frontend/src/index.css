@@ -150,14 +150,43 @@ button {
 }
 
 .all-rewards-preview {
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.all-rewards-final {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.all-rewards-final-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.all-rewards-final-line .pages-event-rewards {
+  justify-content: flex-start;
+}
+
+.all-rewards-sources {
+  border-top: 1px solid #8d6cff88;
+  padding-top: 14px;
+}
+
+.all-rewards-sources p {
+  margin: 8px 0 4px;
 }
 
 .all-rewards-preview-resources {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px 16px;
-  margin: 14px 0 8px;
+  margin: 0 0 8px;
 }
 
 .all-rewards-preview-resources > div {
