@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { api } from "../api";
 import AllRewardsPreview from "../components/AllRewardsPreview.jsx";
+import SimulatorsPreview from "../components/SimulatorsPreview.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import AwakenAmount from "../components/AwakenAmount.jsx";
 import CsgAmount from "../components/CsgAmount.jsx";
@@ -16,6 +17,7 @@ const NAV = [
   { id: "home", label: "Home" },
   { id: "tools", label: "Tools" },
   { id: "rewards", label: "All rewards" },
+  { id: "simulators", label: "Simulators" },
   { id: "resources", label: "Resources" },
   { id: "events", label: "Events" },
 ];
@@ -71,6 +73,7 @@ export default function Home() {
                 steps={[
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
+                  "Simulators turns awaken income into expected rarities.",
                   "Tools holds the CSG, Awakens, Pages, Monster Tickets, and Treasure Coupons calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
@@ -152,6 +155,9 @@ export default function Home() {
                 patch={patch}
                 cases={cases}
               />
+            )}
+            {tab === "simulators" && (
+              <SimulatorsPreview yearlyAwakens={yearResult.awakensYearly} />
             )}
             {tab === "tools" && (
               <div className="card-grid">

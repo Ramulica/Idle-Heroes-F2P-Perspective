@@ -213,6 +213,54 @@ button {
   margin: 10px 0;
 }
 
+.awaken-rarity-table {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.awaken-rarity-head,
+.awaken-rarity-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.awaken-rarity-head {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  padding-bottom: 0;
+}
+
+.awaken-rarity-row {
+  background: #fffaf0;
+  border: 1px solid #d7bf93;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.awaken-rarity-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Cinzel, serif;
+  font-size: 1.05rem;
+  text-shadow: 0 1px 0 #00000033;
+}
+
+.awaken-rarity-modal {
+  width: min(520px, 92vw);
+}
+
+.awakens-simulator {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .check-card .loot-preview {
   display: flex;
   margin-top: 6px;
