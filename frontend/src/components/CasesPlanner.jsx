@@ -389,7 +389,7 @@ export default function CasesPlanner({
     await flushSlotDraft();
   }
 
-  function changeTimes(index, delta) {
+  function changeTimes(index, nextWeeks) {
     if (!selected) return;
     const baseSlots =
       slotDraftRef.current?.caseId === selected.id
@@ -405,7 +405,7 @@ export default function CasesPlanner({
     const maxTimes = Math.max(1, (selected.period_weeks || 6) - otherWeeks);
     const weeks = Math.max(
       1,
-      Math.min(maxTimes, (Number(slot.weeks) || 1) + delta)
+      Math.min(maxTimes, Math.floor(Number(nextWeeks) || 1))
     );
     if (weeks === (Number(slot.weeks) || 1)) return;
     setDraftSlots(
@@ -766,7 +766,7 @@ export default function CasesPlanner({
                   <TimesControl
                     value={slot.weeks || 1}
                     max={maxTimes}
-                    onChange={(delta) => changeTimes(index, delta)}
+                    onChange={(weeks) => changeTimes(index, weeks)}
                   />
                 )}
               </div>
@@ -807,22 +807,60 @@ export default function CasesPlanner({
 }
 
 function TimesControl({ value, max, onChange }) {
+  const [text, setText] = useState(String(value));
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  function apply(next) {
+    const weeks = Math.max(1, Math.min(max, Math.floor(Number(next) || 0) || 1));
+    valueRef.current = weeks;
+    setText(String(weeks));
+    onChange(weeks);
+  }
+
   return (
     <span className="times-control" onClick={(event) => event.stopPropagation()}>
       <button
         className="tan-btn"
         type="button"
         disabled={value <= 1}
-        onClick={() => onChange(-1)}
+        onClick={() => apply(valueRef.current - 1)}
       >
         −
       </button>
-      <strong>× {value}</strong>
+      <label className="times-input-wrap">
+        <span>×</span>
+        <input
+          className="cell-input times-input"
+          type="number"
+          min={1}
+          max={max}
+          inputMode="numeric"
+          value={text}
+          aria-label="Times"
+          onChange={(event) => {
+            const raw = event.target.value;
+            setText(raw);
+            if (raw === "") return;
+            const amount = Math.floor(Number(raw));
+            if (!Number.isFinite(amount)) return;
+            apply(amount);
+          }}
+          onBlur={() => apply(text === "" ? valueRef.current : text)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+        />
+      </label>
       <button
         className="tan-btn"
         type="button"
         disabled={value >= max}
-        onClick={() => onChange(1)}
+        onClick={() => apply(valueRef.current + 1)}
       >
         +
       </button>

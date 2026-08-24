@@ -826,6 +826,15 @@ button.option-row.pick {
   font-size: 1.3rem;
 }
 
+.times-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .case-slots .times-control .muted {
   font-size: 1rem;
   font-weight: 800;
@@ -1333,6 +1342,15 @@ th {
 
 .weeks-input {
   width: 72px;
+}
+
+.times-control .times-input {
+  width: 4.2rem;
+  min-width: 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  padding: 4px 6px;
 }
 
 .danger {
