@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import CsgAmount from "./CsgAmount.jsx";
 import { RateModal } from "./CompletionMenu.jsx";
@@ -76,7 +76,44 @@ function PeriodCalc({ weeks }) {
   );
 }
 
-export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
+function caseTotalsFromSlots(slots, optionsById) {
+  let total_weeks = 0;
+  let total_sg_cost = 0;
+  const reward_counts = {};
+  (slots || []).forEach((slot) => {
+    const option = optionsById[slot.option_id];
+    const weeks = Number(slot.weeks) || 0;
+    if (!option || weeks <= 0) return;
+    total_weeks += weeks;
+    total_sg_cost += (Number(option.sg_cost) || 0) * weeks;
+    Object.entries(option.reward_counts || {}).forEach(([type, value]) => {
+      const amount = Number(value) || 0;
+      if (amount) {
+        reward_counts[type] = (reward_counts[type] || 0) + amount * weeks;
+      }
+    });
+  });
+  return { total_weeks, total_sg_cost, reward_counts };
+}
+
+function mergeSlotDraft(serverCase, draft, optionsById) {
+  if (!serverCase) return null;
+  if (!draft || draft.caseId !== serverCase.id) return serverCase;
+  return {
+    ...serverCase,
+    slots: draft.slots,
+    ...caseTotalsFromSlots(draft.slots, optionsById),
+  };
+}
+
+const TIMES_SAVE_MS = 500;
+
+export default function CasesPlanner({
+  data,
+  onChange,
+  onCaseUpdated,
+  onOpenPlanner,
+}) {
   const guest = Boolean(useAuth()?.user?.guest);
   const [view, setView] = useState("list");
   const [selectedId, setSelectedId] = useState(null);
@@ -101,11 +138,19 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [sgState, setSgState] = useState(DEFAULT_STATE);
 
+  const [slotDraft, setSlotDraft] = useState(null);
+  const slotDraftRef = useRef(null);
+  const timesSaveTimer = useRef(null);
+
   const optionsById = useMemo(
     () => Object.fromEntries(data.options.map((opt) => [opt.id, opt])),
     [data.options]
   );
-  const selected = data.cases.find((row) => row.id === selectedId) || null;
+  const serverCase = data.cases.find((row) => row.id === selectedId) || null;
+  const selected = useMemo(
+    () => mergeSlotDraft(serverCase, slotDraft, optionsById),
+    [serverCase, slotDraft, optionsById]
+  );
   const usedWeeks = selected?.total_weeks || 0;
   const periodWeeks = selected?.period_weeks || 6;
   const remaining = Math.max(0, periodWeeks - usedWeeks);
@@ -180,16 +225,80 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
     }
   }, [data.cases, selectedId]);
 
-  async function patchSelected(payload) {
-    if (!selected) return;
-    setBusy(true);
+  async function patchSelected(payload, options = {}) {
+    if (!selected) return null;
+    const silent = Boolean(options.silent);
+    if (!silent) setBusy(true);
     try {
-      await api.updateCase(selected.id, payload);
-      await onChange();
+      const updated = await api.updateCase(selected.id, payload, { silent });
+      if (onCaseUpdated && updated?.id) {
+        onCaseUpdated(updated);
+      } else {
+        await onChange({ silent });
+      }
+      return updated;
     } finally {
-      setBusy(false);
+      if (!silent) setBusy(false);
     }
   }
+
+  function setDraftSlots(caseId, slots) {
+    const draft = { caseId, slots };
+    slotDraftRef.current = draft;
+    setSlotDraft(draft);
+  }
+
+  async function flushSlotDraft() {
+    const draft = slotDraftRef.current;
+    if (!draft) return;
+    clearTimeout(timesSaveTimer.current);
+    const snapshot = draft.slots;
+    const caseId = draft.caseId;
+    try {
+      const updated = await api.updateCase(
+        caseId,
+        { slots: snapshot },
+        { silent: true }
+      );
+      if (onCaseUpdated && updated?.id) {
+        onCaseUpdated(updated);
+      } else {
+        await onChange({ silent: true });
+      }
+      const latest = slotDraftRef.current;
+      if (
+        latest &&
+        latest.caseId === caseId &&
+        JSON.stringify(latest.slots) !== JSON.stringify(snapshot)
+      ) {
+        scheduleTimesSave();
+        return;
+      }
+      if (latest && latest.caseId === caseId) {
+        slotDraftRef.current = null;
+        setSlotDraft(null);
+      }
+    } catch {
+      /* keep the draft so clicks are not lost */
+    }
+  }
+
+  function scheduleTimesSave() {
+    clearTimeout(timesSaveTimer.current);
+    timesSaveTimer.current = setTimeout(() => {
+      void flushSlotDraft();
+    }, TIMES_SAVE_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(timesSaveTimer.current);
+      const draft = slotDraftRef.current;
+      if (draft) {
+        api.updateCase(draft.caseId, { slots: draft.slots }, { silent: true }).catch(() => {});
+      }
+    };
+  }, []);
 
   async function addCase() {
     const name = newName.trim();
@@ -262,25 +371,59 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
   }
 
   function openCase(id) {
+    void flushSlotDraft();
+    slotDraftRef.current = null;
+    setSlotDraft(null);
     setSelectedId(id);
     setView("detail");
   }
 
-  async function saveSlots(nextSlots) {
-    await patchSelected({ slots: nextSlots });
+  function backToList() {
+    void flushSlotDraft();
+    setView("list");
   }
 
-  function changeTimes(index, weeks) {
+  async function saveSlots(nextSlots) {
     if (!selected) return;
-    const slots = selected.slots.map((slot, slotIndex) =>
-      slotIndex === index ? { ...slot, weeks } : slot
+    setDraftSlots(selected.id, nextSlots);
+    await flushSlotDraft();
+  }
+
+  function changeTimes(index, delta) {
+    if (!selected) return;
+    const baseSlots =
+      slotDraftRef.current?.caseId === selected.id
+        ? slotDraftRef.current.slots
+        : selected.slots || [];
+    const slot = baseSlots[index];
+    if (!slot) return;
+    const otherWeeks = baseSlots.reduce(
+      (sum, row, slotIndex) =>
+        slotIndex === index ? sum : sum + (Number(row.weeks) || 0),
+      0
     );
-    saveSlots(slots);
+    const maxTimes = Math.max(1, (selected.period_weeks || 6) - otherWeeks);
+    const weeks = Math.max(
+      1,
+      Math.min(maxTimes, (Number(slot.weeks) || 1) + delta)
+    );
+    if (weeks === (Number(slot.weeks) || 1)) return;
+    setDraftSlots(
+      selected.id,
+      baseSlots.map((row, slotIndex) =>
+        slotIndex === index ? { ...row, weeks } : row
+      )
+    );
+    scheduleTimesSave();
   }
 
   function removeSlot(index) {
     if (!selected) return;
-    saveSlots(selected.slots.filter((_, slotIndex) => slotIndex !== index));
+    const baseSlots =
+      slotDraftRef.current?.caseId === selected.id
+        ? slotDraftRef.current.slots
+        : selected.slots || [];
+    void saveSlots(baseSlots.filter((_, slotIndex) => slotIndex !== index));
   }
 
   function openAddSlot() {
@@ -293,8 +436,12 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
   async function addSlot() {
     if (!selected || !slotOptionId || remaining <= 0) return;
     const times = Math.max(1, Math.min(Number(slotTimes) || 1, remaining));
+    const currentSlots =
+      slotDraftRef.current?.caseId === selected.id
+        ? slotDraftRef.current.slots
+        : selected.slots || [];
     await saveSlots([
-      ...selected.slots,
+      ...currentSlots,
       { option_id: Number(slotOptionId), weeks: times },
     ]);
     setAddSlotOpen(false);
@@ -526,7 +673,7 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
   return (
     <div className="sale-wrap">
       <div className="sale-top">
-        <button className="tan-btn" type="button" onClick={() => setView("list")}>
+        <button className="tan-btn" type="button" onClick={backToList}>
           ← All event plans
         </button>
         <div className="head-with-help">
@@ -619,7 +766,7 @@ export default function CasesPlanner({ data, onChange, onOpenPlanner }) {
                   <TimesControl
                     value={slot.weeks || 1}
                     max={maxTimes}
-                    onChange={(weeks) => changeTimes(index, weeks)}
+                    onChange={(delta) => changeTimes(index, delta)}
                   />
                 )}
               </div>
@@ -666,7 +813,7 @@ function TimesControl({ value, max, onChange }) {
         className="tan-btn"
         type="button"
         disabled={value <= 1}
-        onClick={() => onChange(value - 1)}
+        onClick={() => onChange(-1)}
       >
         −
       </button>
@@ -675,7 +822,7 @@ function TimesControl({ value, max, onChange }) {
         className="tan-btn"
         type="button"
         disabled={value >= max}
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(1)}
       >
         +
       </button>

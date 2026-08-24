@@ -14,7 +14,7 @@ const PAGES = [
   { id: "preview", label: "4. Event Preview" },
 ];
 
-export default function MysteriousSale({ data, onChange }) {
+export default function MysteriousSale({ data, onChange, onCaseUpdated }) {
   const [page, setPage] = useState("cases");
   const navigate = useNavigate();
   const guest = Boolean(useAuth()?.user?.guest);
@@ -72,6 +72,7 @@ export default function MysteriousSale({ data, onChange }) {
               <CasesPlanner
                 data={data}
                 onChange={onChange}
+                onCaseUpdated={onCaseUpdated}
                 onOpenPlanner={() => setPage("planner")}
               />
             )}

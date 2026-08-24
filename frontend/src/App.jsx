@@ -97,9 +97,21 @@ function MysteriousSaleGate() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
-  async function refresh() {
-    const next = await api.bootstrap();
+  async function refresh(options = {}) {
+    const next = await api.bootstrap(options);
     setData(next);
+  }
+
+  function patchCase(updated) {
+    setData((current) => {
+      if (!current?.cases || !updated?.id) return current;
+      return {
+        ...current,
+        cases: current.cases.map((row) =>
+          row.id === updated.id ? { ...row, ...updated } : row
+        ),
+      };
+    });
   }
 
   useEffect(() => {
@@ -113,5 +125,5 @@ function MysteriousSaleGate() {
     return <LoadingScreen message="Opening Mysterious Sale..." />;
   }
 
-  return <MysteriousSale data={data} onChange={refresh} />;
+  return <MysteriousSale data={data} onChange={refresh} onCaseUpdated={patchCase} />;
 }

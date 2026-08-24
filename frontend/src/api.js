@@ -56,7 +56,8 @@ export const api = {
   login: (payload) =>
     request("/api/login/", { method: "POST", body: JSON.stringify(payload) }),
   logout: () => request("/api/logout/", { method: "POST", body: "{}" }),
-  bootstrap: () => request("/api/bootstrap/"),
+  bootstrap: (options = {}) =>
+    request("/api/bootstrap/", { silent: Boolean(options.silent) }),
   getSgCalc: () => request("/api/sg-calculator/"),
   saveSgCalc: (state) =>
     request("/api/sg-calculator/", {
@@ -79,9 +80,10 @@ export const api = {
     }),
   createCase: (payload) =>
     request("/api/cases/", { method: "POST", body: JSON.stringify(payload) }),
-  updateCase: (id, payload) =>
+  updateCase: (id, payload, options = {}) =>
     request(`/api/cases/${id}/`, {
       method: "PATCH",
+      silent: Boolean(options.silent),
       body: JSON.stringify(payload),
     }),
   deleteCase: (id) => request(`/api/cases/${id}/`, { method: "DELETE" }),
