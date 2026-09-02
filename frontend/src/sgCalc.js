@@ -116,7 +116,6 @@ export const DEFAULT_STATE = {
     want: [],
     haveTempleManual: null,
     wantTempleManual: null,
-    includeOptionals: true,
   },
 };
 

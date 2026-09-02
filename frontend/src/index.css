@@ -2155,6 +2155,14 @@ input[type="range"] {
   line-height: 1.15;
 }
 
+.hero-slot-extras {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #ffe27a;
+  text-align: center;
+  line-height: 1.15;
+}
+
 .hero-slot-remove {
   position: absolute;
   top: -8px;
@@ -2265,4 +2273,14 @@ input[type="range"] {
 .hero-stage-pick:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.hero-optional-block {
+  margin-top: 12px;
+}
+
+.hero-optional-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

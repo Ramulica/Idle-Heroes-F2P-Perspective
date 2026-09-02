@@ -13,12 +13,31 @@ export const V_STELLAR = {
 };
 
 export const T_COSTS = {
-  T1: { essence: 31_020, stellar: 307_350, cores: 8, subs: 0 },
-  T2: { essence: 69_820, stellar: 637_350, cores: 8, subs: 2 },
-  T3: { essence: 132_620, stellar: 1_127_350, cores: 8, subs: 4 },
-  T4: { essence: 219_420, stellar: 1_777_350, cores: 8, subs: 6 },
-  T5: { essence: 330_220, stellar: 2_587_350, cores: 8, subs: 8 },
-  T120: { essence: 465_020, stellar: 3_557_350, cores: 8, subs: 8 },
+  T1: { essence: 31_020, stellar: 307_350 },
+  T2: { essence: 69_820, stellar: 637_350 },
+  T3: { essence: 132_620, stellar: 1_127_350 },
+  T4: { essence: 219_420, stellar: 1_777_350 },
+  T5: { essence: 330_220, stellar: 2_587_350 },
+  T120: { essence: 465_020, stellar: 3_557_350 },
+};
+
+export const CORE_CHESTS = 8;
+export const SUBS_PER_SKILL = 2;
+
+export const T_OPTIONALS = [
+  { id: "core", short: "Core", label: "Core · 8 chests", min: "T1", cores: CORE_CHESTS, subs: 0 },
+  { id: "subActive", short: "A", label: "Active skill subs · 2", min: "T2", cores: 0, subs: SUBS_PER_SKILL },
+  { id: "subP1", short: "P1", label: "Passive 1 subs · 2", min: "T3", cores: 0, subs: SUBS_PER_SKILL },
+  { id: "subP2", short: "P2", label: "Passive 2 subs · 2", min: "T4", cores: 0, subs: SUBS_PER_SKILL },
+  { id: "subP3", short: "P3", label: "Passive 3 subs · 2", min: "T5", cores: 0, subs: SUBS_PER_SKILL },
+];
+
+export const EMPTY_OPTIONALS = {
+  core: false,
+  subActive: false,
+  subP1: false,
+  subP2: false,
+  subP3: false,
 };
 
 export const DT_COSTS = {
@@ -86,7 +105,6 @@ export const DEFAULT_HERO_UPGRADE = {
   want: [],
   haveTempleManual: null,
   wantTempleManual: null,
-  includeOptionals: true,
 };
 
 export function emptyCost() {
@@ -185,7 +203,54 @@ export function displayedDt(stageId, templeLevel) {
   return dt + templeRow(templeLevel).bonus;
 }
 
-export function costToStage(stageId, includeOptionals = true) {
+export function isDtStage(stageId) {
+  return stageOf(stageId).group === "D";
+}
+
+export function isTStage(stageId) {
+  return stageOf(stageId).group === "T";
+}
+
+export function optionalsRequired(stageId) {
+  return isDtStage(stageId);
+}
+
+export function optionalUnlocked(stageId, optionalId) {
+  const row = T_OPTIONALS.find((item) => item.id === optionalId);
+  if (!row) return false;
+  return stageOf(stageId).rank >= stageOf(row.min).rank;
+}
+
+export function visibleOptionals(stageId) {
+  return T_OPTIONALS.filter((item) => optionalUnlocked(stageId, item.id));
+}
+
+export function resolvedOptionals(hero) {
+  const stageId = hero?.stage;
+  if (optionalsRequired(stageId)) {
+    return {
+      core: true,
+      subActive: true,
+      subP1: true,
+      subP2: true,
+      subP3: true,
+    };
+  }
+  const out = { ...EMPTY_OPTIONALS };
+  visibleOptionals(stageId).forEach((item) => {
+    out[item.id] = Boolean(hero?.[item.id]);
+  });
+  return out;
+}
+
+export function optionalSummary(hero) {
+  const owned = resolvedOptionals(hero);
+  return visibleOptionals(hero?.stage)
+    .filter((item) => owned[item.id])
+    .map((item) => item.short);
+}
+
+export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
   const stage = stageOf(stageId);
   const cost = emptyCost();
   if (stage.rank >= stageOf("V1").rank) cost.cot += V_COT;
@@ -204,11 +269,14 @@ export function costToStage(stageId, includeOptionals = true) {
   if (tRow) {
     cost.essence += tRow.essence;
     cost.stellar += tRow.stellar;
-    if (includeOptionals) {
-      cost.cores += tRow.cores;
-      cost.subs += tRow.subs;
-    }
   }
+
+  const owned = resolvedOptionals({ stage: stageId, ...optionals });
+  T_OPTIONALS.forEach((item) => {
+    if (!optionalUnlocked(stageId, item.id) || !owned[item.id]) return;
+    cost.cores += item.cores;
+    cost.subs += item.subs;
+  });
 
   if (stage.rank >= stageOf("D1").rank) {
     cost.stellar += DT_UNLOCK_STELLAR;
@@ -226,9 +294,13 @@ export function costToStage(stageId, includeOptionals = true) {
   return cost;
 }
 
-export function rosterCost(heroes, includeOptionals = true) {
+export function costForHero(hero) {
+  return costToStage(hero?.stage, resolvedOptionals(hero));
+}
+
+export function rosterCost(heroes) {
   return (heroes || []).reduce(
-    (total, hero) => addCosts(total, costToStage(hero.stage, includeOptionals)),
+    (total, hero) => addCosts(total, costForHero(hero)),
     emptyCost()
   );
 }
@@ -255,22 +327,43 @@ export function eventMatsFromCost(cost) {
   };
 }
 
-export function newHero(stage = "E5") {
+export function newHero(stage = "E5", extra = {}) {
   const id =
-    typeof crypto !== "undefined" && crypto.randomUUID
+    extra.id ||
+    (typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
-      : `hero-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return { id, stage: STAGE_BY_ID[stage] ? stage : "E5" };
+      : `hero-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  return normalizeHero({
+    ...EMPTY_OPTIONALS,
+    ...extra,
+    id,
+    stage: STAGE_BY_ID[stage] ? stage : extra.stage || "E5",
+  });
+}
+
+export function normalizeHero(hero) {
+  if (!hero || !STAGE_BY_ID[hero.stage]) return null;
+  const optionals = { ...EMPTY_OPTIONALS };
+  T_OPTIONALS.forEach((item) => {
+    optionals[item.id] = Boolean(hero[item.id]);
+  });
+  if (optionalsRequired(hero.stage)) {
+    T_OPTIONALS.forEach((item) => {
+      optionals[item.id] = true;
+    });
+  }
+  return {
+    id: String(
+      hero.id || `hero-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    ),
+    stage: hero.stage,
+    ...optionals,
+  };
 }
 
 function normalizeHeroes(list) {
   if (!Array.isArray(list)) return [];
-  return list
-    .filter((hero) => hero && STAGE_BY_ID[hero.stage])
-    .map((hero) => ({
-      id: String(hero.id || newHero().id),
-      stage: hero.stage,
-    }));
+  return list.map(normalizeHero).filter(Boolean);
 }
 
 function readTempleManual(value, fallback = null) {
@@ -289,7 +382,6 @@ export function normalizeHeroUpgrade(raw) {
     want: normalizeHeroes(src.want),
     haveTempleManual: readTempleManual(src.haveTempleManual, legacy),
     wantTempleManual: readTempleManual(src.wantTempleManual, legacy),
-    includeOptionals: src.includeOptionals !== false,
   };
 }
 

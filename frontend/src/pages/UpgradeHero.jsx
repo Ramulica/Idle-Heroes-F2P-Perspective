@@ -19,13 +19,18 @@ import {
   canPlaceStage,
   dtCapLabel,
   eventMatsFromCost,
+  isDtStage,
+  isTStage,
   newHero,
   normalizeHeroUpgrade,
+  optionalsRequired,
+  optionalSummary,
   resolvedTempleLevel,
   rosterCost,
   stageOf,
   subCosts,
   templeRow,
+  visibleOptionals,
 } from "../heroUpgrade";
 import {
   calculateSg,
@@ -91,12 +96,16 @@ function CostColumn({ title, cost }) {
 
 function HeroCard({ hero, templeLevel, onPick, onRemove }) {
   const stage = stageOf(hero.stage);
+  const extras = optionalSummary(hero);
   return (
     <div className="hero-slot">
       <button className="hero-slot-card" type="button" onClick={onPick}>
         <img src={heroIcon} alt="" className="hero-slot-art" />
         <HeroStageBadge stageId={hero.stage} templeLevel={templeLevel} />
         <span className="hero-slot-label">{stage.label}</span>
+        {extras.length ? (
+          <span className="hero-slot-extras">{extras.join(" · ")}</span>
+        ) : null}
       </button>
       <button
         className="hero-slot-remove"
@@ -203,14 +212,8 @@ export default function UpgradeHero() {
   const wantTemple = resolvedTempleLevel(upgrade.want, upgrade.wantTempleManual);
   const haveAuto = autoTempleLevel(upgrade.have);
   const wantAuto = autoTempleLevel(upgrade.want);
-  const used = useMemo(
-    () => rosterCost(upgrade.have, upgrade.includeOptionals),
-    [upgrade.have, upgrade.includeOptionals]
-  );
-  const full = useMemo(
-    () => rosterCost(upgrade.want, upgrade.includeOptionals),
-    [upgrade.want, upgrade.includeOptionals]
-  );
+  const used = useMemo(() => rosterCost(upgrade.have), [upgrade.have]);
+  const full = useMemo(() => rosterCost(upgrade.want), [upgrade.want]);
   const need = useMemo(() => subCosts(full, used), [full, used]);
 
   const yearLoot = useMemo(() => {
@@ -229,17 +232,33 @@ export default function UpgradeHero() {
     setUpgrade({ [side]: upgrade[side].filter((hero) => hero.id !== id) });
   }
 
+  function patchHero(side, id, partial) {
+    setUpgrade({
+      [side]: upgrade[side].map((hero) =>
+        hero.id === id ? { ...hero, ...partial } : hero
+      ),
+    });
+  }
+
   function chooseStage(stageId) {
     if (!picker) return;
     const side = picker.side;
     const temple = side === "have" ? haveTemple : wantTemple;
     if (!canPlaceStage(upgrade[side], picker.hero.id, stageId, temple)) return;
-    setUpgrade({
-      [side]: upgrade[side].map((hero) =>
-        hero.id === picker.hero.id ? { ...hero, stage: stageId } : hero
-      ),
-    });
-    setPicker(null);
+    const next = { stage: stageId };
+    if (optionalsRequired(stageId)) {
+      next.core = true;
+      next.subActive = true;
+      next.subP1 = true;
+      next.subP2 = true;
+      next.subP3 = true;
+    }
+    patchHero(side, picker.hero.id, next);
+  }
+
+  function toggleOptional(optionalId, value) {
+    if (!picker || optionalsRequired(pickerHero?.stage)) return;
+    patchHero(picker.side, picker.hero.id, { [optionalId]: value });
   }
 
   const pickerTemple = picker
@@ -247,6 +266,11 @@ export default function UpgradeHero() {
       ? haveTemple
       : wantTemple
     : 1;
+  const pickerHero = picker
+    ? upgrade[picker.side].find((hero) => hero.id === picker.hero.id)
+    : null;
+  const pickerOptionals = pickerHero ? visibleOptionals(pickerHero.stage) : [];
+  const pickerLocked = pickerHero ? optionalsRequired(pickerHero.stage) : false;
 
   return (
     <div className="sky-page">
@@ -260,7 +284,7 @@ export default function UpgradeHero() {
                 steps={[
                   "Left is what you have. Right is what you want. Press + to add a hero, then tap the portrait to pick E1 through D6.",
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
-                  "T1–T max uses Spiritual Essence and stellar. Optional cores and skill subs use origin mats (1 origin = 150k essence, 1 core chest, or 1 sub).",
+                  "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
@@ -313,22 +337,6 @@ export default function UpgradeHero() {
               </div>
             </div>
 
-            <article className="calc-row">
-              <label className="check-card hero-temple-check">
-                <input
-                  type="checkbox"
-                  checked={upgrade.includeOptionals}
-                  onChange={(event) =>
-                    setUpgrade({ includeOptionals: event.target.checked })
-                  }
-                />
-                <span>
-                  Include optional T cores (8 chests at T1) and skill subs (2
-                  origin mats at T2–T5)
-                </span>
-              </label>
-            </article>
-
             <div className="hero-boards">
               <HeroBoard
                 title="What I have"
@@ -358,10 +366,9 @@ export default function UpgradeHero() {
                       type="button"
                       onClick={() =>
                         setUpgrade({
-                          want: upgrade.have.map((hero) => ({
-                            ...newHero(hero.stage),
-                            stage: hero.stage,
-                          })),
+                          want: upgrade.have.map((hero) =>
+                            newHero(hero.stage, { ...hero, id: undefined })
+                          ),
                           wantTempleManual: upgrade.haveTempleManual,
                         })
                       }
@@ -376,7 +383,7 @@ export default function UpgradeHero() {
         </div>
       </div>
 
-      {picker ? (
+      {picker && pickerHero ? (
         <div className="modal-back" onClick={() => setPicker(null)}>
           <div
             className="modal wide hero-stage-modal"
@@ -394,11 +401,11 @@ export default function UpgradeHero() {
                   {STAGES.filter((stage) => stage.group === group.id).map((stage) => {
                     const allowed = canPlaceStage(
                       upgrade[picker.side],
-                      picker.hero.id,
+                      pickerHero.id,
                       stage.id,
                       pickerTemple
                     );
-                    const selected = picker.hero.stage === stage.id;
+                    const selected = pickerHero.stage === stage.id;
                     return (
                       <button
                         key={stage.id}
@@ -418,9 +425,39 @@ export default function UpgradeHero() {
                 </div>
               </div>
             ))}
+            {isTStage(pickerHero.stage) || isDtStage(pickerHero.stage) ? (
+              <div className="hero-optional-block">
+                <h4>Core and skill subs</h4>
+                {pickerLocked ? (
+                  <p className="muted">
+                    Destiny Transition needs the core and all skill subs.
+                  </p>
+                ) : (
+                  <p className="muted">
+                    Tick what this hero already has. 1 origin mat = 1 core chest
+                    or 1 sub.
+                  </p>
+                )}
+                <div className="hero-optional-list">
+                  {pickerOptionals.map((item) => (
+                    <label className="check-card hero-temple-check" key={item.id}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(pickerHero[item.id]) || pickerLocked}
+                        disabled={pickerLocked}
+                        onChange={(event) =>
+                          toggleOptional(item.id, event.target.checked)
+                        }
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="row-actions">
-              <button className="tan-btn" type="button" onClick={() => setPicker(null)}>
-                Close
+              <button className="gold-btn" type="button" onClick={() => setPicker(null)}>
+                Done
               </button>
             </div>
           </div>
