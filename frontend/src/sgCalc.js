@@ -111,6 +111,12 @@ export const DEFAULT_STATE = {
   treasureOtherYearly: TREASURE_OTHER_YEARLY_DEFAULT,
   includeAwakenEvent: true,
   eventPlanId: null,
+  heroUpgrade: {
+    have: [],
+    want: [],
+    templeManual: null,
+    includeOptionals: true,
+  },
 };
 
 export function clampMonths(value) {

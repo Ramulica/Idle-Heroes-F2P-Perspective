@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, and Treasure Coupons calculators, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, and Upgrade Hero calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -328,6 +328,30 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/treasure-coupons")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Upgrade Hero Tool</h3>
+                    <HelpTip
+                      title="Upgrade Hero Tool"
+                      steps={[
+                        "Set what you have and what you want. The top bar shows mats already spent, what is still missing, and the full want cost.",
+                        "Event mats from All rewards pay those costs: void for CoT and stellar, origin for essence, cores, and subs, DT for Aurora and Spirit Vein.",
+                        "Temple level comes from Destiny heroes and can be set by hand if you want a higher cap.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Plan E5, V4, T5, and Destiny Transition costs against the
+                    event mats your calculators and Event Plan give you.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/upgrade-hero")}
                   >
                     Open tool
                   </button>
