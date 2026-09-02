@@ -9,10 +9,12 @@ import {
   RNG_SHOP,
   canBuyRngItem,
   clampRngBuys,
+  maxRngCount,
+  rngItemQty,
   rngSummary,
   setRngBuyCount,
 } from "../rngCelebration";
-import { REWARD_META } from "../rewards";
+import { formatNumber, REWARD_META } from "../rewards";
 
 const SAVE_MS = 500;
 
@@ -188,27 +190,19 @@ export default function RngShopPlanner({
               <div className="rng-item-icon">
                 <RewardIcon type={item.reward} className="reward-icon-lg" />
               </div>
-              <strong>{meta?.label || item.reward}</strong>
-              <span className="muted">Limit: {item.limit}</span>
-              <div className="times-control rng-buy-control">
-                <button
-                  className="tan-btn"
-                  type="button"
-                  disabled={!canEdit || owned <= 0}
-                  onClick={() => buy(item, owned - 1)}
-                >
-                  −
-                </button>
-                <strong>{owned}</strong>
-                <button
-                  className="tan-btn"
-                  type="button"
-                  disabled={!canPlus}
-                  onClick={() => buy(item, owned + 1)}
-                >
-                  +
-                </button>
-              </div>
+              <strong>
+                {rngItemQty(item) > 1 ? `${rngItemQty(item)} ` : ""}
+                {meta?.label || item.reward}
+              </strong>
+              <span className="muted">Limit: {formatNumber(item.limit)}</span>
+              <RngBuyControl
+                item={item}
+                owned={owned}
+                max={maxRngCount(item, shop)}
+                canEdit={canEdit}
+                canPlus={canPlus}
+                onChange={(count) => buy(item, count)}
+              />
               <div className="rng-cost">
                 <CanAmount kind={item.currency} value={item.cost} />
               </div>
@@ -229,6 +223,72 @@ export default function RngShopPlanner({
         <LootChips counts={summary.rewards} empty="Buy shop rows to see loot." />
         {busy ? <p className="muted">Saving...</p> : null}
       </article>
+    </div>
+  );
+}
+
+function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
+  const [text, setText] = useState(String(owned));
+  const ownedRef = useRef(owned);
+  ownedRef.current = owned;
+
+  useEffect(() => {
+    setText(String(owned));
+  }, [owned]);
+
+  function apply(next) {
+    const amount = Math.max(0, Math.min(max, Math.floor(Number(next) || 0)));
+    ownedRef.current = amount;
+    setText(String(amount));
+    onChange(amount);
+  }
+
+  return (
+    <div className="times-control rng-buy-control">
+      <button
+        className="tan-btn"
+        type="button"
+        disabled={!canEdit || owned <= 0}
+        onClick={() => apply(ownedRef.current - 1)}
+      >
+        −
+      </button>
+      {canEdit ? (
+        <label className="times-input-wrap">
+          <span>×</span>
+          <input
+            className="cell-input times-input"
+            type="number"
+            min={0}
+            max={max}
+            inputMode="numeric"
+            value={text}
+            aria-label={`Buy ${item.reward}`}
+            onChange={(event) => {
+              const raw = event.target.value;
+              setText(raw);
+              if (raw === "") return;
+              const amount = Math.floor(Number(raw));
+              if (!Number.isFinite(amount)) return;
+              apply(amount);
+            }}
+            onBlur={() => apply(text === "" ? ownedRef.current : text)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+          />
+        </label>
+      ) : (
+        <strong>× {owned}</strong>
+      )}
+      <button
+        className="tan-btn"
+        type="button"
+        disabled={!canPlus}
+        onClick={() => apply(ownedRef.current + 1)}
+      >
+        +
+      </button>
     </div>
   );
 }

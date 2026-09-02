@@ -1949,6 +1949,11 @@ th {
   margin: 2px 0;
 }
 
+.rng-buy-control .times-input {
+  width: 4.4rem;
+  font-size: 1.15rem;
+}
+
 .rng-cost {
   width: 100%;
   display: flex;

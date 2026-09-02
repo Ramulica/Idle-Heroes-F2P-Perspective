@@ -79,6 +79,10 @@ export const REWARD_ORDER = [
   "Pink Treasure",
   "Pink Festival Treasure",
   "Deluxe Box",
+  "Gold 100k",
+  "Cores",
+  "Small Material Chest",
+  "5-Star Shards",
 ];
 
 export function formatNumber(value) {

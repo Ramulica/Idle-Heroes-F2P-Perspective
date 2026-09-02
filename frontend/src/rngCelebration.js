@@ -1,11 +1,15 @@
 import deluxeBoxIcon from "./assets/rng/deluxe-box.png";
 import festivalSkinIcon from "./assets/rng/festival-skin-chest.png";
+import gold100kIcon from "./assets/rng/gold-100k.png";
+import coresIcon from "./assets/rng/cores.png";
 import heroChestIcon from "./assets/rng/hero-selection-chest.png";
 import limitedCansIcon from "./assets/rng/limited-cans.png";
 import normalCansIcon from "./assets/rng/normal-cans.png";
 import puppet9Icon from "./assets/rng/puppet-9.png";
 import puppet10Icon from "./assets/rng/puppet-10.png";
 import resourcesChestIcon from "./assets/rng/resources-chest.png";
+import shards5StarIcon from "./assets/rng/shards-5-star.png";
+import smallMaterialChestIcon from "./assets/rng/small-material-chest.png";
 import orangeTreasureIcon from "./assets/treasure-chest-orange.png";
 import pinkTreasureIcon from "./assets/treasure-chest-pink.png";
 import artifactsIcon from "./assets/rewards/artifacts.png";
@@ -81,6 +85,30 @@ export const RNG_REWARD_META = {
     label: "Deluxe box",
     color: "#06b6d4",
     icon: deluxeBoxIcon,
+  },
+  "Gold 100k": {
+    short: "Gold",
+    label: "100k Gold",
+    color: "#f4c430",
+    icon: gold100kIcon,
+  },
+  Cores: {
+    short: "Cores",
+    label: "Cores",
+    color: "#38bdf8",
+    icon: coresIcon,
+  },
+  "Small Material Chest": {
+    short: "Mats",
+    label: "Small material chest",
+    color: "#b45309",
+    icon: smallMaterialChestIcon,
+  },
+  "5-Star Shards": {
+    short: "5*",
+    label: "5-Star Shards",
+    color: "#eab308",
+    icon: shards5StarIcon,
   },
 };
 
@@ -213,6 +241,39 @@ export const RNG_SHOP = [
     unlockAt: 16000,
     limit: 6,
   },
+  {
+    id: "gold-100k",
+    reward: "Gold 100k",
+    cost: 100,
+    currency: "normal",
+    unlockAt: 0,
+    limit: 9999,
+  },
+  {
+    id: "cores",
+    reward: "Cores",
+    cost: 1,
+    currency: "limited",
+    unlockAt: 0,
+    limit: 9999,
+    qty: 2,
+  },
+  {
+    id: "small-material-chest",
+    reward: "Small Material Chest",
+    cost: 125,
+    currency: "normal",
+    unlockAt: 0,
+    limit: 9999,
+  },
+  {
+    id: "shards-5-star",
+    reward: "5-Star Shards",
+    cost: 90,
+    currency: "normal",
+    unlockAt: 0,
+    limit: 9999,
+  },
 ];
 
 export const RNG_SHOP_BY_ID = Object.fromEntries(
@@ -264,13 +325,17 @@ export function rngSpend(buys = {}) {
   return { normal, limited };
 }
 
+export function rngItemQty(item) {
+  return Math.max(1, Math.floor(Number(item?.qty) || 1));
+}
+
 export function rngRewards(buys = {}) {
   const counts = {};
   Object.entries(buys).forEach(([id, count]) => {
     const item = RNG_SHOP_BY_ID[id];
     const amount = Math.max(0, Number(count) || 0);
     if (!item || !amount) return;
-    counts[item.reward] = (counts[item.reward] || 0) + amount;
+    counts[item.reward] = (counts[item.reward] || 0) + amount * rngItemQty(item);
   });
   return counts;
 }
@@ -297,16 +362,41 @@ export function canBuyRngItem(item, shop) {
   return summary.leftNormal >= item.cost;
 }
 
+export function maxRngCount(item, shop) {
+  const summary = rngSummary(shop);
+  const owned = Number(summary.buys[item.id] || 0);
+  const spentWithout =
+    item.currency === "limited"
+      ? summary.spentLimited - item.cost * owned
+      : summary.spentNormal - item.cost * owned;
+  const normalForUnlock =
+    item.currency === "normal" ? spentWithout : summary.spentNormal;
+  if (normalForUnlock < item.unlockAt) return 0;
+  const budget =
+    item.currency === "limited" ? summary.limited_cans : summary.normal_cans;
+  const leftover = budget - spentWithout;
+  const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : item.limit;
+  return Math.max(0, Math.min(item.limit, byCost));
+}
+
 export function clampRngBuys(shop) {
   const source = normalizeRngShop(shop);
   const next = { ...source, buys: {} };
+  let spentNormal = 0;
+  let spentLimited = 0;
   RNG_SHOP.forEach((item) => {
     const wanted = Number(source.buys[item.id] || 0);
-    let owned = 0;
-    while (owned < wanted && canBuyRngItem(item, next)) {
-      owned += 1;
-      next.buys[item.id] = owned;
-    }
+    if (!wanted || spentNormal < item.unlockAt) return;
+    const leftover =
+      item.currency === "limited"
+        ? source.limited_cans - spentLimited
+        : source.normal_cans - spentNormal;
+    const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : wanted;
+    const owned = Math.max(0, Math.min(item.limit, wanted, byCost));
+    if (!owned) return;
+    next.buys[item.id] = owned;
+    if (item.currency === "limited") spentLimited += item.cost * owned;
+    else spentNormal += item.cost * owned;
   });
   return next;
 }

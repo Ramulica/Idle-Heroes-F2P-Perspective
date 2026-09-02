@@ -16,6 +16,10 @@ REWARD_TYPES = [
     "Pink Treasure",
     "Pink Festival Treasure",
     "Deluxe Box",
+    "Gold 100k",
+    "Cores",
+    "Small Material Chest",
+    "5-Star Shards",
 ]
 
 
@@ -44,6 +48,10 @@ RNG_SHOP = [
     {"id": "deluxe-box", "reward": "Deluxe Box", "cost": 400, "currency": "normal", "unlock_at": 12800, "limit": 20},
     {"id": "dt-mats", "reward": "DT", "cost": 18, "currency": "limited", "unlock_at": 12800, "limit": 6},
     {"id": "star-soul", "reward": "Star Soul", "cost": 18, "currency": "limited", "unlock_at": 16000, "limit": 6},
+    {"id": "gold-100k", "reward": "Gold 100k", "cost": 100, "currency": "normal", "unlock_at": 0, "limit": 9999},
+    {"id": "cores", "reward": "Cores", "cost": 1, "currency": "limited", "unlock_at": 0, "limit": 9999, "qty": 2},
+    {"id": "small-material-chest", "reward": "Small Material Chest", "cost": 125, "currency": "normal", "unlock_at": 0, "limit": 9999},
+    {"id": "shards-5-star", "reward": "5-Star Shards", "cost": 90, "currency": "normal", "unlock_at": 0, "limit": 9999},
 ]
 RNG_SHOP_BY_ID = {row["id"]: row for row in RNG_SHOP}
 
@@ -137,6 +145,10 @@ def rng_spend(buys):
     return normal, limited
 
 
+def rng_item_qty(item):
+    return max(1, _as_int(item.get("qty"), 1))
+
+
 def rng_can_buy(item, shop):
     owned = _as_int((shop.get("buys") or {}).get(item["id"]))
     if owned >= item["limit"]:
@@ -156,12 +168,26 @@ def clamp_rng_buys(shop):
         "limited_cans": max(0, _as_int(shop.get("limited_cans"), DEFAULT_LIMITED_CANS)),
         "buys": {},
     }
+    spent_normal = 0
+    spent_limited = 0
     for item in RNG_SHOP:
         target = min(item["limit"], max(0, _as_int(wanted.get(item["id"]))))
-        owned = 0
-        while owned < target and rng_can_buy(item, shop):
-            owned += 1
-            shop["buys"][item["id"]] = owned
+        if not target or spent_normal < item["unlock_at"]:
+            continue
+        leftover = (
+            shop["limited_cans"] - spent_limited
+            if item["currency"] == "limited"
+            else shop["normal_cans"] - spent_normal
+        )
+        by_cost = leftover // item["cost"] if item["cost"] else target
+        owned = max(0, min(item["limit"], target, by_cost))
+        if not owned:
+            continue
+        shop["buys"][item["id"]] = owned
+        if item["currency"] == "limited":
+            spent_limited += item["cost"] * owned
+        else:
+            spent_normal += item["cost"] * owned
     return shop
 
 
@@ -175,7 +201,7 @@ def compute_rng_stats(floors):
         if not item or not amount:
             continue
         reward = item["reward"]
-        counts[reward] = counts.get(reward, 0) + amount
+        counts[reward] = counts.get(reward, 0) + amount * rng_item_qty(item)
     return spent_normal, 0, counts, shop, spent_limited
 
 
