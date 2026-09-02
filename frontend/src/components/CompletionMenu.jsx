@@ -61,10 +61,12 @@ export default function CompletionMenu({
           </button>
         </div>
         <div style={{ marginTop: 12 }}>
-          <DiscountToggle
-            checked={Boolean(option.floor_12_discount)}
-            onChange={onToggleDiscount}
-          />
+          {option.event_type === "rng_celebration" ? null : (
+            <DiscountToggle
+              checked={Boolean(option.floor_12_discount)}
+              onChange={onToggleDiscount}
+            />
+          )}
         </div>
         <div className="row-actions">
           <button className="tan-btn" type="button" onClick={onRename}>

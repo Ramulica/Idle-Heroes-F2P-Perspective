@@ -6,6 +6,8 @@ import originArtifactsIcon from "./assets/rewards/origin-artifacts.png";
 import starSoulIcon from "./assets/rewards/star-soul.png";
 import voidIcon from "./assets/rewards/void.png";
 
+import { RNG_REWARD_META } from "./rngCelebration";
+
 export const REWARD_META = {
   Void: {
     short: "Void",
@@ -56,6 +58,7 @@ export const REWARD_META = {
     glyph: "☠",
     icon: grimIcon,
   },
+  ...RNG_REWARD_META,
 };
 
 export const REWARD_ORDER = [
@@ -66,6 +69,16 @@ export const REWARD_ORDER = [
   "Artifacts",
   "Origin Artifacts",
   "Grim",
+  "Hero Chest",
+  "Festival Skin",
+  "Puppet 9",
+  "Puppet 10",
+  "Resources Chest",
+  "Orange Treasure",
+  "Orange Festival Treasure",
+  "Pink Treasure",
+  "Pink Festival Treasure",
+  "Deluxe Box",
 ];
 
 export function formatNumber(value) {

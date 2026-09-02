@@ -11,6 +11,7 @@ import PagesCalculator from "./pages/PagesCalculator.jsx";
 import MonsterTicketsCalculator from "./pages/MonsterTicketsCalculator.jsx";
 import TreasureCouponsCalculator from "./pages/TreasureCouponsCalculator.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
+import { caseTotalsFromSlots } from "./caseTotals";
 
 function PendingOverlay() {
   const [pending, setPending] = useState(0);
@@ -102,6 +103,26 @@ function MysteriousSaleGate() {
     setData(next);
   }
 
+  function patchOption(updated) {
+    setData((current) => {
+      if (!current?.options || !updated?.id) return current;
+      const options = current.options.map((row) =>
+        row.id === updated.id ? { ...row, ...updated } : row
+      );
+      const optionsById = Object.fromEntries(
+        options.map((row) => [row.id, row])
+      );
+      const cases = (current.cases || []).map((row) => {
+        const uses = (row.slots || []).some(
+          (slot) => slot.option_id === updated.id
+        );
+        if (!uses) return row;
+        return { ...row, ...caseTotalsFromSlots(row.slots, optionsById) };
+      });
+      return { ...current, options, cases };
+    });
+  }
+
   function patchCase(updated) {
     setData((current) => {
       if (!current?.cases || !updated?.id) return current;
@@ -125,5 +146,12 @@ function MysteriousSaleGate() {
     return <LoadingScreen message="Opening Mysterious Sale..." />;
   }
 
-  return <MysteriousSale data={data} onChange={refresh} onCaseUpdated={patchCase} />;
+  return (
+    <MysteriousSale
+      data={data}
+      onChange={refresh}
+      onCaseUpdated={patchCase}
+      onOptionUpdated={patchOption}
+    />
+  );
 }

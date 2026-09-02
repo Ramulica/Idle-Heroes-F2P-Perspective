@@ -67,9 +67,10 @@ export const api = {
     }),
   createOption: (payload) =>
     request("/api/options/", { method: "POST", body: JSON.stringify(payload) }),
-  updateOption: (id, payload) =>
+    updateOption: (id, payload, options = {}) =>
     request(`/api/options/${id}/`, {
       method: "PATCH",
+      silent: Boolean(options.silent),
       body: JSON.stringify(payload),
     }),
   deleteOption: (id) => request(`/api/options/${id}/`, { method: "DELETE" }),

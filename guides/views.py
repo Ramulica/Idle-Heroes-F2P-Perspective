@@ -23,11 +23,15 @@ from .models import (
     UserProfile,
 )
 from .services import (
+    EVENT_MYSTERIOUS_SALE,
+    EVENT_RNG_CELEBRATION,
     MAX_CHARM_COST,
     case_payload,
     compute_option_stats,
+    compute_rng_stats,
     normalize_case_slots,
     normalize_picks,
+    normalize_rng_shop,
     option_payload,
 )
 
@@ -322,16 +326,24 @@ def options_collection(request):
     name = (data.get("name") or "").strip()
     if not name:
         return JsonResponse({"error": "Name is required."}, status=400)
-    picks = normalize_picks(data.get("floors") or {}, meta.floors)
-    floor_12_discount = bool(data.get("floor_12_discount"))
-    total, sg_cost, counts = compute_option_stats(
-        picks, meta.floors, meta.sg_table, floor_12_discount
-    )
-    if total > MAX_CHARM_COST:
-        return JsonResponse(
-            {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
-            status=400,
+    event_type = data.get("event_type") or EVENT_MYSTERIOUS_SALE
+    if event_type not in {EVENT_MYSTERIOUS_SALE, EVENT_RNG_CELEBRATION}:
+        event_type = EVENT_MYSTERIOUS_SALE
+    if event_type == EVENT_RNG_CELEBRATION:
+        floors = normalize_rng_shop(data.get("floors") or {})
+        total, sg_cost, counts, floors, _spent_limited = compute_rng_stats(floors)
+    else:
+        picks = normalize_picks(data.get("floors") or {}, meta.floors)
+        floor_12_discount = bool(data.get("floor_12_discount"))
+        total, sg_cost, counts = compute_option_stats(
+            picks, meta.floors, meta.sg_table, floor_12_discount
         )
+        floors = picks
+        if total > MAX_CHARM_COST:
+            return JsonResponse(
+                {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
+                status=400,
+            )
     last = (
         CompletionOption.objects.filter(created_by=request.user)
         .order_by("-sort_order")
@@ -339,8 +351,11 @@ def options_collection(request):
     )
     option = CompletionOption.objects.create(
         name=name,
-        floors=picks,
-        floor_12_discount=floor_12_discount,
+        event_type=event_type,
+        floors=floors,
+        floor_12_discount=bool(data.get("floor_12_discount"))
+        if event_type != EVENT_RNG_CELEBRATION
+        else False,
         total_cost=total,
         sg_cost=sg_cost,
         reward_counts=counts,
@@ -373,20 +388,30 @@ def option_detail(request, option_id):
         if not name:
             return JsonResponse({"error": "Name is required."}, status=400)
         option.name = name
-    if "floors" in data:
-        option.floors = normalize_picks(data.get("floors") or {}, meta.floors)
+    event_type = option.event_type or EVENT_MYSTERIOUS_SALE
+    if event_type == EVENT_RNG_CELEBRATION:
+        if "floors" in data:
+            option.floors = normalize_rng_shop(data.get("floors") or {})
+        else:
+            option.floors = normalize_rng_shop(option.floors)
+        total, sg_cost, counts, shop, _spent_limited = compute_rng_stats(option.floors)
+        option.floors = shop
+        option.floor_12_discount = False
     else:
-        option.floors = normalize_picks(option.floors, meta.floors)
-    if "floor_12_discount" in data:
-        option.floor_12_discount = bool(data.get("floor_12_discount"))
-    total, sg_cost, counts = compute_option_stats(
-        option.floors, meta.floors, meta.sg_table, option.floor_12_discount
-    )
-    if total > MAX_CHARM_COST:
-        return JsonResponse(
-            {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
-            status=400,
+        if "floors" in data:
+            option.floors = normalize_picks(data.get("floors") or {}, meta.floors)
+        else:
+            option.floors = normalize_picks(option.floors, meta.floors)
+        if "floor_12_discount" in data:
+            option.floor_12_discount = bool(data.get("floor_12_discount"))
+        total, sg_cost, counts = compute_option_stats(
+            option.floors, meta.floors, meta.sg_table, option.floor_12_discount
         )
+        if total > MAX_CHARM_COST:
+            return JsonResponse(
+                {"error": f"Charm total cannot go above {MAX_CHARM_COST}."},
+                status=400,
+            )
     option.total_cost = total
     option.sg_cost = sg_cost
     option.reward_counts = counts

@@ -8,6 +8,16 @@ import RewardIcon from "./RewardIcon.jsx";
 import { Stars } from "./StarRating.jsx";
 import { useAuth } from "../auth";
 import { REWARD_META, REWARD_ORDER, rewardPreview } from "../rewards";
+import {
+  EVENT_MYSTERIOUS_SALE,
+  EVENT_RNG_CELEBRATION,
+  defaultRngShop,
+  isRngOption,
+  rngSummary,
+} from "../rngCelebration";
+import CanAmount from "./CanAmount.jsx";
+import LootChips from "./LootChips.jsx";
+import RngShopPlanner from "./RngShopPlanner.jsx";
 
 const DEFAULT_SORT = "csg-asc";
 const MAX_CHARM_COST = 70;
@@ -60,12 +70,13 @@ function sortOptions(rows, sortBy) {
   return copy;
 }
 
-export default function FloorPlanner({ data, onChange }) {
+export default function FloorPlanner({ data, onChange, onOptionUpdated }) {
   const guest = Boolean(useAuth()?.user?.guest);
   const [view, setView] = useState("list");
   const [selectedId, setSelectedId] = useState(null);
   const [modal, setModal] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newEventType, setNewEventType] = useState(EVENT_MYSTERIOUS_SALE);
   const [busy, setBusy] = useState(false);
   const [rateOption, setRateOption] = useState(null);
   const [draftRating, setDraftRating] = useState(0);
@@ -158,9 +169,18 @@ export default function FloorPlanner({ data, onChange }) {
     if (!name) return;
     setBusy(true);
     try {
-      const created = await api.createOption({ name, floors: {} });
+      const created = await api.createOption(
+        newEventType === EVENT_RNG_CELEBRATION
+          ? {
+              name,
+              event_type: EVENT_RNG_CELEBRATION,
+              floors: defaultRngShop(),
+            }
+          : { name, floors: {} }
+      );
       setModal(false);
       setNewName("");
+      setNewEventType(EVENT_MYSTERIOUS_SALE);
       await onChange();
       setSelectedId(created.id);
       setView("floors");
@@ -213,6 +233,9 @@ export default function FloorPlanner({ data, onChange }) {
           >
             {opt.name}
           </button>
+          {isRngOption(opt) ? (
+            <span className="period-badge">RNG Celebration</span>
+          ) : null}
           <Stars value={opt.rating_avg} />
           <span className="rating-score">
             {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
@@ -233,25 +256,41 @@ export default function FloorPlanner({ data, onChange }) {
             type="button"
             onClick={() => openOption(opt.id)}
           >
-            <CsgAmount value={opt.sg_cost} />
-            <span className="loot-preview">
-              {rewardPreview(opt.reward_counts).length ? (
-                rewardPreview(opt.reward_counts).map((item) => (
-                  <span className="loot-chip" key={item.type}>
-                    {item.count}x <RewardIcon type={item.type} />
-                  </span>
-                ))
-              ) : (
-                <span className="muted">No floors picked yet</span>
-              )}
-            </span>
+            {isRngOption(opt) ? (
+              <>
+                <CanAmount
+                  kind="normal"
+                  value={rngSummary(opt.floors).spentNormal}
+                />
+                <CanAmount
+                  kind="limited"
+                  value={rngSummary(opt.floors).spentLimited}
+                />
+                <LootChips counts={opt.reward_counts} empty="No shop buys yet" />
+              </>
+            ) : (
+              <>
+                <CsgAmount value={opt.sg_cost} />
+                <span className="loot-preview">
+                  {rewardPreview(opt.reward_counts).length ? (
+                    rewardPreview(opt.reward_counts).map((item) => (
+                      <span className="loot-chip" key={item.type}>
+                        {item.count}x <RewardIcon type={item.type} />
+                      </span>
+                    ))
+                  ) : (
+                    <span className="muted">No floors picked yet</span>
+                  )}
+                </span>
+              </>
+            )}
           </button>
-          {editable ? (
+          {editable && !isRngOption(opt) ? (
             <DiscountToggle
               checked={Boolean(opt.floor_12_discount)}
               onChange={(enabled) => toggleDiscount(opt, enabled)}
             />
-          ) : opt.floor_12_discount ? (
+          ) : opt.floor_12_discount && !isRngOption(opt) ? (
             <span className="muted">12th floor Discount</span>
           ) : null}
         </div>
@@ -307,7 +346,7 @@ export default function FloorPlanner({ data, onChange }) {
               title="Completion options"
               steps={[
                 "Default completions are shared and cannot be changed.",
-                "Tap + Add option to make a route that only you can see and edit.",
+                "Tap + Add option to make a Mysterious Sale floor route or an RNG Celebration shop.",
                 "Rate default routes with half stars. The score is the community average.",
                 "Filter / Sort is a popup. Completions start sorted by CSG cost, cheapest first.",
               ]}
@@ -374,10 +413,92 @@ export default function FloorPlanner({ data, onChange }) {
           <AddModal
             newName={newName}
             setNewName={setNewName}
+            newEventType={newEventType}
+            setNewEventType={setNewEventType}
             onSave={addOption}
             onClose={() => setModal(false)}
           />
         )}
+      </div>
+    );
+  }
+
+  if (isRngOption(selected)) {
+    return (
+      <div className="sale-wrap">
+        <div className="sale-top">
+          <button className="tan-btn" type="button" onClick={() => setView("list")}>
+            ← All options
+          </button>
+          <div className="head-with-help">
+            <strong>{selected?.name || "RNG Celebration"}</strong>
+            <HelpTip
+              title="RNG Celebration shop"
+              steps={[
+                "Type how many Normal and Limited cans you think you can get.",
+                "Buy unlocked rows with + / −. Spending Normal cans unlocks later rows.",
+                "Rewards you get are at the bottom.",
+              ]}
+            />
+          </div>
+          {selected ? (
+            <div className="option-title">
+              <span className="period-badge">RNG Celebration</span>
+              <Stars value={selected.rating_avg} />
+              <span className="rating-score">
+                {Number(selected.rating_avg || 0).toFixed(1)} (
+                {selected.rating_count || 0})
+              </span>
+              {guest || selected?.is_default ? (
+                guest ? null : (
+                  <button
+                    className="tan-btn"
+                    type="button"
+                    onClick={(event) => openMenu(selected, event)}
+                  >
+                    Rate
+                  </button>
+                )
+              ) : (
+                <MenuIconButton
+                  label={`Menu for ${selected.name}`}
+                  onClick={(event) => openMenu(selected, event)}
+                />
+              )}
+            </div>
+          ) : null}
+        </div>
+        <RngShopPlanner
+          option={selected}
+          canEdit={canEditSelected}
+          busy={busy}
+          onBusy={setBusy}
+          onChange={onChange}
+          onOptionUpdated={onOptionUpdated}
+        />
+        {rateOption &&
+          (rateOption.is_default ? (
+            <RateModal
+              title={`Rate ${rateOption.name}`}
+              value={draftRating}
+              onChange={setDraftRating}
+              onSave={saveRating}
+              onClose={() => setRateOption(null)}
+            />
+          ) : (
+            <CompletionMenu
+              option={
+                data.options.find((row) => row.id === rateOption.id) || rateOption
+              }
+              value={draftRating}
+              onChange={setDraftRating}
+              onSaveRating={saveRating}
+              onToggleDiscount={(enabled) => toggleDiscount(rateOption, enabled)}
+              onRename={() => renameOption(rateOption)}
+              onDelete={() => deleteOption(rateOption)}
+              onClose={() => setRateOption(null)}
+            />
+          ))}
       </div>
     );
   }
@@ -534,14 +655,16 @@ export default function FloorPlanner({ data, onChange }) {
           <CsgAmount value={selected?.sg_cost || 0} />
         </button>
       </div>
-      {modal && (
-        <AddModal
-          newName={newName}
-          setNewName={setNewName}
-          onSave={addOption}
-          onClose={() => setModal(false)}
-        />
-      )}
+        {modal && (
+          <AddModal
+            newName={newName}
+            setNewName={setNewName}
+            newEventType={newEventType}
+            setNewEventType={setNewEventType}
+            onSave={addOption}
+            onClose={() => setModal(false)}
+          />
+        )}
       {rateOption && (
         rateOption.is_default ? (
           <RateModal
@@ -657,7 +780,14 @@ function FilterSortModal({
   );
 }
 
-function AddModal({ newName, setNewName, onSave, onClose }) {
+function AddModal({
+  newName,
+  setNewName,
+  newEventType,
+  setNewEventType,
+  onSave,
+  onClose,
+}) {
   return (
     <div className="modal-back" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
@@ -666,16 +796,36 @@ function AddModal({ newName, setNewName, onSave, onClose }) {
           <HelpTip
             title="Add completion option"
             steps={[
-              "Name the route, then save. Only you can see and edit it.",
-              "Open it to pick one reward per floor. Floor 13 unlocks after 1–12.",
+              "Pick Mysterious Sale for 13 floors and CSG, or RNG Celebration for the can shop.",
+              "Name it, then save. Only you can see and edit it.",
             ]}
           />
+        </div>
+        <div className="period-presets">
+          <button
+            className={
+              newEventType === EVENT_MYSTERIOUS_SALE ? "gold-btn" : "tan-btn"
+            }
+            type="button"
+            onClick={() => setNewEventType(EVENT_MYSTERIOUS_SALE)}
+          >
+            Mysterious Sale
+          </button>
+          <button
+            className={
+              newEventType === EVENT_RNG_CELEBRATION ? "gold-btn" : "tan-btn"
+            }
+            type="button"
+            onClick={() => setNewEventType(EVENT_RNG_CELEBRATION)}
+          >
+            RNG Celebration
+          </button>
         </div>
         <input
           className="cell-input"
           value={newName}
           onChange={(event) => setNewName(event.target.value)}
-          placeholder="Name this route"
+          placeholder="Name this completion"
           autoFocus
         />
         <div className="row-actions">

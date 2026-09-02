@@ -14,7 +14,7 @@ const PAGES = [
   { id: "preview", label: "4. Event Preview" },
 ];
 
-export default function MysteriousSale({ data, onChange, onCaseUpdated }) {
+export default function MysteriousSale({ data, onChange, onCaseUpdated, onOptionUpdated }) {
   const [page, setPage] = useState("cases");
   const navigate = useNavigate();
   const guest = Boolean(useAuth()?.user?.guest);
@@ -30,7 +30,8 @@ export default function MysteriousSale({ data, onChange, onCaseUpdated }) {
                 title="Mysterious Sale"
                 steps={[
                   "Event Plans: your own plans. Set event weeks, then add completions and how many times you run them. 17 event weeks = 1 year.",
-                  "Floor Planner: tap a completion, then pick one reward per floor. Floor 13 unlocks after floors 1–12.",
+                  "Floor Planner: create a Mysterious Sale floor route or an RNG Celebration shop.",
+                  "RNG Celebration uses Normal cans and Limited cans instead of CSG.",
                   "CSG / year comes from the CSG Calculator. An event plan estimates CSG for that plan’s period.",
                   "Rewards and Event Preview are reference lists.",
                 ]}
@@ -66,7 +67,11 @@ export default function MysteriousSale({ data, onChange, onCaseUpdated }) {
           </nav>
           <section className="main-panel">
             {page === "planner" && (
-              <FloorPlanner data={data} onChange={onChange} />
+              <FloorPlanner
+                data={data}
+                onChange={onChange}
+                onOptionUpdated={onOptionUpdated}
+              />
             )}
             {page === "cases" && (
               <CasesPlanner

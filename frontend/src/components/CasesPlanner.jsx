@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import CsgAmount from "./CsgAmount.jsx";
+import CanAmount from "./CanAmount.jsx";
 import { RateModal } from "./CompletionMenu.jsx";
 import HelpTip from "./HelpTip.jsx";
 import MenuIconButton from "./MenuIconButton.jsx";
 import RewardIcon from "./RewardIcon.jsx";
 import { StarPicker, Stars } from "./StarRating.jsx";
 import { useAuth, GUEST_SG_KEY } from "../auth";
+import { caseTotalsFromSlots } from "../caseTotals";
 import { REWARD_ORDER, rewardPreview } from "../rewards";
+import { isRngOption, rngSummary } from "../rngCelebration";
 import {
   DEFAULT_STATE,
   EVENT_WEEKS_PER_YEAR,
@@ -76,24 +79,17 @@ function PeriodCalc({ weeks }) {
   );
 }
 
-function caseTotalsFromSlots(slots, optionsById) {
-  let total_weeks = 0;
-  let total_sg_cost = 0;
-  const reward_counts = {};
-  (slots || []).forEach((slot) => {
-    const option = optionsById[slot.option_id];
-    const weeks = Number(slot.weeks) || 0;
-    if (!option || weeks <= 0) return;
-    total_weeks += weeks;
-    total_sg_cost += (Number(option.sg_cost) || 0) * weeks;
-    Object.entries(option.reward_counts || {}).forEach(([type, value]) => {
-      const amount = Number(value) || 0;
-      if (amount) {
-        reward_counts[type] = (reward_counts[type] || 0) + amount * weeks;
-      }
-    });
-  });
-  return { total_weeks, total_sg_cost, reward_counts };
+function optionSpendPreview(option) {
+  if (isRngOption(option)) {
+    const summary = rngSummary(option.floors);
+    return (
+      <>
+        <CanAmount kind="normal" value={summary.spentNormal} />
+        <CanAmount kind="limited" value={summary.spentLimited} />
+      </>
+    );
+  }
+  return <CsgAmount value={option?.sg_cost || 0} />;
 }
 
 function mergeSlotDraft(serverCase, draft, optionsById) {
@@ -490,9 +486,9 @@ export default function CasesPlanner({
             <HelpTip
               title="Event Plans"
               steps={[
-                "An event plan is how you spend Mysterious Sale event weeks.",
+                "An event plan is how you spend event weeks.",
                 "17 event weeks = 1 year. CSG / year comes from the CSG Calculator.",
-                "Tap a plan to add completions and how many times you run each one.",
+                "Add Mysterious Sale floors or RNG Celebration shops, then set how many times you run each one.",
                 "Filter / Sort is a popup. Resource filters keep plans that include those rewards.",
               ]}
             />
@@ -549,6 +545,12 @@ export default function CasesPlanner({
                     onClick={() => openCase(row.id)}
                   >
                     <CsgAmount value={row.total_sg_cost} />
+                    {row.total_normal_cans ? (
+                      <CanAmount kind="normal" value={row.total_normal_cans} />
+                    ) : null}
+                    {row.total_limited_cans ? (
+                      <CanAmount kind="limited" value={row.total_limited_cans} />
+                    ) : null}
                     <span className="loot-preview">
                       {rewardPreview(row.reward_counts).length ? (
                         rewardPreview(row.reward_counts).map((item) => (
@@ -709,6 +711,18 @@ export default function CasesPlanner({
           <span>CSG cost</span>
           <CsgAmount value={selected?.total_sg_cost || 0} />
         </div>
+        {selected?.total_normal_cans ? (
+          <div className="cost-pill">
+            <span>Normal cans</span>
+            <CanAmount kind="normal" value={selected.total_normal_cans} />
+          </div>
+        ) : null}
+        {selected?.total_limited_cans ? (
+          <div className="cost-pill">
+            <span>Limited cans</span>
+            <CanAmount kind="limited" value={selected.total_limited_cans} />
+          </div>
+        ) : null}
         <div className="cost-pill income-pill">
           <span>Est. CSG</span>
           <CsgAmount value={estimatedCsg} />
@@ -731,6 +745,9 @@ export default function CasesPlanner({
             <div className="option-row" key={`${slot.option_id}-${index}`}>
               <div className="option-title">
                 <span className="option-name">{opt.name}</span>
+                {isRngOption(opt) ? (
+                  <span className="period-badge">RNG Celebration</span>
+                ) : null}
                 <Stars value={opt.rating_avg} />
                 <span className="rating-score">
                   {Number(opt.rating_avg || 0).toFixed(1)} ({opt.rating_count || 0})
@@ -747,7 +764,7 @@ export default function CasesPlanner({
               </div>
               <div className="option-preview-row">
                 <div className="option-open">
-                  <CsgAmount value={opt.sg_cost} />
+                  {optionSpendPreview(opt)}
                   <span className="loot-preview">
                     {rewardPreview(opt.reward_counts).length ? (
                       rewardPreview(opt.reward_counts).map((item) => (
@@ -756,7 +773,9 @@ export default function CasesPlanner({
                         </span>
                       ))
                     ) : (
-                      <span className="muted">No floors picked yet</span>
+                      <span className="muted">
+                        {isRngOption(opt) ? "No shop buys yet" : "No floors picked yet"}
+                      </span>
                     )}
                   </span>
                 </div>
@@ -1154,6 +1173,9 @@ function AddSlotModal({
             >
               <div className="option-title">
                 <span className="option-name">{opt.name}</span>
+                {isRngOption(opt) ? (
+                  <span className="period-badge">RNG Celebration</span>
+                ) : null}
                 <Stars value={opt.rating_avg} />
                 <span className="rating-score">
                   {Number(opt.rating_avg || 0).toFixed(1)}
@@ -1161,7 +1183,7 @@ function AddSlotModal({
               </div>
               <div className="option-preview-row">
                 <span className="option-open">
-                  <CsgAmount value={opt.sg_cost} />
+                  {optionSpendPreview(opt)}
                   <span className="loot-preview">
                     {rewardPreview(opt.reward_counts).length ? (
                       rewardPreview(opt.reward_counts).map((item) => (
@@ -1170,7 +1192,9 @@ function AddSlotModal({
                         </span>
                       ))
                     ) : (
-                      <span className="muted">No floors picked yet</span>
+                      <span className="muted">
+                        {isRngOption(opt) ? "No shop buys yet" : "No floors picked yet"}
+                      </span>
                     )}
                   </span>
                 </span>

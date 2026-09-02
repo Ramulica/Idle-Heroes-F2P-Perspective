@@ -13,6 +13,7 @@ class GameMeta(models.Model):
 
 class CompletionOption(models.Model):
     name = models.CharField(max_length=80)
+    event_type = models.CharField(max_length=40, default="mysterious_sale")
     floors = models.JSONField(default=dict)
     floor_12_discount = models.BooleanField(default=False)
     total_cost = models.IntegerField(default=0)

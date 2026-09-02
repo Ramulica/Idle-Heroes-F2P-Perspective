@@ -195,14 +195,15 @@ export default function Home() {
                       title="Mysterious Sale"
                       steps={[
                         "Event Plans: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
-                        "Floor Planner: pick or create a completion, then tap one reward per floor.",
+                        "Floor Planner: Mysterious Sale floors, or an RNG Celebration can shop.",
                         "CSG cost of an event plan is compared with the CSG you earn in that period from the calculator.",
                       ]}
                     />
                   </div>
                   <p>
-                    Plan 13 floors, save completion options, and build your own
-                    event plans with CSG cost, loot, and a time period.
+                    Plan Mysterious Sale floors or RNG Celebration shops, save
+                    completions, and build event plans with CSG, cans, loot, and
+                    a time period.
                   </p>
                   <button
                     className="gold-btn"

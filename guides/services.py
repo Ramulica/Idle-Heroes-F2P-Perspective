@@ -6,10 +6,46 @@ REWARD_TYPES = [
     "Artifacts",
     "Origin Artifacts",
     "Grim",
+    "Hero Chest",
+    "Festival Skin",
+    "Puppet 9",
+    "Puppet 10",
+    "Resources Chest",
+    "Orange Treasure",
+    "Orange Festival Treasure",
+    "Pink Treasure",
+    "Pink Festival Treasure",
+    "Deluxe Box",
 ]
 
 
 MAX_CHARM_COST = 70
+
+EVENT_MYSTERIOUS_SALE = "mysterious_sale"
+EVENT_RNG_CELEBRATION = "rng_celebration"
+
+DEFAULT_NORMAL_CANS = 16000
+DEFAULT_LIMITED_CANS = 36
+
+RNG_SHOP = [
+    {"id": "hero-chest", "reward": "Hero Chest", "cost": 1000, "currency": "normal", "unlock_at": 0, "limit": 20},
+    {"id": "festival-skin", "reward": "Festival Skin", "cost": 2500, "currency": "normal", "unlock_at": 0, "limit": 1},
+    {"id": "puppet-9", "reward": "Puppet 9", "cost": 3500, "currency": "normal", "unlock_at": 0, "limit": 4},
+    {"id": "puppet-10", "reward": "Puppet 10", "cost": 5600, "currency": "normal", "unlock_at": 0, "limit": 2},
+    {"id": "resources-chest", "reward": "Resources Chest", "cost": 18, "currency": "limited", "unlock_at": 0, "limit": 10},
+    {"id": "orange-treasure", "reward": "Orange Treasure", "cost": 6500, "currency": "normal", "unlock_at": 1000, "limit": 8},
+    {"id": "orange-festival", "reward": "Orange Festival Treasure", "cost": 7500, "currency": "normal", "unlock_at": 1250, "limit": 8},
+    {"id": "pink-treasure", "reward": "Pink Treasure", "cost": 9300, "currency": "normal", "unlock_at": 2000, "limit": 4},
+    {"id": "pink-festival", "reward": "Pink Festival Treasure", "cost": 10000, "currency": "normal", "unlock_at": 2500, "limit": 4},
+    {"id": "normal-arti", "reward": "Artifacts", "cost": 18, "currency": "limited", "unlock_at": 3200, "limit": 4},
+    {"id": "origin-arti", "reward": "Origin Artifacts", "cost": 18, "currency": "limited", "unlock_at": 6400, "limit": 4},
+    {"id": "origin-mats", "reward": "Origin", "cost": 18, "currency": "limited", "unlock_at": 9600, "limit": 8},
+    {"id": "grim", "reward": "Grim", "cost": 18, "currency": "limited", "unlock_at": 9600, "limit": 6},
+    {"id": "deluxe-box", "reward": "Deluxe Box", "cost": 400, "currency": "normal", "unlock_at": 12800, "limit": 20},
+    {"id": "dt-mats", "reward": "DT", "cost": 18, "currency": "limited", "unlock_at": 12800, "limit": 6},
+    {"id": "star-soul", "reward": "Star Soul", "cost": 18, "currency": "limited", "unlock_at": 16000, "limit": 6},
+]
+RNG_SHOP_BY_ID = {row["id"]: row for row in RNG_SHOP}
 
 
 def empty_counts():
@@ -63,6 +99,86 @@ def compute_option_stats(picks, floors, sg_table, floor_12_discount=False):
     return total, lookup_sg(total, sg_table), counts
 
 
+def _as_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def normalize_rng_shop(raw):
+    data = raw if isinstance(raw, dict) else {}
+    buys = {}
+    for item_id, value in (data.get("buys") or {}).items():
+        item = RNG_SHOP_BY_ID.get(str(item_id))
+        amount = max(0, _as_int(value))
+        if item and amount:
+            buys[item["id"]] = min(item["limit"], amount)
+    shop = {
+        "normal_cans": max(0, _as_int(data.get("normal_cans"), DEFAULT_NORMAL_CANS)),
+        "limited_cans": max(0, _as_int(data.get("limited_cans"), DEFAULT_LIMITED_CANS)),
+        "buys": buys,
+    }
+    return clamp_rng_buys(shop)
+
+
+def rng_spend(buys):
+    normal = 0
+    limited = 0
+    for item_id, count in (buys or {}).items():
+        item = RNG_SHOP_BY_ID.get(item_id)
+        amount = max(0, _as_int(count))
+        if not item or not amount:
+            continue
+        if item["currency"] == "limited":
+            limited += item["cost"] * amount
+        else:
+            normal += item["cost"] * amount
+    return normal, limited
+
+
+def rng_can_buy(item, shop):
+    owned = _as_int((shop.get("buys") or {}).get(item["id"]))
+    if owned >= item["limit"]:
+        return False
+    spent_normal, spent_limited = rng_spend(shop.get("buys") or {})
+    if spent_normal < item["unlock_at"]:
+        return False
+    if item["currency"] == "limited":
+        return shop["limited_cans"] - spent_limited >= item["cost"]
+    return shop["normal_cans"] - spent_normal >= item["cost"]
+
+
+def clamp_rng_buys(shop):
+    wanted = dict(shop.get("buys") or {})
+    shop = {
+        "normal_cans": max(0, _as_int(shop.get("normal_cans"), DEFAULT_NORMAL_CANS)),
+        "limited_cans": max(0, _as_int(shop.get("limited_cans"), DEFAULT_LIMITED_CANS)),
+        "buys": {},
+    }
+    for item in RNG_SHOP:
+        target = min(item["limit"], max(0, _as_int(wanted.get(item["id"]))))
+        owned = 0
+        while owned < target and rng_can_buy(item, shop):
+            owned += 1
+            shop["buys"][item["id"]] = owned
+    return shop
+
+
+def compute_rng_stats(floors):
+    shop = normalize_rng_shop(floors)
+    spent_normal, spent_limited = rng_spend(shop["buys"])
+    counts = empty_counts()
+    for item_id, count in shop["buys"].items():
+        item = RNG_SHOP_BY_ID.get(item_id)
+        amount = max(0, _as_int(count))
+        if not item or not amount:
+            continue
+        reward = item["reward"]
+        counts[reward] = counts.get(reward, 0) + amount
+    return spent_normal, 0, counts, shop, spent_limited
+
+
 def option_payload(option, rating_avg=None, rating_count=0, my_rating=None):
     avg = rating_avg
     if avg is None:
@@ -78,6 +194,7 @@ def option_payload(option, rating_avg=None, rating_count=0, my_rating=None):
         "total_cost": option.total_cost,
         "sg_cost": option.sg_cost,
         "reward_counts": option.reward_counts,
+        "event_type": getattr(option, "event_type", None) or EVENT_MYSTERIOUS_SALE,
         "sort_order": option.sort_order,
         "rating_avg": round(float(avg), 2) if avg is not None else 0,
         "rating_count": count,
@@ -116,6 +233,8 @@ def case_totals(slots, options_by_id):
     counts = empty_counts()
     total_sg = 0
     total_weeks = 0
+    total_normal = 0
+    total_limited = 0
     for slot in slots:
         option = options_by_id.get(slot.get("option_id"))
         weeks = int(slot.get("weeks") or 0)
@@ -125,10 +244,18 @@ def case_totals(slots, options_by_id):
         total_sg += option.sg_cost * weeks
         for key, value in (option.reward_counts or {}).items():
             counts[key] = counts.get(key, 0) + int(value) * weeks
+        if getattr(option, "event_type", EVENT_MYSTERIOUS_SALE) == EVENT_RNG_CELEBRATION:
+            spent_normal, spent_limited = rng_spend(
+                (option.floors or {}).get("buys") or {}
+            )
+            total_normal += spent_normal * weeks
+            total_limited += spent_limited * weeks
     return {
         "total_sg_cost": total_sg,
         "total_weeks": total_weeks,
         "reward_counts": counts,
+        "total_normal_cans": total_normal,
+        "total_limited_cans": total_limited,
     }
 
 
