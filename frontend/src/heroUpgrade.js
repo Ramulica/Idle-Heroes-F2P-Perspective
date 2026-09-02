@@ -84,7 +84,8 @@ export const TEMPLE_TABLE = [
 export const DEFAULT_HERO_UPGRADE = {
   have: [],
   want: [],
-  templeManual: null,
+  haveTempleManual: null,
+  wantTempleManual: null,
   includeOptionals: true,
 };
 
@@ -272,16 +273,22 @@ function normalizeHeroes(list) {
     }));
 }
 
+function readTempleManual(value, fallback = null) {
+  if (value == null || value === "") return fallback;
+  return clampTemple(value);
+}
+
 export function normalizeHeroUpgrade(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
-  const templeManual =
+  const legacy =
     src.templeManual == null || src.templeManual === ""
       ? null
       : clampTemple(src.templeManual);
   return {
     have: normalizeHeroes(src.have),
     want: normalizeHeroes(src.want),
-    templeManual,
+    haveTempleManual: readTempleManual(src.haveTempleManual, legacy),
+    wantTempleManual: readTempleManual(src.wantTempleManual, legacy),
     includeOptionals: src.includeOptionals !== false,
   };
 }

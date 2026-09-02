@@ -115,12 +115,15 @@ function HeroBoard({
   heroes,
   templeLevel,
   autoLevel,
+  templeManual,
+  onTempleManual,
   onAdd,
   onPick,
   onRemove,
   extra,
 }) {
   const row = templeRow(templeLevel);
+  const manual = templeManual != null;
   return (
     <article className="hero-board">
       <div className="calc-row-head">
@@ -129,9 +132,35 @@ function HeroBoard({
           Temple {templeLevel} · D+{row.bonus}
         </span>
       </div>
-      <p className="muted">
-        Auto temple {autoLevel}. Cap: {dtCapLabel(templeLevel)}
-      </p>
+      <p className="muted">Cap: {dtCapLabel(templeLevel)}</p>
+      <label className="check-card hero-temple-check">
+        <input
+          type="checkbox"
+          checked={manual}
+          onChange={(event) =>
+            onTempleManual(event.target.checked ? autoLevel : null)
+          }
+        />
+        <span>Set this temple manually</span>
+      </label>
+      {manual ? (
+        <label className="hero-temple-input">
+          Temple level
+          <input
+            type="number"
+            min="1"
+            max="22"
+            value={templeManual}
+            onChange={(event) =>
+              onTempleManual(
+                Math.min(22, Math.max(1, Number(event.target.value) || 1))
+              )
+            }
+          />
+        </label>
+      ) : (
+        <p className="muted">Auto from this board’s Destiny heroes: {autoLevel}</p>
+      )}
       {extra}
       <div className="hero-slot-grid">
         {heroes.map((hero) => (
@@ -170,8 +199,8 @@ export default function UpgradeHero() {
     patch({ heroUpgrade: { ...upgrade, ...partial } });
   }
 
-  const haveTemple = resolvedTempleLevel(upgrade.have, upgrade.templeManual);
-  const wantTemple = resolvedTempleLevel(upgrade.want, upgrade.templeManual);
+  const haveTemple = resolvedTempleLevel(upgrade.have, upgrade.haveTempleManual);
+  const wantTemple = resolvedTempleLevel(upgrade.want, upgrade.wantTempleManual);
   const haveAuto = autoTempleLevel(upgrade.have);
   const wantAuto = autoTempleLevel(upgrade.want);
   const used = useMemo(
@@ -233,7 +262,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. Optional cores and skill subs use origin mats (1 origin = 150k essence, 1 core chest, or 1 sub).",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
-                  "Temple level comes from your Destiny heroes and sets the D cap plus the D+ shown on the star. Tick Set temple manually to override it.",
+                  "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
             </div>
@@ -285,50 +314,6 @@ export default function UpgradeHero() {
             </div>
 
             <article className="calc-row">
-              <div className="calc-row-head">
-                <h3>Temple</h3>
-                <span className="calc-badge">
-                  Have auto {haveAuto} · Want auto {wantAuto}
-                </span>
-              </div>
-              <p className="muted">
-                Temple does not cost mats. It only needs the Destiny heroes in
-                that column. Higher temple raises the D cap and adds D+ to the
-                star.
-              </p>
-              <label className="check-card hero-temple-check">
-                <input
-                  type="checkbox"
-                  checked={upgrade.templeManual != null}
-                  onChange={(event) =>
-                    setUpgrade({
-                      templeManual: event.target.checked
-                        ? Math.max(haveAuto, wantAuto)
-                        : null,
-                    })
-                  }
-                />
-                <span>Set temple manually</span>
-              </label>
-              {upgrade.templeManual != null ? (
-                <label className="hero-temple-input">
-                  Temple level
-                  <input
-                    type="number"
-                    min="1"
-                    max="22"
-                    value={upgrade.templeManual}
-                    onChange={(event) =>
-                      setUpgrade({
-                        templeManual: Math.min(
-                          22,
-                          Math.max(1, Number(event.target.value) || 1)
-                        ),
-                      })
-                    }
-                  />
-                </label>
-              ) : null}
               <label className="check-card hero-temple-check">
                 <input
                   type="checkbox"
@@ -350,6 +335,8 @@ export default function UpgradeHero() {
                 heroes={upgrade.have}
                 templeLevel={haveTemple}
                 autoLevel={haveAuto}
+                templeManual={upgrade.haveTempleManual}
+                onTempleManual={(value) => setUpgrade({ haveTempleManual: value })}
                 onAdd={() => addHero("have")}
                 onPick={(hero) => setPicker({ side: "have", hero })}
                 onRemove={(id) => removeHero("have", id)}
@@ -359,6 +346,8 @@ export default function UpgradeHero() {
                 heroes={upgrade.want}
                 templeLevel={wantTemple}
                 autoLevel={wantAuto}
+                templeManual={upgrade.wantTempleManual}
+                onTempleManual={(value) => setUpgrade({ wantTempleManual: value })}
                 onAdd={() => addHero("want")}
                 onPick={(hero) => setPicker({ side: "want", hero })}
                 onRemove={(id) => removeHero("want", id)}
@@ -373,6 +362,7 @@ export default function UpgradeHero() {
                             ...newHero(hero.stage),
                             stage: hero.stage,
                           })),
+                          wantTempleManual: upgrade.haveTempleManual,
                         })
                       }
                     >

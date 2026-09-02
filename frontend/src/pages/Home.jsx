@@ -340,7 +340,7 @@ export default function Home() {
                       steps={[
                         "Set what you have and what you want. The top bar shows mats already spent, what is still missing, and the full want cost.",
                         "Event mats from All rewards pay those costs: void for CoT and stellar, origin for essence, cores, and subs, DT for Aurora and Spirit Vein.",
-                        "Temple level comes from Destiny heroes and can be set by hand if you want a higher cap.",
+                        "Have and Want each have their own temple. Auto uses that board’s Destiny heroes; you can set either side by hand.",
                       ]}
                     />
                   </div>

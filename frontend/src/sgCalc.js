@@ -114,7 +114,8 @@ export const DEFAULT_STATE = {
   heroUpgrade: {
     have: [],
     want: [],
-    templeManual: null,
+    haveTempleManual: null,
+    wantTempleManual: null,
     includeOptionals: true,
   },
 };
