@@ -2054,7 +2054,7 @@ input[type="range"] {
 .hero-cost-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 920px;
 }
 
 .hero-cost-table th,
@@ -2137,6 +2137,18 @@ input[type="range"] {
 
 .hero-res-icon {
   border-radius: 8px;
+}
+
+.hero-other-input {
+  width: 100%;
+  min-width: 7.5em;
+  max-width: 11em;
+  padding: 6px 8px;
+  border: 2px solid #8a5a2a;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .hero-temple-check {

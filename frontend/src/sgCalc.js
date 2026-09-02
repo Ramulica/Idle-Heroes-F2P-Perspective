@@ -116,6 +116,15 @@ export const DEFAULT_STATE = {
     want: [],
     haveTempleManual: null,
     wantTempleManual: null,
+    otherSources: {
+      cot: 0,
+      stellar: 0,
+      essence: 0,
+      cores: 0,
+      subs: 0,
+      dtMats: 0,
+      spiritVein: 0,
+    },
   },
 };
 

@@ -17,6 +17,7 @@ import originIcon from "../assets/rewards/origin.png";
 import voidIcon from "../assets/rewards/void.png";
 import {
   STAGES,
+  addCosts,
   autoTempleLevel,
   canPlaceStage,
   dtCapLabel,
@@ -27,6 +28,7 @@ import {
   normalizeHeroUpgrade,
   optionalsRequired,
   optionalSummary,
+  parseResourceInput,
   resolvedTempleLevel,
   rosterCost,
   stageOf,
@@ -140,14 +142,16 @@ function MatAmount({ type, value }) {
   );
 }
 
-function CostPreview({ used, need, full }) {
+function CostPreview({ used, other, need, full, onOther }) {
   const columns = [
     { id: "used", title: "Used so far", cost: used },
+    { id: "other", title: "Other sources", cost: other, input: true },
     { id: "need", title: "Still need", cost: need },
     { id: "full", title: "Full want cost", cost: full },
   ];
   const mats = {
     used: eventMatsFromCost(used),
+    other: eventMatsFromCost(other),
     need: eventMatsFromCost(need),
     full: eventMatsFromCost(full),
   };
@@ -155,9 +159,10 @@ function CostPreview({ used, need, full }) {
   return (
     <div className="hero-cost-table-wrap">
       <p className="hero-cost-rates">
-        1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
-        core chest, or 1 skill sub · 1 DT mat = 5 Divine Aurora or 200k Spirit
-        Vein
+        Other sources is bag, shop, or extra income not already on the boards.
+        Type a number or 5000k. 1 void mat = 1250k CoT or 1250k stellar · 1
+        origin mat = 150k essence, 1 core chest, or 1 skill sub · 1 DT mat = 5
+        Divine Aurora or 200k Spirit Vein
       </p>
       <table className="hero-cost-table">
         <thead>
@@ -180,11 +185,25 @@ function CostPreview({ used, need, full }) {
                 </th>
                 {columns.map((col) => (
                   <td key={col.id}>
-                    <ResourceAmount
-                      alt={row.alt}
-                      value={col.cost[row.key]}
-                      compact={row.compact}
-                    />
+                    {col.input ? (
+                      <input
+                        className="hero-other-input"
+                        type="text"
+                        inputMode="decimal"
+                        aria-label={`${row.name} from other sources`}
+                        placeholder="0"
+                        value={col.cost[row.key] ? String(col.cost[row.key]) : ""}
+                        onChange={(event) =>
+                          onOther(row.key, parseResourceInput(event.target.value))
+                        }
+                      />
+                    ) : (
+                      <ResourceAmount
+                        alt={row.alt}
+                        value={col.cost[row.key]}
+                        compact={row.compact}
+                      />
+                    )}
                   </td>
                 ))}
               </tr>
@@ -339,7 +358,10 @@ export default function UpgradeHero() {
   const wantAuto = autoTempleLevel(upgrade.want);
   const used = useMemo(() => rosterCost(upgrade.have), [upgrade.have]);
   const full = useMemo(() => rosterCost(upgrade.want), [upgrade.want]);
-  const need = useMemo(() => subCosts(full, used), [full, used]);
+  const need = useMemo(
+    () => subCosts(full, addCosts(used, upgrade.otherSources)),
+    [full, used, upgrade.otherSources]
+  );
 
   const yearLoot = useMemo(() => {
     const yearState = { ...state, months: 12 };
@@ -411,6 +433,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
+                  "The preview has Used so far, Other sources you type in, Still need, and Full want. Other sources is bag or extra income, and it lowers Still need.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
@@ -455,7 +478,17 @@ export default function UpgradeHero() {
                   </svg>
                 </button>
               </div>
-              <CostPreview used={used} need={need} full={full} />
+              <CostPreview
+                used={used}
+                other={upgrade.otherSources}
+                need={need}
+                full={full}
+                onOther={(key, value) =>
+                  setUpgrade({
+                    otherSources: { ...upgrade.otherSources, [key]: value },
+                  })
+                }
+              />
             </div>
 
             <div className="hero-boards">

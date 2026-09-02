@@ -106,6 +106,15 @@ export const DEFAULT_HERO_UPGRADE = {
   want: [],
   haveTempleManual: null,
   wantTempleManual: null,
+  otherSources: {
+    cot: 0,
+    stellar: 0,
+    essence: 0,
+    cores: 0,
+    subs: 0,
+    dtMats: 0,
+    spiritVein: 0,
+  },
 };
 
 export function emptyCost() {
@@ -383,7 +392,31 @@ export function normalizeHeroUpgrade(raw) {
     want: normalizeHeroes(src.want),
     haveTempleManual: readTempleManual(src.haveTempleManual, legacy),
     wantTempleManual: readTempleManual(src.wantTempleManual, legacy),
+    otherSources: normalizeOtherSources(src.otherSources),
   };
+}
+
+export function normalizeOtherSources(raw) {
+  const out = emptyCost();
+  Object.keys(out).forEach((key) => {
+    const amount = Number(raw?.[key]);
+    out[key] = Number.isFinite(amount) && amount > 0 ? amount : 0;
+  });
+  return out;
+}
+
+export function parseResourceInput(text) {
+  let value = String(text ?? "")
+    .trim()
+    .replace(/,/g, "")
+    .replace(/_/g, "")
+    .replace(/\s/g, "");
+  if (!value) return 0;
+  const kilo = /k$/i.test(value);
+  if (kilo) value = value.slice(0, -1);
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  return kilo ? amount * 1000 : amount;
 }
 
 export function formatCap(value) {
