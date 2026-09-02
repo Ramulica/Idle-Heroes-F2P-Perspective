@@ -149,16 +149,27 @@ def rng_item_qty(item):
     return max(1, _as_int(item.get("qty"), 1))
 
 
+def copies_needed_for_unlock(item, spent_normal):
+    if spent_normal >= item["unlock_at"]:
+        return 0
+    if item["currency"] != "normal" or item["cost"] <= 0:
+        return None
+    need = item["unlock_at"] - spent_normal
+    return (need + item["cost"] - 1) // item["cost"]
+
+
 def rng_can_buy(item, shop):
     owned = _as_int((shop.get("buys") or {}).get(item["id"]))
     if owned >= item["limit"]:
         return False
     spent_normal, spent_limited = rng_spend(shop.get("buys") or {})
-    if spent_normal < item["unlock_at"]:
-        return False
     if item["currency"] == "limited":
+        if spent_normal < item["unlock_at"]:
+            return False
         return shop["limited_cans"] - spent_limited >= item["cost"]
-    return shop["normal_cans"] - spent_normal >= item["cost"]
+    if shop["normal_cans"] - spent_normal < item["cost"]:
+        return False
+    return spent_normal + item["cost"] >= item["unlock_at"]
 
 
 def clamp_rng_buys(shop):
@@ -172,7 +183,7 @@ def clamp_rng_buys(shop):
     spent_limited = 0
     for item in RNG_SHOP:
         target = min(item["limit"], max(0, _as_int(wanted.get(item["id"]))))
-        if not target or spent_normal < item["unlock_at"]:
+        if not target:
             continue
         leftover = (
             shop["limited_cans"] - spent_limited
@@ -182,6 +193,9 @@ def clamp_rng_buys(shop):
         by_cost = leftover // item["cost"] if item["cost"] else target
         owned = max(0, min(item["limit"], target, by_cost))
         if not owned:
+            continue
+        needed = copies_needed_for_unlock(item, spent_normal)
+        if needed is None or owned < needed:
             continue
         shop["buys"][item["id"]] = owned
         if item["currency"] == "limited":

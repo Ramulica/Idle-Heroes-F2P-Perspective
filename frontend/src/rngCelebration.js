@@ -353,13 +353,22 @@ export function rngSummary(raw) {
   };
 }
 
+function copiesNeededForUnlock(item, spentNormal) {
+  if (spentNormal >= item.unlockAt) return 0;
+  if (item.currency !== "normal" || !(item.cost > 0)) return Infinity;
+  return Math.ceil((item.unlockAt - spentNormal) / item.cost);
+}
+
 export function canBuyRngItem(item, shop) {
   const summary = rngSummary(shop);
   const owned = Number(summary.buys[item.id] || 0);
   if (owned >= item.limit) return false;
-  if (summary.spentNormal < item.unlockAt) return false;
-  if (item.currency === "limited") return summary.leftLimited >= item.cost;
-  return summary.leftNormal >= item.cost;
+  if (item.currency === "limited") {
+    if (summary.spentNormal < item.unlockAt) return false;
+    return summary.leftLimited >= item.cost;
+  }
+  if (summary.leftNormal < item.cost) return false;
+  return summary.spentNormal + item.cost >= item.unlockAt;
 }
 
 export function maxRngCount(item, shop) {
@@ -369,14 +378,17 @@ export function maxRngCount(item, shop) {
     item.currency === "limited"
       ? summary.spentLimited - item.cost * owned
       : summary.spentNormal - item.cost * owned;
-  const normalForUnlock =
-    item.currency === "normal" ? spentWithout : summary.spentNormal;
-  if (normalForUnlock < item.unlockAt) return 0;
   const budget =
     item.currency === "limited" ? summary.limited_cans : summary.normal_cans;
   const leftover = budget - spentWithout;
   const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : item.limit;
-  return Math.max(0, Math.min(item.limit, byCost));
+  const affordable = Math.max(0, Math.min(item.limit, byCost));
+  const normalWithout =
+    item.currency === "normal" ? spentWithout : summary.spentNormal;
+  const needed = copiesNeededForUnlock(item, normalWithout);
+  if (!Number.isFinite(needed)) return owned;
+  if (affordable < needed) return owned;
+  return Math.max(owned, affordable);
 }
 
 export function clampRngBuys(shop) {
@@ -386,14 +398,16 @@ export function clampRngBuys(shop) {
   let spentLimited = 0;
   RNG_SHOP.forEach((item) => {
     const wanted = Number(source.buys[item.id] || 0);
-    if (!wanted || spentNormal < item.unlockAt) return;
+    if (!wanted) return;
     const leftover =
       item.currency === "limited"
         ? source.limited_cans - spentLimited
         : source.normal_cans - spentNormal;
     const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : wanted;
-    const owned = Math.max(0, Math.min(item.limit, wanted, byCost));
+    let owned = Math.max(0, Math.min(item.limit, wanted, byCost));
     if (!owned) return;
+    const needed = copiesNeededForUnlock(item, spentNormal);
+    if (owned < needed) return;
     next.buys[item.id] = owned;
     if (item.currency === "limited") spentLimited += item.cost * owned;
     else spentNormal += item.cost * owned;

@@ -184,7 +184,7 @@ export default function RngShopPlanner({
                 <span>
                   {item.unlockAt <= 0
                     ? "Unlocked"
-                    : `${Math.min(summary.spentNormal, item.unlockAt)}/${item.unlockAt}`}
+                    : `${summary.spentNormal}/${item.unlockAt}`}
                 </span>
               </div>
               <div className="rng-item-icon">
@@ -237,10 +237,17 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
   }, [owned]);
 
   function apply(next) {
-    const amount = Math.max(0, Math.min(max, Math.floor(Number(next) || 0)));
+    const parsed = Math.floor(Number(next));
+    const amount = Number.isFinite(parsed)
+      ? Math.max(0, Math.min(Math.max(owned, max), parsed))
+      : 0;
     ownedRef.current = amount;
     setText(String(amount));
     onChange(amount);
+  }
+
+  function bump(delta) {
+    apply(ownedRef.current + delta);
   }
 
   return (
@@ -249,7 +256,8 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
         className="tan-btn"
         type="button"
         disabled={!canEdit || owned <= 0}
-        onClick={() => apply(ownedRef.current - 1)}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => bump(-1)}
       >
         −
       </button>
@@ -260,7 +268,7 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
             className="cell-input times-input"
             type="number"
             min={0}
-            max={max}
+            max={Math.max(owned, max)}
             inputMode="numeric"
             value={text}
             aria-label={`Buy ${item.reward}`}
@@ -285,7 +293,8 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
         className="tan-btn"
         type="button"
         disabled={!canPlus}
-        onClick={() => apply(ownedRef.current + 1)}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => bump(1)}
       >
         +
       </button>
