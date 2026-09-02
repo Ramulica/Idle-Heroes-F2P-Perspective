@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
 import LootChips from "../components/LootChips.jsx";
 import ResourceAmount from "../components/ResourceAmount.jsx";
+import RewardIcon from "../components/RewardIcon.jsx";
+import { formatNumber } from "../rewards";
 import auroraIcon from "../assets/hero/aurora.png";
 import coreChestIcon from "../assets/hero/core-chest.png";
 import cotIcon from "../assets/hero/cot.png";
@@ -46,50 +48,173 @@ const STAGE_GROUPS = [
   { id: "D", title: "Destiny Transition" },
 ];
 
-function CostColumn({ title, cost }) {
-  const mats = eventMatsFromCost(cost);
+const COST_ROWS = [
+  {
+    key: "cot",
+    name: "CoT",
+    icon: cotIcon,
+    alt: "Crystals of Transcendence",
+    compact: true,
+    matKey: "voidForCot",
+    matType: "Void",
+    matName: "void mats",
+    rate: "1 void = 1250k CoT",
+  },
+  {
+    key: "stellar",
+    name: "Stellar",
+    icon: voidIcon,
+    alt: "Stellar Shards",
+    compact: true,
+    matKey: "voidForStellar",
+    matType: "Void",
+    matName: "void mats",
+    rate: "1 void = 1250k stellar",
+  },
+  {
+    key: "essence",
+    name: "Spiritual Essence",
+    icon: essenceIcon,
+    alt: "Spiritual Essence",
+    matKey: "originForEssence",
+    matType: "Origin",
+    matName: "origin mats",
+    rate: "1 origin = 150k essence",
+  },
+  {
+    key: "cores",
+    name: "Core chests",
+    icon: coreChestIcon,
+    alt: "Core Chest",
+    matKey: "originForCores",
+    matType: "Origin",
+    matName: "origin mats",
+    rate: "1 origin = 1 core chest",
+  },
+  {
+    key: "subs",
+    name: "Skill subs",
+    icon: originIcon,
+    alt: "Origin Material",
+    matKey: "originForSubs",
+    matType: "Origin",
+    matName: "origin mats",
+    rate: "1 origin = 1 sub",
+  },
+  {
+    key: "dtMats",
+    name: "Divine Aurora",
+    icon: auroraIcon,
+    alt: "Divine Aurora",
+    matKey: "dtForAurora",
+    matType: "DT",
+    matName: "DT mats",
+    rate: "1 DT mat = 5 Aurora",
+  },
+  {
+    key: "spiritVein",
+    name: "Spirit Vein",
+    icon: spiritVeinIcon,
+    alt: "Spirit Vein Shards",
+    matKey: "dtForVein",
+    matType: "DT",
+    matName: "DT mats",
+    rate: "1 DT mat = 200k Spirit Vein",
+  },
+];
+
+function formatMats(value) {
+  const amount = Number(value) || 0;
+  if (Math.abs(amount - Math.round(amount)) < 0.001) {
+    return formatNumber(Math.round(amount));
+  }
+  return amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function MatAmount({ type, value }) {
   return (
-    <div className="hero-cost-col">
-      <h3>{title}</h3>
-      <div className="hero-cost-line">
-        <span>CoT</span>
-        <ResourceAmount icon={cotIcon} alt="Crystals of Transcendence" value={cost.cot} compact />
-        <span className="muted">{mats.voidForCot.toFixed(2)} void mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Stellar</span>
-        <ResourceAmount icon={voidIcon} alt="Stellar Shards" value={cost.stellar} compact />
-        <span className="muted">{mats.voidForStellar.toFixed(2)} void mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Essence</span>
-        <ResourceAmount icon={essenceIcon} alt="Spiritual Essence" value={cost.essence} />
-        <span className="muted">{mats.originForEssence.toFixed(2)} origin mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Core chests</span>
-        <ResourceAmount icon={coreChestIcon} alt="Core Chest" value={cost.cores} />
-        <span className="muted">{mats.originForCores} origin mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Skill subs</span>
-        <ResourceAmount icon={originIcon} alt="Origin Material" value={cost.subs} />
-        <span className="muted">{mats.originForSubs} origin mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Divine Aurora</span>
-        <ResourceAmount icon={auroraIcon} alt="Divine Aurora" value={cost.dtMats} />
-        <span className="muted">{mats.dtForAurora} DT mats</span>
-      </div>
-      <div className="hero-cost-line">
-        <span>Spirit Vein</span>
-        <ResourceAmount icon={spiritVeinIcon} alt="Spirit Vein Shards" value={cost.spiritVein} />
-        <span className="muted">{mats.dtForVein.toFixed(2)} DT mats</span>
-      </div>
-      <p className="hero-cost-total muted">
-        Event mats if you pay everything that way: {mats.voidTotal.toFixed(2)} void ·{" "}
-        {mats.originTotal.toFixed(2)} origin · {mats.dtTotal.toFixed(2)} DT
+    <span className="hero-mat-amount">
+      <RewardIcon type={type} />
+      <strong>{formatMats(value)}</strong>
+    </span>
+  );
+}
+
+function CostPreview({ used, need, full }) {
+  const columns = [
+    { id: "used", title: "Used so far", cost: used },
+    { id: "need", title: "Still need", cost: need },
+    { id: "full", title: "Full want cost", cost: full },
+  ];
+  const mats = {
+    used: eventMatsFromCost(used),
+    need: eventMatsFromCost(need),
+    full: eventMatsFromCost(full),
+  };
+
+  return (
+    <div className="hero-cost-table-wrap">
+      <p className="hero-cost-rates">
+        1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
+        core chest, or 1 skill sub · 1 DT mat = 5 Divine Aurora or 200k Spirit
+        Vein
       </p>
+      <table className="hero-cost-table">
+        <thead>
+          <tr>
+            <th>Resource</th>
+            {columns.map((col) => (
+              <th key={col.id}>{col.title}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {COST_ROWS.map((row) => (
+            <Fragment key={row.key}>
+              <tr>
+                <th scope="row">
+                  <span className="hero-cost-name">
+                    <img src={row.icon} alt="" className="csg-icon hero-res-icon" />
+                    {row.name}
+                  </span>
+                </th>
+                {columns.map((col) => (
+                  <td key={col.id}>
+                    <ResourceAmount
+                      alt={row.alt}
+                      value={col.cost[row.key]}
+                      compact={row.compact}
+                    />
+                  </td>
+                ))}
+              </tr>
+              <tr className="hero-cost-conv">
+                <th scope="row">
+                  <span className="hero-cost-rate">= {row.matName}</span>
+                  <span className="hero-cost-rate-note">{row.rate}</span>
+                </th>
+                {columns.map((col) => (
+                  <td key={col.id}>
+                    <MatAmount type={row.matType} value={mats[col.id][row.matKey]} />
+                  </td>
+                ))}
+              </tr>
+            </Fragment>
+          ))}
+          <tr className="hero-cost-sum">
+            <th scope="row">Event mats if you pay that way</th>
+            {columns.map((col) => (
+              <td key={col.id}>
+                <div className="hero-cost-sum-stack">
+                  <MatAmount type="Void" value={mats[col.id].voidTotal} />
+                  <MatAmount type="Origin" value={mats[col.id].originTotal} />
+                  <MatAmount type="DT" value={mats[col.id].dtTotal} />
+                </div>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -330,11 +455,7 @@ export default function UpgradeHero() {
                   </svg>
                 </button>
               </div>
-              <div className="hero-cost-grid">
-                <CostColumn title="Used so far" cost={used} />
-                <CostColumn title="Still need" cost={need} />
-                <CostColumn title="Full want cost" cost={full} />
-              </div>
+              <CostPreview used={used} need={need} full={full} />
             </div>
 
             <div className="hero-boards">

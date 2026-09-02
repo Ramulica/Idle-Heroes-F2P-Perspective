@@ -2020,14 +2020,13 @@ input[type="range"] {
     max-height: none;
   }
 
-  .hero-cost-grid,
   .hero-boards {
     grid-template-columns: 1fr;
   }
 }
 
 .hero-shell {
-  width: min(1280px, 100%);
+  width: min(1360px, 100%);
 }
 
 .hero-cost-banner {
@@ -2036,40 +2035,104 @@ input[type="range"] {
   gap: 12px;
 }
 
-.hero-cost-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.hero-cost-col {
-  background: rgba(255, 248, 230, 0.7);
+.hero-cost-table-wrap {
+  background: #fff8e8;
   border: 1px solid #c9a66b;
   border-radius: 12px;
-  padding: 10px 12px;
+  overflow-x: auto;
+  color: var(--ink);
 }
 
-.hero-cost-col h3 {
-  margin: 0 0 8px;
+.hero-cost-rates {
+  margin: 0;
+  padding: 10px 12px 0;
+  font-size: 0.82rem !important;
+  color: var(--ink-soft) !important;
+  line-height: 1.35;
+}
+
+.hero-cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.hero-cost-table th,
+.hero-cost-table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #e4d0a8;
+}
+
+.hero-cost-table thead th {
+  font-family: Cinzel, serif;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.hero-cost-table tbody th {
+  font-weight: 800;
+  width: 220px;
+}
+
+.hero-cost-name,
+.hero-mat-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.hero-cost-rate {
+  display: block;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.hero-cost-rate-note {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8a6a3a;
+}
+
+.hero-cost-conv {
+  background: rgba(255, 248, 230, 0.7);
+}
+
+.hero-cost-conv th,
+.hero-cost-conv td {
+  padding-top: 4px;
+  padding-bottom: 10px;
+}
+
+.hero-cost-sum th,
+.hero-cost-sum td {
+  background: #f4e6c8;
+  border-bottom: none;
+}
+
+.hero-cost-sum-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-cost-banner .hero-cost-table .csg-amount,
+.hero-cost-banner .hero-mat-amount {
+  color: var(--ink);
+}
+
+.hero-cost-banner .hero-cost-table .csg-amount strong,
+.hero-cost-banner .hero-mat-amount strong {
   font-size: 1rem;
 }
 
-.hero-cost-line {
-  display: grid;
-  grid-template-columns: 7.5em minmax(0, 1fr) auto;
-  gap: 6px 8px;
-  align-items: center;
-  margin-bottom: 6px;
-  font-size: 0.92rem;
-}
-
-.hero-cost-line > span:first-child {
-  font-weight: 800;
-}
-
-.hero-cost-total {
-  margin: 8px 0 0;
-  font-size: 0.82rem;
+.hero-cost-banner .hero-cost-table .csg-icon,
+.hero-cost-banner .hero-cost-table .reward-icon {
+  width: 1.45em;
+  height: 1.45em;
 }
 
 .hero-res-icon {
