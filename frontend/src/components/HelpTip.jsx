@@ -1,14 +1,14 @@
 import { useState } from "react";
 
-export default function HelpTip({ title, steps = [] }) {
+export default function HelpTip({ title, steps = [], message = "" }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         className="info-btn"
         type="button"
-        aria-label={`How to use ${title}`}
-        title="How to use"
+        aria-label={title}
+        title={title}
         onClick={(event) => {
           event.stopPropagation();
           setOpen(true);
@@ -29,12 +29,15 @@ export default function HelpTip({ title, steps = [] }) {
       {open ? (
         <div className="modal-back" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>How to use: {title}</h3>
-            <ul className="help-steps">
-              {steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ul>
+            <h3>{message && !steps.length ? title : `How to use: ${title}`}</h3>
+            {message ? <p>{message}</p> : null}
+            {steps.length ? (
+              <ul className="help-steps">
+                {steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+            ) : null}
             <div className="row-actions">
               <button className="gold-btn" type="button" onClick={() => setOpen(false)}>
                 Got it

@@ -28,6 +28,7 @@ export default function AwakensIncome({ state, result, patch }) {
               "Sky Labyrinth adds 10 soulbond + 8 normal awakens / 5 weeks and costs 1000 CSG / 5 weeks.",
               "Fantasy Factory every time or every other are mutually exclusive.",
               "Pages of Destiny and Monster Tickets add 30 awakens per 100-spend Conductors Offer event if those ticks are on.",
+              "Deluxe boxes are a 1 time / year source from about 2–3 value-pack events.",
             ]}
           />
         </div>
@@ -148,26 +149,6 @@ export default function AwakensIncome({ state, result, patch }) {
         <div className="check-card">
           <input
             type="checkbox"
-            checked={state.deluxeOn}
-            onChange={(event) => patch({ deluxeOn: event.target.checked })}
-          />
-          <span>Awakens from events (deluxe boxes)</span>
-          <input
-            className="cell-input weeks-input"
-            type="number"
-            min="0"
-            disabled={!state.deluxeOn}
-            value={state.deluxeAwakens}
-            onChange={(event) =>
-              patch({
-                deluxeAwakens: Math.max(0, Number(event.target.value || 0)),
-              })
-            }
-          />
-        </div>
-        <div className="check-card">
-          <input
-            type="checkbox"
             checked={state.includePagesAwakens}
             onChange={(event) =>
               patch({ includePagesAwakens: event.target.checked })
@@ -192,6 +173,33 @@ export default function AwakensIncome({ state, result, patch }) {
             <AwakenAmount value={tickets.awakensYearly} /> / year +{" "}
             <SpecialBoxAmount value={tickets.boxesYearly} /> / year)
           </span>
+        </div>
+        <div className="check-card">
+          <input
+            type="checkbox"
+            checked={state.deluxeOn}
+            onChange={(event) => patch({ deluxeOn: event.target.checked })}
+          />
+          <span className="head-with-help">
+            Awakens from events (deluxe boxes), 1 time / year
+            <HelpTip
+              title="Deluxe boxes"
+              message="About 2–3 events per year give deluxe boxes in value packs."
+            />
+          </span>
+          <input
+            className="cell-input weeks-input"
+            type="number"
+            min="0"
+            disabled={!state.deluxeOn}
+            value={state.deluxeAwakens}
+            onChange={(event) =>
+              patch({
+                deluxeAwakens: Math.max(0, Number(event.target.value || 0)),
+              })
+            }
+          />
+          <span className="per-label">/ year</span>
         </div>
       </div>
       <div className="stat-line">

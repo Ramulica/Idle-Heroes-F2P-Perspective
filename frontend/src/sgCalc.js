@@ -284,7 +284,10 @@ export function calculateSg(state) {
   const free = state.freeAwakensOn
     ? Math.min(5, Math.max(2, Number(state.freeAwakens) || 2))
     : 0;
-  const deluxe = state.deluxeOn ? Math.max(0, Number(state.deluxeAwakens) || 0) : 0;
+  const deluxeYearly = state.deluxeOn
+    ? Math.max(0, Number(state.deluxeAwakens) || 0)
+    : 0;
+  const deluxePeriod = deluxeYearly * years;
   const chest = state.mysteriousChest ? CHEST_AWAKENS : 0;
   const labyrinth = state.skyLabyrinth ? LABYRINTH_AWAKENS : 0;
   const factoryEvery = state.factoryMode === "every" ? FACTORY_AWAKENS : 0;
@@ -301,7 +304,6 @@ export function calculateSg(state) {
     chest +
     labyrinth +
     free +
-    deluxe +
     factoryEvery +
     pagesAwakensCycle +
     ticketAwakensCycle;
@@ -313,12 +315,14 @@ export function calculateSg(state) {
     labyrinthCsgCost;
   const awakenPeriod =
     (awakensPerCycle * csgPerAwaken - labyrinthCsgCost) * cycles5 +
-    factoryOther * csgPerAwaken * cycles10;
+    factoryOther * csgPerAwaken * cycles10 +
+    deluxePeriod * csgPerAwaken;
   const awakensYearly =
     awakensPerCycle * (WEEKS_PER_YEAR / AWAKEN_CYCLE_WEEKS) +
-    factoryOther * (WEEKS_PER_YEAR / B_STONE_WEEKS);
+    factoryOther * (WEEKS_PER_YEAR / B_STONE_WEEKS) +
+    deluxeYearly;
   const awakensPeriodCount =
-    awakensPerCycle * cycles5 + factoryOther * cycles10;
+    awakensPerCycle * cycles5 + factoryOther * cycles10 + deluxePeriod;
   const awakenEvent = planAwakenEvents(Math.floor(awakensPerCycle), 1);
   const awakenEventOn = state.includeAwakenEvent !== false;
   const awakenEventPeriod = awakenEventOn
@@ -359,7 +363,9 @@ export function calculateSg(state) {
     factoryEvery,
     factoryOther,
     free,
-    deluxe,
+    deluxe: deluxeYearly,
+    deluxeYearly,
+    deluxePeriod,
     pages,
     monsterTickets,
     treasureCoupons,
