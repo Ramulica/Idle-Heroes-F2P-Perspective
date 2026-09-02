@@ -27,6 +27,8 @@ MAX_CHARM_COST = 70
 
 EVENT_MYSTERIOUS_SALE = "mysterious_sale"
 EVENT_RNG_CELEBRATION = "rng_celebration"
+EVENT_WEEKS_PER_YEAR = 17
+RNG_EVENTS_PER_YEAR = 2
 
 DEFAULT_NORMAL_CANS = 16000
 DEFAULT_LIMITED_CANS = 36
@@ -223,16 +225,24 @@ def option_payload(option, rating_avg=None, rating_count=0, my_rating=None):
     }
 
 
+def rng_events_for_period(period_weeks):
+    period = max(1, int(period_weeks or 1))
+    return max(0, int(round(RNG_EVENTS_PER_YEAR * period / EVENT_WEEKS_PER_YEAR)))
+
+
 def normalize_case_slots(slots, options_by_id, period_weeks):
     period = max(1, int(period_weeks or 1))
+    rng_cap = rng_events_for_period(period)
     cleaned = []
-    used = 0
+    used_ms = 0
+    used_rng = 0
     for slot in slots or []:
         try:
             option_id = int(slot.get("option_id"))
         except (TypeError, ValueError):
             continue
-        if option_id not in options_by_id:
+        option = options_by_id.get(option_id)
+        if not option:
             continue
         try:
             weeks = int(slot.get("weeks") or 0)
@@ -240,12 +250,20 @@ def normalize_case_slots(slots, options_by_id, period_weeks):
             continue
         if weeks <= 0:
             continue
-        room = period - used
-        if room <= 0:
-            break
-        weeks = min(weeks, room)
+        is_rng = getattr(option, "event_type", EVENT_MYSTERIOUS_SALE) == EVENT_RNG_CELEBRATION
+        if is_rng:
+            room = rng_cap - used_rng
+            if room <= 0:
+                continue
+            weeks = min(weeks, room)
+            used_rng += weeks
+        else:
+            room = period - used_ms
+            if room <= 0:
+                continue
+            weeks = min(weeks, room)
+            used_ms += weeks
         cleaned.append({"option_id": option_id, "weeks": weeks})
-        used += weeks
     return cleaned
 
 
@@ -253,6 +271,7 @@ def case_totals(slots, options_by_id):
     counts = empty_counts()
     total_sg = 0
     total_weeks = 0
+    total_rng_events = 0
     total_normal = 0
     total_limited = 0
     for slot in slots:
@@ -260,19 +279,23 @@ def case_totals(slots, options_by_id):
         weeks = int(slot.get("weeks") or 0)
         if not option or weeks <= 0:
             continue
-        total_weeks += weeks
-        total_sg += option.sg_cost * weeks
-        for key, value in (option.reward_counts or {}).items():
-            counts[key] = counts.get(key, 0) + int(value) * weeks
-        if getattr(option, "event_type", EVENT_MYSTERIOUS_SALE) == EVENT_RNG_CELEBRATION:
+        is_rng = getattr(option, "event_type", EVENT_MYSTERIOUS_SALE) == EVENT_RNG_CELEBRATION
+        if is_rng:
+            total_rng_events += weeks
             spent_normal, spent_limited = rng_spend(
                 (option.floors or {}).get("buys") or {}
             )
             total_normal += spent_normal * weeks
             total_limited += spent_limited * weeks
+        else:
+            total_weeks += weeks
+            total_sg += option.sg_cost * weeks
+        for key, value in (option.reward_counts or {}).items():
+            counts[key] = counts.get(key, 0) + int(value) * weeks
     return {
         "total_sg_cost": total_sg,
         "total_weeks": total_weeks,
+        "total_rng_events": total_rng_events,
         "reward_counts": counts,
         "total_normal_cans": total_normal,
         "total_limited_cans": total_limited,

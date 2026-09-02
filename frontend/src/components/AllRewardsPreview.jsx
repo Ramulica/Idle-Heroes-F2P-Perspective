@@ -50,7 +50,7 @@ export default function AllRewardsPreview({
               steps={[
                 "The top line is everything added together: CSG left, awakens, pages, coupons, boxes, loot, and treasure chests.",
                 "The lines under that are the sources: calculator income, treasure completions, awaken-event loot, and the Event Plan.",
-                "Tick one Event Plan below to add its Mysterious Sale loot. 17 event weeks = 1 year.",
+                "Tick one Event Plan below to add its Mysterious Sale and RNG Celebration loot. 17 sale weeks and 2 RNG events = 1 year.",
               ]}
             />
           </div>

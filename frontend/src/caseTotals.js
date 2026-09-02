@@ -2,6 +2,7 @@ import { isRngOption, rngSummary } from "./rngCelebration";
 
 export function caseTotalsFromSlots(slots, optionsById) {
   let total_weeks = 0;
+  let total_rng_events = 0;
   let total_sg_cost = 0;
   let total_normal_cans = 0;
   let total_limited_cans = 0;
@@ -10,12 +11,14 @@ export function caseTotalsFromSlots(slots, optionsById) {
     const option = optionsById[slot.option_id];
     const weeks = Number(slot.weeks) || 0;
     if (!option || weeks <= 0) return;
-    total_weeks += weeks;
-    total_sg_cost += (Number(option.sg_cost) || 0) * weeks;
     if (isRngOption(option)) {
+      total_rng_events += weeks;
       const summary = rngSummary(option.floors);
       total_normal_cans += summary.spentNormal * weeks;
       total_limited_cans += summary.spentLimited * weeks;
+    } else {
+      total_weeks += weeks;
+      total_sg_cost += (Number(option.sg_cost) || 0) * weeks;
     }
     Object.entries(option.reward_counts || {}).forEach(([type, value]) => {
       const amount = Number(value) || 0;
@@ -26,6 +29,7 @@ export function caseTotalsFromSlots(slots, optionsById) {
   });
   return {
     total_weeks,
+    total_rng_events,
     total_sg_cost,
     total_normal_cans,
     total_limited_cans,

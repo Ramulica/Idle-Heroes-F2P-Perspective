@@ -14,7 +14,9 @@ import { isRngOption, rngSummary } from "../rngCelebration";
 import {
   DEFAULT_STATE,
   EVENT_WEEKS_PER_YEAR,
+  RNG_EVENTS_PER_YEAR,
   csgForEventWeeks,
+  rngEventsForPeriod,
   yearlyCsg,
 } from "../sgCalc";
 
@@ -74,7 +76,11 @@ function PeriodCalc({ weeks }) {
   return (
     <p className="period-calc">
       {eventWeeksLabel(weeks)} = <strong>{calendarPeriodLabel(weeks)}</strong>
-      <span className="muted"> · 17 event weeks = 1 year</span>
+      <span className="muted">
+        {" "}
+        · {EVENT_WEEKS_PER_YEAR} Mysterious Sale weeks = 1 year ·{" "}
+        {RNG_EVENTS_PER_YEAR} RNG Celebrations = 1 year
+      </span>
     </p>
   );
 }
@@ -90,6 +96,21 @@ function optionSpendPreview(option) {
     );
   }
   return <CsgAmount value={option?.sg_cost || 0} />;
+}
+
+function slotBudget(slots, index, optionsById, periodWeeks, rngCap) {
+  const slot = slots[index];
+  const rng = isRngOption(optionsById[slot?.option_id]);
+  const others = (slots || []).reduce((sum, row, slotIndex) => {
+    if (slotIndex === index) return sum;
+    if (Boolean(isRngOption(optionsById[row.option_id])) !== rng) return sum;
+    return sum + (Number(row.weeks) || 0);
+  }, 0);
+  const cap = rng ? rngCap : periodWeeks;
+  return {
+    rng,
+    maxTimes: Math.max(1, cap - others),
+  };
 }
 
 function mergeSlotDraft(serverCase, draft, optionsById) {
@@ -148,8 +169,12 @@ export default function CasesPlanner({
     [serverCase, slotDraft, optionsById]
   );
   const usedWeeks = selected?.total_weeks || 0;
+  const usedRng = selected?.total_rng_events || 0;
   const periodWeeks = selected?.period_weeks || 6;
-  const remaining = Math.max(0, periodWeeks - usedWeeks);
+  const rngCap = rngEventsForPeriod(periodWeeks);
+  const remainingMs = Math.max(0, periodWeeks - usedWeeks);
+  const remainingRng = Math.max(0, rngCap - usedRng);
+  const canAddCompletion = remainingMs > 0 || remainingRng > 0;
   const caseLoot = rewardPreview(selected?.reward_counts);
   const estimatedCsg = useMemo(
     () => csgForEventWeeks(sgState, periodWeeks),
@@ -393,12 +418,13 @@ export default function CasesPlanner({
         : selected.slots || [];
     const slot = baseSlots[index];
     if (!slot) return;
-    const otherWeeks = baseSlots.reduce(
-      (sum, row, slotIndex) =>
-        slotIndex === index ? sum : sum + (Number(row.weeks) || 0),
-      0
+    const { maxTimes } = slotBudget(
+      baseSlots,
+      index,
+      optionsById,
+      selected.period_weeks || 6,
+      rngEventsForPeriod(selected.period_weeks || 6)
     );
-    const maxTimes = Math.max(1, (selected.period_weeks || 6) - otherWeeks);
     const weeks = Math.max(
       1,
       Math.min(maxTimes, Math.floor(Number(nextWeeks) || 1))
@@ -423,15 +449,22 @@ export default function CasesPlanner({
   }
 
   function openAddSlot() {
-    if (remaining <= 0) return;
-    setSlotOptionId(data.options[0]?.id || null);
+    if (!canAddCompletion) return;
+    const fallback =
+      remainingMs > 0
+        ? data.options[0]
+        : data.options.find((opt) => isRngOption(opt)) || data.options[0];
+    setSlotOptionId(fallback?.id || null);
     setSlotTimes(1);
     setAddSlotOpen(true);
   }
 
   async function addSlot() {
-    if (!selected || !slotOptionId || remaining <= 0) return;
-    const times = Math.max(1, Math.min(Number(slotTimes) || 1, remaining));
+    if (!selected || !slotOptionId || !canAddCompletion) return;
+    const picked = optionsById[slotOptionId];
+    const room = isRngOption(picked) ? remainingRng : remainingMs;
+    if (room <= 0) return;
+    const times = Math.max(1, Math.min(Number(slotTimes) || 1, room));
     const currentSlots =
       slotDraftRef.current?.caseId === selected.id
         ? slotDraftRef.current.slots
@@ -486,9 +519,9 @@ export default function CasesPlanner({
             <HelpTip
               title="Event Plans"
               steps={[
-                "An event plan is how you spend event weeks.",
-                "17 event weeks = 1 year. CSG / year comes from the CSG Calculator.",
-                "Add Mysterious Sale floors or RNG Celebration shops, then set how many times you run each one.",
+                "An event plan is how you spend Mysterious Sale weeks and RNG Celebrations.",
+                "17 Mysterious Sale weeks and 2 RNG Celebrations = 1 year.",
+                "RNG shops do not use Mysterious Sale weeks. They have their own 2-per-year cap.",
                 "Filter / Sort is a popup. Resource filters keep plans that include those rewards.",
               ]}
             />
@@ -619,7 +652,7 @@ export default function CasesPlanner({
     <button
       className="gold-btn"
       type="button"
-      disabled={remaining <= 0}
+      disabled={!canAddCompletion}
       onClick={openAddSlot}
     >
       + Add completion option
@@ -632,7 +665,7 @@ export default function CasesPlanner({
         <strong>All rewards</strong>
         <span className="muted">
           {eventWeeksLabel(periodWeeks)} · {calendarPeriodLabel(periodWeeks)} ·{" "}
-          {usedWeeks} used · {remaining} left
+          {usedWeeks}/{periodWeeks} sale weeks · {usedRng}/{rngCap} RNG
         </span>
       </div>
       <div className="case-totals-body">
@@ -684,8 +717,8 @@ export default function CasesPlanner({
             title="Event plan"
             steps={[
               "All rewards at the top is the total loot and CSG cost of this event plan.",
-              "Est. CSG is what the CSG Calculator says you earn in this plan’s period (17 event weeks = 1 year).",
-              "Gold cards below are single completions. Use × times to set how many event weeks you run that route.",
+              "Est. CSG is what the CSG Calculator says you earn in this plan’s period (17 Mysterious Sale weeks = 1 year).",
+              "A year also has 2 RNG Celebrations. Those do not use sale weeks.",
               "The three-line menu edits this plan: name, duration, rating, or delete.",
               "+ Add completion option is at the top and the bottom.",
             ]}
@@ -730,8 +763,8 @@ export default function CasesPlanner({
       </div>
       {totals}
       <div className="progress-line">
-        {remaining
-          ? `${remaining} time${remaining === 1 ? "" : "s"} left to add.`
+        {canAddCompletion
+          ? `${remainingMs} Mysterious Sale week${remainingMs === 1 ? "" : "s"} and ${remainingRng} RNG Celebration${remainingRng === 1 ? "" : "s"} left to add.`
           : "This event plan period is full."}
         {busy ? "  Saving..." : ""}
       </div>
@@ -739,8 +772,13 @@ export default function CasesPlanner({
         {(selected?.slots || []).map((slot, index) => {
           const opt = optionsById[slot.option_id];
           if (!opt) return null;
-          const otherWeeks = usedWeeks - (slot.weeks || 0);
-          const maxTimes = Math.max(1, periodWeeks - otherWeeks);
+          const { maxTimes } = slotBudget(
+            selected?.slots || [],
+            index,
+            optionsById,
+            periodWeeks,
+            rngCap
+          );
           return (
             <div className="option-row" key={`${slot.option_id}-${index}`}>
               <div className="option-title">
@@ -811,7 +849,8 @@ export default function CasesPlanner({
       {addSlotOpen && (
         <AddSlotModal
           options={data.options}
-          remaining={remaining}
+          remainingMs={remainingMs}
+          remainingRng={remainingRng}
           slotOptionId={slotOptionId}
           setSlotOptionId={setSlotOptionId}
           slotTimes={slotTimes}
@@ -1017,8 +1056,8 @@ function EditCaseModal({
             title="Edit event plan"
             steps={[
               "Rename the plan, set event weeks, and rate it here.",
-              "Duration cannot go below the times already used.",
-              "17 event weeks = 1 year. The calendar length is shown under the week count.",
+              "Duration cannot go below the Mysterious Sale weeks already used.",
+              "17 sale weeks = 1 year, and that year also gets 2 RNG Celebrations.",
               "Delete removes this event plan from your account only.",
             ]}
           />
@@ -1092,7 +1131,7 @@ function AddCaseModal({
             title="Add event plan"
             steps={[
               "Name the plan, then pick how many Mysterious Sale event weeks it covers.",
-              "17 event weeks = 1 year. Other week counts convert to months/years automatically.",
+              "17 sale weeks = 1 year. That year also has 2 RNG Celebrations, which do not use sale weeks.",
               "After saving, add completions and how many times you run each one.",
             ]}
           />
@@ -1135,7 +1174,8 @@ function AddCaseModal({
 
 function AddSlotModal({
   options,
-  remaining,
+  remainingMs,
+  remainingRng,
   slotOptionId,
   setSlotOptionId,
   slotTimes,
@@ -1144,6 +1184,8 @@ function AddSlotModal({
   onClose,
   onOpenPlanner,
 }) {
+  const picked = options.find((opt) => opt.id === slotOptionId);
+  const room = isRngOption(picked) ? remainingRng : remainingMs;
   return (
     <div className="modal-back" onClick={onClose}>
       <div className="modal wide" onClick={(event) => event.stopPropagation()}>
@@ -1152,16 +1194,19 @@ function AddSlotModal({
           <HelpTip
             title="Add completion to an event plan"
             steps={[
-              "Pick a default or custom completion from the list.",
-              "Set how many times (event weeks) you run it in this event plan.",
-              "You cannot add more times than the plan has left.",
+              "Mysterious Sale floors use sale weeks. RNG Celebration shops use the separate RNG cap.",
+              "A 1-year plan has 17 sale weeks and 2 RNG Celebrations.",
+              "You cannot add more times than that type has left.",
               "Scroll to the bottom to create your own route in Floor Planner.",
             ]}
           />
         </div>
         <p className="muted">
-          Pick a default or custom completion. {remaining} time
-          {remaining === 1 ? "" : "s"} left in this event plan.
+          {remainingMs} Mysterious Sale week{remainingMs === 1 ? "" : "s"} and{" "}
+          {remainingRng} RNG Celebration{remainingRng === 1 ? "" : "s"} left.
+          {picked
+            ? ` This pick can be added ${room} time${room === 1 ? "" : "s"}.`
+            : ""}
         </p>
         <div className="option-pick-list">
           {options.map((opt) => (
@@ -1169,7 +1214,13 @@ function AddSlotModal({
               className={`option-row pick${slotOptionId === opt.id ? " selected-pick" : ""}`}
               type="button"
               key={opt.id}
-              onClick={() => setSlotOptionId(opt.id)}
+              onClick={() => {
+                setSlotOptionId(opt.id);
+                const nextRoom = isRngOption(opt) ? remainingRng : remainingMs;
+                setSlotTimes((current) =>
+                  Math.max(1, Math.min(current, Math.max(1, nextRoom)))
+                );
+              }}
             >
               <div className="option-title">
                 <span className="option-name">{opt.name}</span>
@@ -1220,18 +1271,26 @@ function AddSlotModal({
             className="cell-input"
             type="number"
             min="1"
-            max={remaining}
+            max={Math.max(1, room)}
             value={slotTimes}
             onChange={(event) =>
               setSlotTimes(
-                Math.max(1, Math.min(remaining, Number(event.target.value) || 1))
+                Math.max(
+                  1,
+                  Math.min(Math.max(1, room), Number(event.target.value) || 1)
+                )
               )
             }
             style={{ marginTop: 6 }}
           />
         </label>
         <div className="row-actions">
-          <button className="gold-btn" type="button" onClick={onSave} disabled={!slotOptionId}>
+          <button
+            className="gold-btn"
+            type="button"
+            onClick={onSave}
+            disabled={!slotOptionId || room <= 0}
+          >
             Add
           </button>
           <button className="tan-btn" type="button" onClick={onClose}>
@@ -1242,3 +1301,4 @@ function AddSlotModal({
     </div>
   );
 }
+

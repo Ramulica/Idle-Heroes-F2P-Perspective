@@ -1,6 +1,12 @@
 export const WEEKS_PER_YEAR = 52;
 export const MONTHS_PER_YEAR = 12;
 export const EVENT_WEEKS_PER_YEAR = 17;
+export const RNG_EVENTS_PER_YEAR = 2;
+
+export function rngEventsForPeriod(eventWeeks) {
+  const weeks = Math.max(1, Number(eventWeeks) || 1);
+  return Math.max(0, Math.round((RNG_EVENTS_PER_YEAR * weeks) / EVENT_WEEKS_PER_YEAR));
+}
 export const WEEKS_PER_MONTH = WEEKS_PER_YEAR / MONTHS_PER_YEAR;
 export const BASE_WEEKLY_AWAKENS = 3;
 export const DEFAULT_CSG_PER_AWAKEN = 50;

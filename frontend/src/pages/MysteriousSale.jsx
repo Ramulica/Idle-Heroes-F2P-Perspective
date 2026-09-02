@@ -29,7 +29,7 @@ export default function MysteriousSale({ data, onChange, onCaseUpdated, onOption
               <HelpTip
                 title="Mysterious Sale"
                 steps={[
-                  "Event Plans: your own plans. Set event weeks, then add completions and how many times you run them. 17 event weeks = 1 year.",
+                  "Event Plans: 17 Mysterious Sale weeks and 2 RNG Celebrations = 1 year. Add completions for each.",
                   "Floor Planner: create a Mysterious Sale floor route or an RNG Celebration shop.",
                   "RNG Celebration uses Normal cans and Limited cans instead of CSG.",
                   "CSG / year comes from the CSG Calculator. An event plan estimates CSG for that plan’s period.",

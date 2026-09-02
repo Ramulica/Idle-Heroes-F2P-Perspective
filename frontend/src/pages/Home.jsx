@@ -194,7 +194,7 @@ export default function Home() {
                     <HelpTip
                       title="Mysterious Sale"
                       steps={[
-                        "Event Plans: plan how many event weeks you play a completion. 17 event weeks = 1 year.",
+                        "Event Plans: 17 Mysterious Sale weeks and 2 RNG Celebrations = 1 year.",
                         "Floor Planner: Mysterious Sale floors, or an RNG Celebration can shop.",
                         "CSG cost of an event plan is compared with the CSG you earn in that period from the calculator.",
                       ]}
