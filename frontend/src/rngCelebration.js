@@ -341,7 +341,7 @@ export function rngRewards(buys = {}) {
 }
 
 export function rngSummary(raw) {
-  const shop = normalizeRngShop(raw);
+  const shop = clampRngBuys(raw);
   const spent = rngSpend(shop.buys);
   return {
     ...shop,
@@ -351,12 +351,6 @@ export function rngSummary(raw) {
     leftLimited: shop.limited_cans - spent.limited,
     rewards: rngRewards(shop.buys),
   };
-}
-
-function copiesNeededForUnlock(item, spentNormal) {
-  if (spentNormal >= item.unlockAt) return 0;
-  if (item.currency !== "normal" || !(item.cost > 0)) return Infinity;
-  return Math.ceil((item.unlockAt - spentNormal) / item.cost);
 }
 
 export function canBuyRngItem(item, shop) {
@@ -383,11 +377,12 @@ export function maxRngCount(item, shop) {
   const leftover = budget - spentWithout;
   const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : item.limit;
   const affordable = Math.max(0, Math.min(item.limit, byCost));
-  const normalWithout =
-    item.currency === "normal" ? spentWithout : summary.spentNormal;
-  const needed = copiesNeededForUnlock(item, normalWithout);
-  if (!Number.isFinite(needed)) return owned;
-  if (affordable < needed) return owned;
+  if (item.currency === "limited") {
+    const unlocked = summary.spentNormal >= item.unlockAt;
+    return unlocked ? affordable : owned;
+  }
+  const spentAfter = (n) => spentWithout + item.cost * n;
+  if (spentAfter(affordable) < item.unlockAt) return owned;
   return Math.max(owned, affordable);
 }
 
@@ -404,13 +399,18 @@ export function clampRngBuys(shop) {
         ? source.limited_cans - spentLimited
         : source.normal_cans - spentNormal;
     const byCost = item.cost > 0 ? Math.floor(leftover / item.cost) : wanted;
-    let owned = Math.max(0, Math.min(item.limit, wanted, byCost));
+    const owned = Math.max(0, Math.min(item.limit, wanted, byCost));
     if (!owned) return;
-    const needed = copiesNeededForUnlock(item, spentNormal);
-    if (owned < needed) return;
+    if (item.currency === "limited") {
+      if (spentNormal < item.unlockAt) return;
+      next.buys[item.id] = owned;
+      spentLimited += item.cost * owned;
+      return;
+    }
+    const spentAfter = spentNormal + item.cost * owned;
+    if (spentAfter < item.unlockAt) return;
     next.buys[item.id] = owned;
-    if (item.currency === "limited") spentLimited += item.cost * owned;
-    else spentNormal += item.cost * owned;
+    spentNormal = spentAfter;
   });
   return next;
 }

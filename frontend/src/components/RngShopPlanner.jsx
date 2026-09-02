@@ -83,14 +83,14 @@ export default function RngShopPlanner({
   function patchBudget(field, value) {
     queueSave(
       clampRngBuys({
-        ...shop,
+        ...shopRef.current,
         [field]: Math.max(0, Math.floor(Number(value) || 0)),
       })
     );
   }
 
   function buy(item, nextCount) {
-    queueSave(setRngBuyCount(shop, item.id, nextCount));
+    queueSave(setRngBuyCount(shopRef.current, item.id, nextCount));
   }
 
   return (
@@ -228,26 +228,19 @@ export default function RngShopPlanner({
 }
 
 function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
-  const [text, setText] = useState(String(owned));
-  const ownedRef = useRef(owned);
-  ownedRef.current = owned;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(owned));
+  const shown = editing ? draft : String(owned);
+  const cap = Math.max(0, owned, max);
 
-  useEffect(() => {
-    setText(String(owned));
-  }, [owned]);
-
-  function apply(next) {
-    const parsed = Math.floor(Number(next));
+  function commit(raw) {
+    const parsed = Math.floor(Number(raw));
     const amount = Number.isFinite(parsed)
-      ? Math.max(0, Math.min(Math.max(owned, max), parsed))
-      : 0;
-    ownedRef.current = amount;
-    setText(String(amount));
-    onChange(amount);
-  }
-
-  function bump(delta) {
-    apply(ownedRef.current + delta);
+      ? Math.max(0, Math.min(cap, parsed))
+      : owned;
+    setEditing(false);
+    setDraft(String(amount));
+    if (amount !== owned) onChange(amount);
   }
 
   return (
@@ -257,7 +250,7 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
         type="button"
         disabled={!canEdit || owned <= 0}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => bump(-1)}
+        onClick={() => onChange(owned - 1)}
       >
         −
       </button>
@@ -268,19 +261,16 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
             className="cell-input times-input"
             type="number"
             min={0}
-            max={Math.max(owned, max)}
+            max={cap}
             inputMode="numeric"
-            value={text}
+            value={shown}
             aria-label={`Buy ${item.reward}`}
-            onChange={(event) => {
-              const raw = event.target.value;
-              setText(raw);
-              if (raw === "") return;
-              const amount = Math.floor(Number(raw));
-              if (!Number.isFinite(amount)) return;
-              apply(amount);
+            onFocus={() => {
+              setEditing(true);
+              setDraft(String(owned));
             }}
-            onBlur={() => apply(text === "" ? ownedRef.current : text)}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => commit(draft)}
             onKeyDown={(event) => {
               if (event.key === "Enter") event.currentTarget.blur();
             }}
@@ -294,7 +284,7 @@ function RngBuyControl({ item, owned, max, canEdit, canPlus, onChange }) {
         type="button"
         disabled={!canPlus}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => bump(1)}
+        onClick={() => onChange(owned + 1)}
       >
         +
       </button>
