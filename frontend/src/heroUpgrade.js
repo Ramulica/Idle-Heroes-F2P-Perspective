@@ -1,6 +1,7 @@
 export const VOID_MAT_VALUE = 1_250_000;
 export const ORIGIN_ESSENCE_VALUE = 150_000;
 export const DT_VEIN_PER_MAT = 200_000;
+export const DT_AURORA_PER_MAT = 5;
 export const V_COT = 5_000_000;
 export const DT_UNLOCK_STELLAR = 5_000_000;
 export const DT_UNLOCK_COT = 14_929_100;
@@ -321,9 +322,9 @@ export function eventMatsFromCost(cost) {
     originForCores: cores,
     originForSubs: subs,
     originTotal: essence / ORIGIN_ESSENCE_VALUE + cores + subs,
-    dtForAurora: dtMats,
+    dtForAurora: dtMats / DT_AURORA_PER_MAT,
     dtForVein: spiritVein / DT_VEIN_PER_MAT,
-    dtTotal: dtMats + spiritVein / DT_VEIN_PER_MAT,
+    dtTotal: dtMats / DT_AURORA_PER_MAT + spiritVein / DT_VEIN_PER_MAT,
   };
 }
 
