@@ -299,6 +299,35 @@ def bootstrap(request):
     )
 
 
+def _hero_upgrade_progress(hu):
+    if not isinstance(hu, dict):
+        return False
+    if hu.get("have") or hu.get("want"):
+        return True
+    other = hu.get("otherSources") or {}
+    if not isinstance(other, dict):
+        return False
+    return any(float(value or 0) > 0 for value in other.values())
+
+
+def _merge_sg_state(existing, incoming):
+    existing = existing if isinstance(existing, dict) else {}
+    incoming = incoming if isinstance(incoming, dict) else {}
+    merged = {**existing, **incoming}
+    old_hu = existing.get("heroUpgrade")
+    new_hu = incoming.get("heroUpgrade")
+    if "heroUpgrade" not in incoming:
+        if isinstance(old_hu, dict):
+            merged["heroUpgrade"] = old_hu
+        return merged
+    if not _hero_upgrade_progress(new_hu) and _hero_upgrade_progress(old_hu):
+        merged["heroUpgrade"] = old_hu
+        return merged
+    if isinstance(old_hu, dict) and isinstance(new_hu, dict):
+        merged["heroUpgrade"] = {**old_hu, **new_hu}
+    return merged
+
+
 @require_http_methods(["GET", "PUT", "PATCH"])
 def sg_calculator(request):
     if not request.user.is_authenticated:
@@ -309,7 +338,9 @@ def sg_calculator(request):
     if request.method == "GET":
         return JsonResponse({"state": profile.sg_calculator or {}})
     data = _json_body(request)
-    profile.sg_calculator = data.get("state") or {}
+    profile.sg_calculator = _merge_sg_state(
+        profile.sg_calculator or {}, data.get("state") or {}
+    )
     profile.save(update_fields=["sg_calculator"])
     return JsonResponse({"state": profile.sg_calculator})
 

@@ -381,6 +381,12 @@ function readTempleManual(value, fallback = null) {
   return clampTemple(value);
 }
 
+export function hasHeroUpgradeProgress(raw) {
+  const upgrade = normalizeHeroUpgrade(raw);
+  if (upgrade.have.length || upgrade.want.length) return true;
+  return Object.values(upgrade.otherSources).some((value) => Number(value) > 0);
+}
+
 export function normalizeHeroUpgrade(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const legacy =

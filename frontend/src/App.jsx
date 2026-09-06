@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { api, subscribePending } from "./api";
 import { AuthContext, GUEST_KEY, GUEST_USER } from "./auth";
+import { flushSgCalcSave, resetSgCalcStore } from "./useSgCalc";
 import { LoadingOverlay, LoadingScreen } from "./components/LoadingSpinner.jsx";
 import Home from "./pages/Home.jsx";
 import MysteriousSale from "./pages/MysteriousSale.jsx";
@@ -61,8 +62,10 @@ export default function App() {
   async function logout() {
     sessionStorage.removeItem(GUEST_KEY);
     if (!user?.guest) {
+      await flushSgCalcSave();
       await api.logout();
     }
+    resetSgCalcStore();
     setUser(null);
   }
 
