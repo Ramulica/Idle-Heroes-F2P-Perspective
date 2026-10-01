@@ -39,6 +39,62 @@ const AXIS = {
   d1: "1.5,3.5 4.5,0.5",
 };
 
+const SCRATCH_ADVANCED = [
+  {
+    heading: "The card",
+    paragraphs: [
+      "The 3×3 is a random shuffle of 1–9, each number once. You uncover 4 tiles, then pick one of 8 lines: 3 rows, 3 columns, and 2 diagonals.",
+      "The game scores the three numbers on that line by their sum. Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. Mid sums pay much less. The payout table on this page is the full map from sum to cans.",
+    ],
+  },
+  {
+    heading: "What a line average is",
+    paragraphs: [
+      "Tiles you already typed are fixed. Unknown tiles on that line will be filled from leftover unused numbers.",
+      "A line only cares which leftover numbers land on it, not their order, because the payout uses the sum. So the calculator lists leftover combinations of the right size — not every 9! shuffle of the whole card. Every leftover set of that size is equally likely on a given line.",
+    ],
+    formula:
+      "leftover = {1…9} minus typed numbers\ncombos  = every leftover set of size (unknown cells on this line)\nEV      = average of payout(sum of the three numbers) over those combos",
+    items: [
+      "1 unknown cell: try each leftover number once.",
+      "2 unknown cells: try every leftover pair once.",
+      "3 unknown cells: try every leftover triple once.",
+      "Line fully known: one value, the real payout.",
+    ],
+  },
+  {
+    heading: "Fairy mix",
+    paragraphs: [
+      "If the numbers already showing on a line include two of 1-2-3 (1-2, 1-3, or 2-3), a fairy can complete 1-2-3 for 1680, no matter what the last number is. Same for two of 7-8-9 → 1008. The chance p is the field next to the fairy (default 20%).",
+      "Fairy only looks at numbers already on that line. A line with just a 1 is not eligible yet. A line that is already 1-2-3 or 7-8-9 needs no fairy.",
+    ],
+    formula:
+      "if the line already has two of 1-2-3 (and is not already 1-2-3):\n  payout = p × 1680  +  (1 − p) × natural cans\nexcept when leftover already completes 1-2-3: payout = 1680\n\nSame idea for 7-8-9 with 1008.",
+    items: [
+      "Example: line shows 1 and 3, leftover includes 2 and 4, p = 20%.",
+      "Third is 2 → already 1-2-3 → 1680 for sure.",
+      "Third is 4 → sum 8 pays 630 naturally → 0.20 × 1680 + 0.80 × 630 = 840.",
+      "The line bubble is that average over every leftover fill, with fairy mixed in.",
+    ],
+  },
+  {
+    heading: "Which tile to uncover next",
+    paragraphs: [
+      "Until 4 tiles are open, the green ring is a one-step look-ahead: pick the empty cell that makes the best line worth the most after you see that number.",
+      "Each leftover number is treated as equally likely on that cell. After pretending it is there, every line EV is recomputed (fairy included), and the best of those 8 lines is kept. Average that over leftover numbers.",
+    ],
+    formula:
+      "for each empty cell c:\n  for each leftover number n:\n    place n on c\n    score(n) = highest line EV on that new board\n  VoI(c) = average of score(n)\n\nsuggest the cell with the highest VoI\ntie-break: the cell that sits on more lines (center sits on 4)",
+  },
+  {
+    heading: "Which line to pick",
+    paragraphs: [
+      "After 4 scratches, stop uncovering. The gold line is the one with the highest EV. That is the line to confirm in-game.",
+      "Tap a bubble (or a row under Line averages) to see every leftover set still possible on that axis, with sum, natural cans, and fairy mix when it applies.",
+    ],
+  },
+];
+
 function LineBubble({ line, recommended, onClick, className = "" }) {
   if (!line) return null;
   return (
@@ -202,6 +258,7 @@ export default function ScratchCardCalculator() {
                   "If a line already has two of 1-2-3 (1-2, 1-3, or 2-3) or two of 7-8-9, a fairy can complete that max line. Set the chance (default 20%); averages and advice use it.",
                   "Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. After 4 scratches, pick the highlighted line.",
                 ]}
+                advanced={SCRATCH_ADVANCED}
               />
             </div>
             <p>

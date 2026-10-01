@@ -767,6 +767,82 @@ button.option-row.pick {
   line-height: 1.4;
 }
 
+.help-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.help-tab {
+  border: 2px solid #8a5a2a;
+  background: #fff8e8;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.help-tab.on {
+  background: linear-gradient(180deg, #ffe27a, #f4c430);
+  box-shadow: 0 2px 0 #c4921a;
+}
+
+.help-advanced {
+  max-height: 56vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px;
+}
+
+.help-advanced article {
+  background: #fffaf0;
+  border: 2px solid #c9a36a;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.help-advanced h4 {
+  margin: 0 0 6px;
+  font-family: Cinzel, serif;
+  color: #7a4a22;
+}
+
+.help-advanced p {
+  margin: 0 0 6px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.help-advanced p:last-child {
+  margin-bottom: 0;
+}
+
+.help-formula {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: #3b2d6b;
+  color: #fff8e0;
+  border-radius: 10px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  font-weight: 700;
+}
+
+.help-advanced ul {
+  margin: 6px 0 0;
+  padding-left: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .menu-icon-btn {
   width: 42px;
   height: 42px;
