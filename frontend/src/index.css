@@ -2468,10 +2468,18 @@ input[type="range"] {
   font-size: 0.68rem;
 }
 
+.scratch-bubble.has-fairy {
+  box-shadow: 0 0 0 3px rgba(231, 168, 255, 0.7), 0 3px 0 #24183f;
+}
+
 .scratch-bubble.recommended {
   background: linear-gradient(180deg, #ffe27a, #f4c430);
   color: #4a2c14;
   box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.45), 0 3px 0 #c4921a;
+}
+
+.scratch-bubble.recommended.has-fairy {
+  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.45), 0 0 0 6px rgba(231, 168, 255, 0.55), 0 3px 0 #c4921a;
 }
 
 .scratch-tile {
@@ -2540,6 +2548,14 @@ input[type="range"] {
 
 .scratch-line-row.recommended {
   background: linear-gradient(180deg, #fff4c4, #ffe27a);
+  border-color: #c4921a;
+}
+
+.scratch-line-row.has-fairy {
+  border-color: #c084fc;
+}
+
+.scratch-line-row.recommended.has-fairy {
   border-color: #c4921a;
 }
 
@@ -2640,6 +2656,20 @@ input[type="range"] {
 
 .scratch-pad-btn:disabled {
   opacity: 0.35;
+}
+
+.scratch-fairy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 800;
+  margin: 8px 0 2px;
+}
+
+.scratch-fairy .weeks-input {
+  width: 72px;
+  min-width: 72px;
 }
 
 .scratch-step .tan-btn {

@@ -4,6 +4,7 @@ import CanAmount from "../components/CanAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import { formatNumber } from "../rewards";
 import {
+  DEFAULT_FAIRY_CHANCE,
   EMPTY_BOARD,
   LINES,
   MAX_REVEALS,
@@ -11,6 +12,7 @@ import {
   TILE_SUITS,
   analyzeBoard,
   canPlaceNumber,
+  clampFairyChance,
   explainStep,
   lineCombinations,
   remainingNumbers,
@@ -40,7 +42,9 @@ function LineBubble({ line, recommended, onClick, className = "" }) {
   if (!line) return null;
   return (
     <button
-      className={`scratch-bubble${recommended ? " recommended" : ""} ${className}`.trim()}
+      className={`scratch-bubble${recommended ? " recommended" : ""}${
+        line.pFairy > 0 ? " has-fairy" : ""
+      } ${className}`.trim()}
       type="button"
       title={`Tap to see every leftover combo for the ${line.name}`}
       onClick={() => onClick(line)}
@@ -51,8 +55,9 @@ function LineBubble({ line, recommended, onClick, className = "" }) {
   );
 }
 
-function ComboModal({ line, board, onClose }) {
-  const rows = lineCombinations(board, line);
+function ComboModal({ line, board, fairyChance, onClose }) {
+  const rows = lineCombinations(board, line, fairyChance);
+  const percent = clampFairyChance(fairyChance);
   return (
     <div className="modal-back" onClick={onClose}>
       <div
@@ -63,14 +68,17 @@ function ComboModal({ line, board, onClose }) {
         <p className="muted">
           {rows.length} leftover set{rows.length === 1 ? "" : "s"} that can still
           land on this line. Known tiles stay fixed; empty tiles take leftover
-          numbers. Only the three numbers and the sum matter.
+          numbers.
+          {percent > 0
+            ? ` If this line already has two of 1-2-3 or 7-8-9, a ${percent}% fairy can complete that max line no matter what the last number is.`
+            : ""}
         </p>
         <div className="scratch-combo-list">
           {rows.map((row) => (
             <div
               key={row.numbers.join("-")}
               className={`scratch-combo-row${
-                row.sum === 6 || row.sum === 24 ? " hot" : ""
+                row.sum === 6 || row.sum === 24 || row.fairy ? " hot" : ""
               }`}
             >
               <span className="scratch-combo-nums">
@@ -80,7 +88,12 @@ function ComboModal({ line, board, onClose }) {
                   </strong>
                 ))}
               </span>
-              <span>sum {row.sum}</span>
+              <span>
+                sum {row.sum}
+                {row.fairy
+                  ? ` · fairy ${percent}% → ${row.fairy.label}`
+                  : ""}
+              </span>
               <CanAmount value={row.cans} />
             </div>
           ))}
@@ -134,14 +147,22 @@ export default function ScratchCardCalculator() {
   const [board, setBoard] = useState(EMPTY_BOARD);
   const [picker, setPicker] = useState(null);
   const [comboLine, setComboLine] = useState(null);
+  const [fairyInput, setFairyInput] = useState(String(DEFAULT_FAIRY_CHANCE));
+  const fairyChance = clampFairyChance(fairyInput);
 
-  const analysis = useMemo(() => analyzeBoard(board), [board]);
-  const suggestion = useMemo(() => suggestReveal(board), [board]);
+  const analysis = useMemo(
+    () => analyzeBoard(board, fairyChance),
+    [board, fairyChance]
+  );
+  const suggestion = useMemo(
+    () => suggestReveal(board, fairyChance),
+    [board, fairyChance]
+  );
   const revealed = revealedCount(board);
   const leftover = remainingNumbers(board);
   const used = new Set(board.filter((value) => value != null).map(Number));
   const attemptsLeft = Math.max(0, MAX_REVEALS - revealed);
-  const explain = explainStep(board, suggestion);
+  const explain = explainStep(board, suggestion, fairyChance);
   const byId = Object.fromEntries(analysis.lines.map((line) => [line.id, line]));
   const recommendedId = analysis.bestLine.id;
 
@@ -176,6 +197,7 @@ export default function ScratchCardCalculator() {
                   "The first scratch is random. Tap that tile and type the number you see.",
                   "The calculator then marks the next tile that teaches the most, and updates every line’s average cans.",
                   "Tap a line average to see every leftover number set still possible on that row, column, or diagonal.",
+                  "If a line already has two of 1-2-3 (1-2, 1-3, or 2-3) or two of 7-8-9, a fairy can complete that max line. Set the chance (default 20%); averages and advice use it.",
                   "Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. After 4 scratches, pick the highlighted line.",
                 ]}
               />
@@ -203,6 +225,26 @@ export default function ScratchCardCalculator() {
               <p className="muted">
                 Remaining attempt{attemptsLeft === 1 ? "" : "s"}: {attemptsLeft} ·
                 leftover numbers: {leftover.join(", ") || "none"}
+              </p>
+              <label className="scratch-fairy">
+                <span>Fairy</span>
+                <input
+                  className="cell-input weeks-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={fairyInput}
+                  onChange={(event) => setFairyInput(event.target.value)}
+                  onBlur={() =>
+                    setFairyInput(String(clampFairyChance(fairyInput)))
+                  }
+                />
+                <span>% chance</span>
+              </label>
+              <p className="muted">
+                If a line has 1-2, 1-3, or 2-3, a fairy can turn it into 1-2-3
+                (1680). Same for 7-8-9 (1008). Averages use this chance.
               </p>
               <button
                 className="tan-btn"
@@ -372,11 +414,22 @@ export default function ScratchCardCalculator() {
                       key={line.id}
                       className={`scratch-line-row${
                         line.id === recommendedId ? " recommended" : ""
-                      }`}
+                      }${line.pFairy > 0 ? " has-fairy" : ""}`}
                       type="button"
                       onClick={() => setComboLine(line)}
                     >
-                      <span>{line.name}</span>
+                      <span>
+                        {line.name}
+                        {line.pFairy > 0
+                          ? ` · fairy ${
+                              line.fairyKind === "high"
+                                ? "7-8-9"
+                                : line.fairyKind === "mixed"
+                                  ? "1-2-3 / 7-8-9"
+                                  : "1-2-3"
+                            }`
+                          : ""}
+                      </span>
                       <span>avg sum {line.avgSum.toFixed(1)}</span>
                       <CanAmount value={line.ev} />
                     </button>
@@ -409,6 +462,7 @@ export default function ScratchCardCalculator() {
         <ComboModal
           line={comboLine}
           board={board}
+          fairyChance={fairyChance}
           onClose={() => setComboLine(null)}
         />
       ) : null}
