@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, and Upgrade Hero calculators, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, and Scratch Card calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -353,6 +353,30 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/upgrade-hero")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Scratch Card Calculator</h3>
+                    <HelpTip
+                      title="Scratch Card Calculator"
+                      steps={[
+                        "The grid is 1–9 once each. Scratch 4 tiles, then pick a row, column, or diagonal.",
+                        "Type the first random number, then follow the suggested tile for the most information.",
+                        "Each line shows average cans. After 4 scratches, pick the highlighted line. 1-2-3 pays 1680.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Play Celebration Scratchcard: uncover four numbers, then pick
+                    the line that averages the most cans.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/scratch-card")}
                   >
                     Open tool
                   </button>

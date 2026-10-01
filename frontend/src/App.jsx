@@ -12,6 +12,7 @@ import PagesCalculator from "./pages/PagesCalculator.jsx";
 import MonsterTicketsCalculator from "./pages/MonsterTicketsCalculator.jsx";
 import TreasureCouponsCalculator from "./pages/TreasureCouponsCalculator.jsx";
 import UpgradeHero from "./pages/UpgradeHero.jsx";
+import ScratchCardCalculator from "./pages/ScratchCardCalculator.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 import { caseTotalsFromSlots } from "./caseTotals";
 
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="/guides/monster-tickets" element={<MonsterTicketsCalculator />} />
         <Route path="/guides/treasure-coupons" element={<TreasureCouponsCalculator />} />
         <Route path="/guides/upgrade-hero" element={<UpgradeHero />} />
+        <Route path="/guides/scratch-card" element={<ScratchCardCalculator />} />
         <Route path="/guides/mysterious-sale" element={<MysteriousSaleGate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
