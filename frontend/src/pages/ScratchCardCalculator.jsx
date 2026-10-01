@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CanAmount from "../components/CanAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
+import fairyIcon from "../assets/scratch-fairy.png";
 import { formatNumber } from "../rewards";
 import {
   DEFAULT_FAIRY_CHANCE,
@@ -148,6 +149,7 @@ export default function ScratchCardCalculator() {
   const [picker, setPicker] = useState(null);
   const [comboLine, setComboLine] = useState(null);
   const [fairyInput, setFairyInput] = useState(String(DEFAULT_FAIRY_CHANCE));
+  const [fairyTip, setFairyTip] = useState(false);
   const fairyChance = clampFairyChance(fairyInput);
 
   const analysis = useMemo(
@@ -226,26 +228,6 @@ export default function ScratchCardCalculator() {
                 Remaining attempt{attemptsLeft === 1 ? "" : "s"}: {attemptsLeft} ·
                 leftover numbers: {leftover.join(", ") || "none"}
               </p>
-              <label className="scratch-fairy">
-                <span>Fairy</span>
-                <input
-                  className="cell-input weeks-input"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={fairyInput}
-                  onChange={(event) => setFairyInput(event.target.value)}
-                  onBlur={() =>
-                    setFairyInput(String(clampFairyChance(fairyInput)))
-                  }
-                />
-                <span>% chance</span>
-              </label>
-              <p className="muted">
-                If a line has 1-2, 1-3, or 2-3, a fairy can turn it into 1-2-3
-                (1680). Same for 7-8-9 (1008). Averages use this chance.
-              </p>
               <button
                 className="tan-btn"
                 type="button"
@@ -260,6 +242,38 @@ export default function ScratchCardCalculator() {
             </div>
 
             <div className="scratch-play">
+              <div className="scratch-fairy-side">
+                <button
+                  className={`scratch-fairy-btn${fairyTip ? " open" : ""}`}
+                  type="button"
+                  title="Fairy chance"
+                  onClick={() => setFairyTip((open) => !open)}
+                >
+                  <img src={fairyIcon} alt="Fairy" />
+                </button>
+                <label className="scratch-fairy-chance">
+                  <input
+                    className="cell-input weeks-input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={fairyInput}
+                    onChange={(event) => setFairyInput(event.target.value)}
+                    onBlur={() =>
+                      setFairyInput(String(clampFairyChance(fairyInput)))
+                    }
+                  />
+                  <span>%</span>
+                </label>
+                {fairyTip ? (
+                  <div className="scratch-fairy-pop">
+                    If a line has 1-2, 1-3, or 2-3, a fairy can turn it into
+                    1-2-3 (1680). Same for 7-8-9 (1008). Averages use this
+                    chance.
+                  </div>
+                ) : null}
+              </div>
               <div className="scratch-board">
                 <div className="scratch-layout">
                   <svg
