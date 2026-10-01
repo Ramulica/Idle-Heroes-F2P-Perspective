@@ -4,6 +4,7 @@ import CanAmount from "../components/CanAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import fairyIcon from "../assets/scratch-fairy.png";
 import { formatNumber } from "../rewards";
+import { useSgCalc } from "../useSgCalc";
 import {
   DEFAULT_FAIRY_CHANCE,
   EMPTY_BOARD,
@@ -201,12 +202,30 @@ function NumberPad({ used, onPick, onClear, onClose, canClear }) {
 
 export default function ScratchCardCalculator() {
   const navigate = useNavigate();
+  const { guest, state, patch, loaded } = useSgCalc();
   const [board, setBoard] = useState(EMPTY_BOARD);
   const [picker, setPicker] = useState(null);
   const [comboLine, setComboLine] = useState(null);
   const [fairyInput, setFairyInput] = useState(String(DEFAULT_FAIRY_CHANCE));
   const [fairyTip, setFairyTip] = useState(false);
+  const [fairyWarnGone, setFairyWarnGone] = useState(false);
   const fairyChance = clampFairyChance(fairyInput);
+  const showFairyWarn =
+    loaded && !state.hideScratchFairyWarning && !fairyWarnGone;
+
+  function hideFairyWarn(persist) {
+    setFairyWarnGone(true);
+    if (persist && !guest) {
+      patch({ hideScratchFairyWarning: true });
+    }
+  }
+
+  function setFairyChanceValue(value) {
+    if (String(value) !== String(fairyInput)) {
+      setFairyWarnGone(true);
+    }
+    setFairyInput(value);
+  }
 
   const analysis = useMemo(
     () => analyzeBoard(board, fairyChance),
@@ -300,6 +319,29 @@ export default function ScratchCardCalculator() {
 
             <div className="scratch-play">
               <div className="scratch-fairy-side">
+                {showFairyWarn ? (
+                  <div className="scratch-fairy-warn">
+                    Set the % for this event. 20% is only an estimate.
+                    <button
+                      className="scratch-fairy-gotit"
+                      type="button"
+                      onClick={() => hideFairyWarn(false)}
+                    >
+                      Got it
+                    </button>
+                    {guest ? null : (
+                      <label>
+                        <input
+                          type="checkbox"
+                          onChange={(event) => {
+                            if (event.target.checked) hideFairyWarn(true);
+                          }}
+                        />
+                        Don’t show again **
+                      </label>
+                    )}
+                  </div>
+                ) : null}
                 <button
                   className={`scratch-fairy-btn${fairyTip ? " open" : ""}`}
                   type="button"
@@ -316,9 +358,9 @@ export default function ScratchCardCalculator() {
                     max="100"
                     step="1"
                     value={fairyInput}
-                    onChange={(event) => setFairyInput(event.target.value)}
+                    onChange={(event) => setFairyChanceValue(event.target.value)}
                     onBlur={() =>
-                      setFairyInput(String(clampFairyChance(fairyInput)))
+                      setFairyChanceValue(String(clampFairyChance(fairyInput)))
                     }
                   />
                   <span>%</span>

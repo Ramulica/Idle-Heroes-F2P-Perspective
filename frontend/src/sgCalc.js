@@ -111,6 +111,7 @@ export const DEFAULT_STATE = {
   treasureOtherYearly: TREASURE_OTHER_YEARLY_DEFAULT,
   includeAwakenEvent: true,
   eventPlanId: null,
+  hideScratchFairyWarning: false,
   heroUpgrade: {
     have: [],
     want: [],
