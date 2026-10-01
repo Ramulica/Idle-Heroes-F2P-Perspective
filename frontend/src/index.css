@@ -2743,7 +2743,44 @@ input[type="range"] {
   box-shadow: 0 0 0 2px #f4c430;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 720px) {
+  .scratch-play {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .scratch-fairy-side {
+    flex: 0 0 auto;
+    width: auto;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .scratch-fairy-btn {
+    width: 72px;
+    height: 72px;
+  }
+
+  .scratch-fairy-pop {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(280px, calc(100vw - 48px));
+  }
+
+  .scratch-board {
+    width: 100%;
+    max-width: 420px;
+    padding: 10px 8px 8px;
+  }
+
+  .scratch-layout > .scratch-bubble,
+  .scratch-layout > .scratch-tile {
+    margin: 6%;
+  }
+
   .scratch-bubble {
     font-size: 0.62rem;
   }
@@ -2754,22 +2791,17 @@ input[type="range"] {
 
   .scratch-num,
   .scratch-suit {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 
-  .scratch-fairy-side {
-    flex: 0 0 88px;
-    width: 88px;
+  .scratch-legend {
+    font-size: 0.82rem;
   }
 
-  .scratch-fairy-btn {
-    width: 84px;
-    height: 84px;
-  }
-
-  .scratch-fairy-pop {
-    left: 90px;
-    width: min(200px, 58vw);
+  .scratch-line-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    font-size: 0.88rem;
   }
 }
 
