@@ -29,8 +29,8 @@ export const LINES = [
   { id: "c0", name: "left column", short: "Left", cells: [0, 3, 6], place: "col", slot: 0 },
   { id: "c1", name: "middle column", short: "Mid", cells: [1, 4, 7], place: "col", slot: 1 },
   { id: "c2", name: "right column", short: "Right", cells: [2, 5, 8], place: "col", slot: 2 },
-  { id: "d0", name: "diagonal ↘", short: "↘", cells: [0, 4, 8], place: "diag", slot: 1 },
-  { id: "d1", name: "diagonal ↗", short: "↗", cells: [2, 4, 6], place: "diag", slot: 0 },
+  { id: "d0", name: "diagonal ↘", short: "↘", cells: [0, 4, 8], place: "diag", slot: 0 },
+  { id: "d1", name: "diagonal ↗", short: "↗", cells: [2, 4, 6], place: "diag", slot: 1 },
 ];
 
 export const TILE_SUITS = [
@@ -197,6 +197,27 @@ export function explainStep(board, suggestion) {
   return `Uncover ${tile} next. It sits on ${onLines}, so it updates the most line averages. After this scratch the best line would be worth about ${Math.round(
     suggestion.ev
   )} cans.`;
+}
+
+export function lineCombinations(board, line) {
+  const known = (board || []).map((value) => (value == null ? null : Number(value)));
+  const leftover = remainingNumbers(known);
+  const slots = line.cells.map((index) => known[index]);
+  const unknown = slots.filter((value) => value == null).length;
+  const picks = unknown === 0 ? [[]] : combinations(leftover, unknown);
+  return picks
+    .map((pick) => {
+      let next = 0;
+      const numbers = slots.map((value) => (value == null ? pick[next++] : value));
+      const sum = numbers.reduce((total, value) => total + value, 0);
+      return {
+        numbers,
+        sum,
+        cans: SUM_SCORE[sum] || 0,
+        known: slots.map((value) => value != null),
+      };
+    })
+    .sort((a, b) => b.cans - a.cans || a.sum - b.sum);
 }
 
 export function canPlaceNumber(board, index, number) {

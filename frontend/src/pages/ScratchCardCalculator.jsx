@@ -12,6 +12,7 @@ import {
   analyzeBoard,
   canPlaceNumber,
   explainStep,
+  lineCombinations,
   remainingNumbers,
   revealedCount,
   suggestReveal,
@@ -24,14 +25,72 @@ const SUIT_MARK = {
   club: "♣",
 };
 
-function LineBubble({ line, recommended }) {
+const AXIS = {
+  r0: "1.5,1.5 4.5,1.5",
+  r1: "1.5,2.5 4.5,2.5",
+  r2: "1.5,3.5 4.5,3.5",
+  c0: "1.5,3.5 1.5,0.5",
+  c1: "2.5,3.5 2.5,0.5",
+  c2: "3.5,3.5 3.5,0.5",
+  d0: "3.5,3.5 0.5,0.5",
+  d1: "1.5,3.5 4.5,0.5",
+};
+
+function LineBubble({ line, recommended, onClick, className = "" }) {
+  if (!line) return null;
   return (
-    <div
-      className={`scratch-bubble${recommended ? " recommended" : ""}`}
-      title={`${line.name}: about ${Math.round(line.ev)} cans, avg sum ${line.avgSum.toFixed(1)}`}
+    <button
+      className={`scratch-bubble${recommended ? " recommended" : ""} ${className}`.trim()}
+      type="button"
+      title={`Tap to see every leftover combo for the ${line.name}`}
+      onClick={() => onClick(line)}
     >
       <strong>{formatNumber(Math.round(line.ev))}</strong>
       <span>{line.avgSum.toFixed(1)}</span>
+    </button>
+  );
+}
+
+function ComboModal({ line, board, onClose }) {
+  const rows = lineCombinations(board, line);
+  return (
+    <div className="modal-back" onClick={onClose}>
+      <div
+        className="modal wide scratch-combo-modal"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3>{line.name}</h3>
+        <p className="muted">
+          {rows.length} leftover set{rows.length === 1 ? "" : "s"} that can still
+          land on this line. Known tiles stay fixed; empty tiles take leftover
+          numbers. Only the three numbers and the sum matter.
+        </p>
+        <div className="scratch-combo-list">
+          {rows.map((row) => (
+            <div
+              key={row.numbers.join("-")}
+              className={`scratch-combo-row${
+                row.sum === 6 || row.sum === 24 ? " hot" : ""
+              }`}
+            >
+              <span className="scratch-combo-nums">
+                {row.numbers.map((n, i) => (
+                  <strong key={i} className={row.known[i] ? "known" : ""}>
+                    {n}
+                  </strong>
+                ))}
+              </span>
+              <span>sum {row.sum}</span>
+              <CanAmount value={row.cans} />
+            </div>
+          ))}
+        </div>
+        <div className="row-actions">
+          <button className="gold-btn" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -74,6 +133,7 @@ export default function ScratchCardCalculator() {
   const navigate = useNavigate();
   const [board, setBoard] = useState(EMPTY_BOARD);
   const [picker, setPicker] = useState(null);
+  const [comboLine, setComboLine] = useState(null);
 
   const analysis = useMemo(() => analyzeBoard(board), [board]);
   const suggestion = useMemo(() => suggestReveal(board), [board]);
@@ -115,6 +175,7 @@ export default function ScratchCardCalculator() {
                   "The 3×3 grid is 1–9 once each. You scratch 4 tiles, then pick a row, column, or diagonal.",
                   "The first scratch is random. Tap that tile and type the number you see.",
                   "The calculator then marks the next tile that teaches the most, and updates every line’s average cans.",
+                  "Tap a line average to see every leftover number set still possible on that row, column, or diagonal.",
                   "Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. After 4 scratches, pick the highlighted line.",
                 ]}
               />
@@ -143,54 +204,150 @@ export default function ScratchCardCalculator() {
                 Remaining attempt{attemptsLeft === 1 ? "" : "s"}: {attemptsLeft} ·
                 leftover numbers: {leftover.join(", ") || "none"}
               </p>
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => {
+                  setBoard(EMPTY_BOARD());
+                  setPicker(null);
+                  setComboLine(null);
+                }}
+              >
+                Clear all
+              </button>
             </div>
 
             <div className="scratch-play">
               <div className="scratch-board">
-                <div className="scratch-top-lines">
-                  <LineBubble line={byId.d1} recommended={recommendedId === "d1"} />
-                  <LineBubble line={byId.c0} recommended={recommendedId === "c0"} />
-                  <LineBubble line={byId.c1} recommended={recommendedId === "c1"} />
-                  <LineBubble line={byId.c2} recommended={recommendedId === "c2"} />
-                  <LineBubble line={byId.d0} recommended={recommendedId === "d0"} />
-                </div>
-                <div className="scratch-mid">
-                  <div className="scratch-grid">
-                    {board.map((value, index) => {
-                      const suggested = suggestion.index === index;
-                      const onBest = analysis.bestLine.cells.includes(index);
-                      return (
-                        <button
-                          key={index}
-                          className={`scratch-tile${value != null ? " open" : ""}${
-                            suggested ? " suggested" : ""
-                          }${onBest && revealed >= MAX_REVEALS ? " on-best" : ""}`}
-                          type="button"
-                          onClick={() => {
-                            if (value == null && revealed >= MAX_REVEALS) return;
-                            setPicker(index);
-                          }}
-                        >
-                          {value != null ? (
-                            <span className="scratch-num">{value}</span>
-                          ) : (
-                            <span className="scratch-suit" aria-hidden="true">
-                              {SUIT_MARK[TILE_SUITS[index]]}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="scratch-row-lines">
-                    <LineBubble line={byId.r0} recommended={recommendedId === "r0"} />
-                    <LineBubble line={byId.r1} recommended={recommendedId === "r1"} />
-                    <LineBubble line={byId.r2} recommended={recommendedId === "r2"} />
-                  </div>
+                <div className="scratch-layout">
+                  <svg
+                    className="scratch-axes"
+                    viewBox="0 0 5 4"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <marker
+                        id="scratch-arrow"
+                        viewBox="0 0 8 8"
+                        refX="7"
+                        refY="4"
+                        markerWidth="0.32"
+                        markerHeight="0.32"
+                        orient="auto"
+                        markerUnits="userSpaceOnUse"
+                      >
+                        <path d="M0 0 L8 4 L0 8 Z" fill="rgba(90, 110, 140, 0.7)" />
+                      </marker>
+                      <marker
+                        id="scratch-arrow-best"
+                        viewBox="0 0 8 8"
+                        refX="7"
+                        refY="4"
+                        markerWidth="0.34"
+                        markerHeight="0.34"
+                        orient="auto"
+                        markerUnits="userSpaceOnUse"
+                      >
+                        <path d="M0 0 L8 4 L0 8 Z" fill="#f4c430" />
+                      </marker>
+                    </defs>
+                    {LINES.map((line) => (
+                      <polyline
+                        key={line.id}
+                        points={AXIS[line.id]}
+                        className={
+                          line.id === recommendedId ? "is-best" : undefined
+                        }
+                        markerEnd={
+                          line.id === recommendedId
+                            ? "url(#scratch-arrow-best)"
+                            : "url(#scratch-arrow)"
+                        }
+                      />
+                    ))}
+                  </svg>
+                  <LineBubble
+                    className="pos-d0"
+                    line={byId.d0}
+                    recommended={recommendedId === "d0"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-c0"
+                    line={byId.c0}
+                    recommended={recommendedId === "c0"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-c1"
+                    line={byId.c1}
+                    recommended={recommendedId === "c1"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-c2"
+                    line={byId.c2}
+                    recommended={recommendedId === "c2"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-d1"
+                    line={byId.d1}
+                    recommended={recommendedId === "d1"}
+                    onClick={setComboLine}
+                  />
+                  {board.map((value, index) => {
+                    const suggested = suggestion.index === index;
+                    const onBest = analysis.bestLine.cells.includes(index);
+                    return (
+                      <button
+                        key={index}
+                        className={`scratch-tile${value != null ? " open" : ""}${
+                          suggested ? " suggested" : ""
+                        }${onBest && revealed >= MAX_REVEALS ? " on-best" : ""}`}
+                        type="button"
+                        style={{
+                          gridColumn: 2 + (index % 3),
+                          gridRow: 2 + Math.floor(index / 3),
+                        }}
+                        onClick={() => {
+                          if (value == null && revealed >= MAX_REVEALS) return;
+                          setPicker(index);
+                        }}
+                      >
+                        {value != null ? (
+                          <span className="scratch-num">{value}</span>
+                        ) : (
+                          <span className="scratch-suit" aria-hidden="true">
+                            {SUIT_MARK[TILE_SUITS[index]]}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  <LineBubble
+                    className="pos-r0"
+                    line={byId.r0}
+                    recommended={recommendedId === "r0"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-r1"
+                    line={byId.r1}
+                    recommended={recommendedId === "r1"}
+                    onClick={setComboLine}
+                  />
+                  <LineBubble
+                    className="pos-r2"
+                    line={byId.r2}
+                    recommended={recommendedId === "r2"}
+                    onClick={setComboLine}
+                  />
                 </div>
                 <p className="scratch-legend muted">
-                  Each bubble is a line. Top number is average cans. Bottom number
-                  is average sum. Gold means the current best line.
+                  Bubbles sit on each row, column, and diagonal. Tap one to see
+                  every leftover combination. Gold is the current best line.
                 </p>
               </div>
             </div>
@@ -202,31 +359,28 @@ export default function ScratchCardCalculator() {
                   Best now: {analysis.bestLine.name}
                 </span>
               </div>
+              <p className="muted">
+                Tap a line here or a bubble on the board to see every leftover
+                number set still possible on that axis.
+              </p>
               <div className="scratch-line-list">
                 {analysis.lines
                   .slice()
                   .sort((a, b) => b.ev - a.ev)
                   .map((line) => (
-                    <div
+                    <button
                       key={line.id}
                       className={`scratch-line-row${
                         line.id === recommendedId ? " recommended" : ""
                       }`}
+                      type="button"
+                      onClick={() => setComboLine(line)}
                     >
                       <span>{line.name}</span>
                       <span>avg sum {line.avgSum.toFixed(1)}</span>
                       <CanAmount value={line.ev} />
-                    </div>
+                    </button>
                   ))}
-              </div>
-              <div className="row-actions">
-                <button
-                  className="tan-btn"
-                  type="button"
-                  onClick={() => setBoard(EMPTY_BOARD())}
-                >
-                  New card
-                </button>
               </div>
             </article>
 
@@ -251,6 +405,13 @@ export default function ScratchCardCalculator() {
         </div>
       </div>
 
+      {comboLine ? (
+        <ComboModal
+          line={comboLine}
+          board={board}
+          onClose={() => setComboLine(null)}
+        />
+      ) : null}
       {picker != null ? (
         <NumberPad
           used={
