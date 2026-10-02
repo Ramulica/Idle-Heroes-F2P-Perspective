@@ -9,7 +9,7 @@ export const HEX_DIRS = [
 ];
 
 export const BOARD_ROWS = 7;
-export const BOARD_COLS = 13;
+export const BOARD_COLS = 20;
 export const COMMON_CHANCE = 0.8;
 export const RARE_CHANCE = 0.2;
 
@@ -75,6 +75,16 @@ export function axialPixel(q, r, size) {
     x: size * Math.sqrt(3) * (q + r / 2),
     y: size * 1.5 * r,
   };
+}
+
+export function hexCornerPoints(q, r, size) {
+  const { x, y } = axialPixel(q, r, size);
+  const pts = [];
+  for (let i = 0; i < 6; i += 1) {
+    const angle = ((60 * i - 30) * Math.PI) / 180;
+    pts.push(`${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`);
+  }
+  return pts.join(" ");
 }
 
 export const BOARD_CELLS = (() => {

@@ -11,14 +11,22 @@ import {
   axialPixel,
   bestMainPlacement,
   cellKey,
+  hexCornerPoints,
   pieceById,
 } from "../fantasyFactory";
 
-const HEX_SIZE = 20;
+const HEX_SIZE = 18;
 const PREVIEW_SIZE = 9;
+const HEX_PAD = HEX_SIZE + 4;
+const BOARD_VIEW = {
+  x: BOARD_BOUNDS.minX * HEX_SIZE - HEX_PAD,
+  y: BOARD_BOUNDS.minY * HEX_SIZE - HEX_PAD,
+  w: (BOARD_BOUNDS.maxX - BOARD_BOUNDS.minX) * HEX_SIZE + HEX_PAD * 2,
+  h: (BOARD_BOUNDS.maxY - BOARD_BOUNDS.minY) * HEX_SIZE + HEX_PAD * 2,
+};
 
 const FACTORY_HELP = [
-  "Tap hexes on the board to mark every little hero still left. Empty blue hexes are already cleared. Fill board paints a fresh stage; then tap off the ones you already removed.",
+  "Tap hexes on the honeycomb to mark every little hero still left. Empty blue hexes are already cleared. Fill board paints a fresh stage; then tap off the ones you already removed.",
   "The game always shows two Dream Patterns: the one you must place now (Main) and the one after it (Next). Tap a slot, then tap the matching shape below.",
   "Green hexes are where Main should go. Gold is the planned Next. Red is waste — a cell of the piece that hangs off remaining heroes or off the map.",
   "Place Main in-game on those green hexes, then tap I placed this. Next becomes Main. Pick the new Next pattern the game just revealed.",
@@ -30,7 +38,7 @@ const FACTORY_ADVANCED = [
   {
     heading: "What the puzzle is",
     paragraphs: [
-      "The board is a 13×7 pointy-top hex map. Painted hexes are remaining little heroes. A Dream Pattern is a fixed polyhex: you get that exact orientation, and you cannot rotate it.",
+      "The board is a honeycomb 20 hexes wide and 7 hexes tall. Cells sit in a zigzag honeycomb: they touch on vertical and diagonal edges, not as a square grid. Painted hexes are remaining little heroes. A Dream Pattern is a fixed polyhex: you get that exact orientation, and you cannot rotate it.",
       "Placing a piece clears every remaining hero under it. Any cell of the piece that lands on a cleared hex, or off the remaining set, is waste.",
     ],
   },
@@ -90,45 +98,74 @@ function HexShape({ cells, size = PREVIEW_SIZE, className = "" }) {
   );
 }
 
-const HEX_W = Math.sqrt(3) * HEX_SIZE;
-const HEX_H = 2 * HEX_SIZE;
-const BOARD_W =
-  (BOARD_BOUNDS.maxX - BOARD_BOUNDS.minX) * HEX_SIZE + HEX_W;
-const BOARD_H =
-  (BOARD_BOUNDS.maxY - BOARD_BOUNDS.minY) * HEX_SIZE + HEX_H;
-
-function cellPixel(q, r, size = HEX_SIZE) {
-  const p = axialPixel(q, r, size);
-  return {
-    x: p.x - BOARD_BOUNDS.minX * size + HEX_W / 2,
-    y: p.y - BOARD_BOUNDS.minY * size + HEX_H / 2,
-  };
+function hexClass(key, remainingSet, mainHits, mainWaste, nextHits, nextWaste) {
+  const classes = [
+    remainingSet.has(key) ? "filled" : "empty",
+    mainHits.has(key) ? "main-hit" : "",
+    mainWaste.has(key) ? "main-waste" : "",
+    nextHits.has(key) ? "next-hit" : "",
+    nextWaste.has(key) ? "next-waste" : "",
+  ];
+  return classes.filter(Boolean).join(" ");
 }
 
-function HexCell({ q, r, className, onClick, label, ghost }) {
-  const { x, y } = cellPixel(q, r);
-  const style = {
-    left: x - HEX_W / 2,
-    top: y - HEX_H / 2,
-    width: HEX_W + 1,
-    height: HEX_H + 1,
-  };
-  if (ghost) {
-    return (
-      <span className={`ff-hex ${className}`.trim()} style={style} aria-hidden="true">
-        {label}
-      </span>
-    );
-  }
+function HexBoard({
+  remainingSet,
+  mainHits,
+  mainWaste,
+  nextHits,
+  nextWaste,
+  extraGhosts,
+  onToggle,
+}) {
   return (
-    <button
-      className={`ff-hex ${className}`.trim()}
-      type="button"
-      style={style}
-      onClick={onClick}
+    <svg
+      className="ff-board-svg"
+      viewBox={`${BOARD_VIEW.x} ${BOARD_VIEW.y} ${BOARD_VIEW.w} ${BOARD_VIEW.h}`}
+      role="img"
+      aria-label="Fantasy Factory hex map"
     >
-      {label}
-    </button>
+      {BOARD_CELLS.map((cell) => {
+        const filled = remainingSet.has(cell.key);
+        const { x, y } = axialPixel(cell.q, cell.r, HEX_SIZE);
+        return (
+          <g key={cell.key}>
+            <polygon
+              className={hexClass(
+                cell.key,
+                remainingSet,
+                mainHits,
+                mainWaste,
+                nextHits,
+                nextWaste
+              )}
+              points={hexCornerPoints(cell.q, cell.r, HEX_SIZE)}
+              onClick={() => onToggle(cell.key)}
+            />
+            {filled ? (
+              <circle className="ff-pip" cx={x} cy={y} r={HEX_SIZE * 0.22} />
+            ) : null}
+          </g>
+        );
+      })}
+      {extraGhosts.map(([q, r]) => {
+        const key = cellKey(q, r);
+        return (
+          <polygon
+            key={`g-${key}`}
+            className={`ghost ${hexClass(
+              key,
+              remainingSet,
+              mainHits,
+              mainWaste,
+              nextHits,
+              nextWaste
+            )}`}
+            points={hexCornerPoints(q, r, HEX_SIZE)}
+          />
+        );
+      })}
+    </svg>
   );
 }
 
@@ -294,50 +331,15 @@ export default function FantasyFactoryCalculator() {
             </div>
 
             <div className="ff-play">
-              <div
-                className="ff-board"
-                style={{ width: BOARD_W, height: BOARD_H }}
-              >
-                {BOARD_CELLS.map((cell) => {
-                  const key = cell.key;
-                  const filled = remainingSet.has(key);
-                  const classes = [
-                    filled ? "filled" : "empty",
-                    mainHits.has(key) ? "main-hit" : "",
-                    mainWaste.has(key) ? "main-waste" : "",
-                    nextHits.has(key) ? "next-hit" : "",
-                    nextWaste.has(key) ? "next-waste" : "",
-                  ];
-                  return (
-                    <HexCell
-                      key={key}
-                      q={cell.q}
-                      r={cell.r}
-                      className={classes.filter(Boolean).join(" ")}
-                      onClick={() => toggleCell(key)}
-                    />
-                  );
-                })}
-                {extraGhosts.map(([q, r]) => {
-                  const key = cellKey(q, r);
-                  const classes = [
-                    "ghost",
-                    mainHits.has(key) ? "main-hit" : "",
-                    mainWaste.has(key) ? "main-waste" : "",
-                    nextHits.has(key) ? "next-hit" : "",
-                    nextWaste.has(key) ? "next-waste" : "",
-                  ];
-                  return (
-                    <HexCell
-                      key={`g-${key}`}
-                      q={q}
-                      r={r}
-                      className={classes.filter(Boolean).join(" ")}
-                      ghost
-                    />
-                  );
-                })}
-              </div>
+              <HexBoard
+                remainingSet={remainingSet}
+                mainHits={mainHits}
+                mainWaste={mainWaste}
+                nextHits={nextHits}
+                nextWaste={nextWaste}
+                extraGhosts={extraGhosts}
+                onToggle={toggleCell}
+              />
               <p className="ff-legend muted">
                 <span className="ff-swatch filled" /> remaining hero
                 <span className="ff-swatch main-hit" /> Main
