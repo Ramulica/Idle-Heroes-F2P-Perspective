@@ -3113,10 +3113,11 @@ input[type="range"] {
 }
 
 .ff-bag {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(64px, 80px));
   gap: 8px;
   margin-bottom: 8px;
+  justify-content: start;
 }
 
 .ff-piece {

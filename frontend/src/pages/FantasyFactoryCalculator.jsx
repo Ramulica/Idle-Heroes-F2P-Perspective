@@ -30,7 +30,7 @@ const FACTORY_HELP = [
   "The game always shows two Dream Patterns: the one you must place now (Main) and the one after it (Next). Tap a slot, then tap the matching shape below.",
   "Green hexes are where Main should go. Gold is the planned Next. Red is waste — a cell of the piece that hangs off remaining heroes or off the map.",
   "Place Main in-game on those green hexes, then tap I placed this. Next becomes Main. Pick the new Next pattern the game just revealed.",
-  "You may drop a piece over the edge or over a cleared hex, but that cell is waste. The solver picks the Main spot that covers the most remaining heroes and leaves the easiest leftover for Next and later pieces.",
+  "The solver tries every legal Main spot, then every Next spot on what would remain. It scores leftover groups: isolated singles are very expensive, then it averages how well the real 80% / 20% bag can bite what is left. A 0-waste move that creates stranded hexes loses to a slightly wasteful move that keeps the leftover tileable.",
   "Common 3-hex patterns are about 80% of draws. Rare 5-hex patterns are about 20%. That mix is only used to prefer leftovers that future pieces can still cover cleanly.",
 ];
 
@@ -45,16 +45,16 @@ const FACTORY_ADVANCED = [
   {
     heading: "How the best Main spot is chosen",
     paragraphs: [
-      "Every translation of Main that covers at least one remaining hero is tried. For each of those, every translation of Next on the leftover is tried. The pair with the least total waste wins. That full pair search runs while 36 or fewer hexes remain — the leftover puzzles this tool is for.",
-      "If several pairs waste the same amount, the solver keeps the leftover with fewer cells, then the leftover whose connected groups are easiest to cover with a later 3-hex or 5-hex piece (isolated singles are the worst).",
+      "Every translation of Main that covers at least one remaining hero is tried. For each of those, every translation of Next on the leftover is tried. The winner is not the lowest waste by itself — leftover shape and the 80/20 future bag matter more. Isolated singles score worst. That full pair search runs while 40 or fewer hexes remain.",
+      "A later unknown piece is 80% one of the 10 common 3-hex patterns (equal chance each) and 20% one of the 4 rare 5-hex patterns. After Main and Next, the leftover is scored by the expected best bite from that bag, so the solver plans past the two pieces you can see.",
     ],
     formula:
-      "for each Main origin that hits the puzzle:\n  place Main, leftover1 = remaining − covered\n  for each Next origin on leftover1:\n    place Next, leftover2 = leftover1 − covered\n    score = waste(Main)×1e6 + waste(Next)×1e4\n          + |leftover2|×80 + shape(leftover2)\n\npick the Main origin with the lowest score\nshape: isolated 1-hex and 2-hex groups cost the most",
+      "score = waste(Main)×26 + waste(Next)×20 + leftoverCost\nleftoverCost = 120 per isolated hex\n             + 62 per 2-hex stub\n             + 2 if a leftover 3-hex matches a common piece\n             + 52 if that 3-hex matches none\n             + expected future bite from the 80/20 bag",
   },
   {
     heading: "Future 80% / 20% pieces",
     paragraphs: [
-      "After the two known patterns, later draws are unknown. Common 3-hex pieces are 80% of the bag, rare 5-hex pieces 20%. The solver does not pretend to know those draws. It only prefers leftovers that some catalog piece can still cover with little waste, so a random future pattern is less likely to strip leftover singles.",
+      "There are 10 common Dream Patterns and 4 rare ones, in the orientations the game gives you. You cannot rotate them. After the two known patterns, later draws are 80% common (equal among the 10) and 20% rare (equal among the 4). That mix is used when scoring leftovers, so Main is chosen with those probabilities in mind.",
     ],
   },
   {

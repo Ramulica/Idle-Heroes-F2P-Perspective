@@ -51,112 +51,77 @@ export function rotateCells(cells, times = 1) {
   return normalizeCells(out);
 }
 
-function fingerprint(cells) {
-  return normalizeCells(cells)
-    .map(([q, r]) => `${q},${r}`)
-    .join(";");
+function makePiece(id, rarity, cells) {
+  const norm = normalizeCells(cells);
+  return { id, rarity, cells: norm, size: norm.length };
 }
 
-function uniqueOrientations(seed) {
-  const seen = new Set();
-  const out = [];
-  for (let k = 0; k < 6; k += 1) {
-    const cells = rotateCells(seed, k);
-    const id = fingerprint(cells);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push(cells);
-  }
-  return out;
-}
-
-export function axialPixel(q, r, size) {
-  return {
-    x: size * Math.sqrt(3) * (q + r / 2),
-    y: size * 1.5 * r,
-  };
-}
-
-export function hexCornerPoints(q, r, size) {
-  const { x, y } = axialPixel(q, r, size);
-  const pts = [];
-  for (let i = 0; i < 6; i += 1) {
-    const angle = ((60 * i - 30) * Math.PI) / 180;
-    pts.push(`${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`);
-  }
-  return pts.join(" ");
-}
-
-export const BOARD_CELLS = (() => {
-  const cells = [];
-  for (let row = 0; row < BOARD_ROWS; row += 1) {
-    for (let col = 0; col < BOARD_COLS; col += 1) {
-      const [q, r] = oddRToAxial(col, row);
-      cells.push({ col, row, q, r, key: cellKey(q, r) });
-    }
-  }
-  return cells;
-})();
-
-export const BOARD_KEYS = new Set(BOARD_CELLS.map((cell) => cell.key));
-
-const BOARD_PIX = BOARD_CELLS.map((cell) => axialPixel(cell.q, cell.r, 1));
-export const BOARD_BOUNDS = {
-  minX: Math.min(...BOARD_PIX.map((p) => p.x)),
-  maxX: Math.max(...BOARD_PIX.map((p) => p.x)),
-  minY: Math.min(...BOARD_PIX.map((p) => p.y)),
-  maxY: Math.max(...BOARD_PIX.map((p) => p.y)),
-};
-
-function makePieces(rarity, seeds) {
-  const pieces = [];
-  seeds.forEach((seed, seedIndex) => {
-    uniqueOrientations(seed).forEach((cells, orient) => {
-      pieces.push({
-        id: `${rarity[0]}${seedIndex + 1}${orient}`,
-        rarity,
-        cells,
-        size: cells.length,
-      });
-    });
-  });
-  return pieces;
-}
-
-export const COMMON_PIECES = makePieces("common", [
-  [
+export const COMMON_PIECES = [
+  makePiece("c1", "common", [
     [0, 0],
     [1, 0],
     [2, 0],
-  ],
-  [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-  ],
-  [
+  ]),
+  makePiece("c2", "common", [
     [0, 0],
     [1, 0],
     [1, -1],
-  ],
-]);
-
-export const RARE_PIECES = makePieces("rare", [
-  [
+  ]),
+  makePiece("c3", "common", [
     [0, 0],
     [1, 0],
-    [2, 0],
+    [2, -1],
+  ]),
+  makePiece("c4", "common", [
+    [0, 0],
+    [1, -1],
+    [0, -1],
+  ]),
+  makePiece("c5", "common", [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+  ]),
+  makePiece("c6", "common", [
+    [0, 0],
     [0, 1],
     [1, 1],
-  ],
-  [
+  ]),
+  makePiece("c7", "common", [
     [0, 0],
-    [1, 0],
-    [2, 0],
+    [0, 1],
+    [0, 2],
+  ]),
+  makePiece("c8", "common", [
+    [0, 0],
+    [1, -1],
     [2, -1],
-    [1, 1],
-  ],
-]);
+  ]),
+  makePiece("c9", "common", [
+    [0, 0],
+    [1, -1],
+    [2, -2],
+  ]),
+  makePiece("c10", "common", [
+    [0, 0],
+    [0, 1],
+    [-1, 1],
+  ]),
+];
+
+const TRAP = [
+  [0, 0],
+  [1, 0],
+  [2, 0],
+  [0, 1],
+  [1, 1],
+];
+export const RARE_PIECES = [
+  makePiece("r1", "rare", rotateCells(TRAP, 1)),
+  makePiece("r2", "rare", rotateCells(TRAP, 2)),
+  makePiece("r3", "rare", rotateCells(TRAP, 4)),
+  makePiece("r4", "rare", TRAP),
+];
 
 export const ALL_PIECES = [...COMMON_PIECES, ...RARE_PIECES];
 
@@ -238,126 +203,162 @@ function components(remaining) {
   return groups;
 }
 
-function exactlyCoveredByCatalog(keys) {
+function perfectFit(keys, pieces) {
   const remaining = new Set(keys);
   const size = remaining.size;
-  if (size !== 3 && size !== 5) return false;
-  for (let i = 0; i < ALL_PIECES.length; i += 1) {
-    const piece = ALL_PIECES[i];
+  for (let i = 0; i < pieces.length; i += 1) {
+    const piece = pieces[i];
     if (piece.size !== size) continue;
     const origins = originsFor(piece, remaining);
     for (let j = 0; j < origins.length; j += 1) {
-      const [oq, or] = origins[j];
-      const scored = scorePlacement(piece, oq, or, remaining);
+      const scored = scorePlacement(piece, origins[j][0], origins[j][1], remaining);
       if (scored.waste === 0 && scored.hit === size) return true;
     }
   }
   return false;
 }
 
-export function leftoverShapeCost(remaining) {
-  if (!remaining.size) return 0;
-  const groups = components(remaining);
-  const detailed = remaining.size <= 24;
-  let cost = 0;
-  groups.forEach((group) => {
-    const n = group.length;
-    if (detailed && (n === 3 || n === 5) && exactlyCoveredByCatalog(group)) {
-      cost += 1;
-      return;
-    }
-    if (n === 1) cost += 55;
-    else if (n === 2) cost += 34;
-    else if (n === 4) cost += 18;
-    else if (n % 3 === 1) cost += 12 + n;
-    else if (n % 3 === 2) cost += 8 + n;
-    else cost += 4 + n;
-  });
-  return cost + groups.length * 3;
-}
-
-function coarseValue(mainWaste, nextWaste, leftoverSize) {
-  return mainWaste * 1_000_000 + nextWaste * 10_000 + leftoverSize * 80;
-}
-
-function finishBest(candidates, bestCoarse) {
+function bestBite(piece, remaining) {
   let best = null;
-  candidates.forEach((row) => {
-    if (row.coarse > bestCoarse) return;
-    const value = row.coarse + leftoverShapeCost(row.leftover);
-    if (!best || value < best.value) {
-      best = {
-        value,
-        main: row.main,
-        next: row.next,
-        leftover: row.leftover.size,
-        leftoverKeys: row.leftover,
-        remainingAfterMain: row.remainingAfterMain,
-      };
-    }
+  originsFor(piece, remaining).forEach(([oq, or]) => {
+    const scored = scorePlacement(piece, oq, or, remaining);
+    const leftover = subtractKeys(remaining, scored.hitKeys);
+    const cost = scored.waste * 22 + cheapLeftover(leftover);
+    if (!best || cost < best.cost) best = { cost, scored, leftover };
   });
   return best;
 }
 
-function searchMains(remaining, mainPiece, attachNext) {
-  const candidates = [];
-  let bestCoarse = Infinity;
-  originsFor(mainPiece, remaining).forEach(([oq, or]) => {
-    const main = scorePlacement(mainPiece, oq, or, remaining);
-    const afterMain = subtractKeys(remaining, main.hitKeys);
-    attachNext(main, afterMain, (next, leftover) => {
-      const coarse = coarseValue(main.waste, next ? next.waste : 0, leftover.size);
-      if (coarse > bestCoarse) return;
-      if (coarse < bestCoarse) {
-        bestCoarse = coarse;
-        candidates.length = 0;
-      }
-      if (leftover.size > 24 && candidates.length) return;
-      candidates.push({
-        coarse,
-        main,
-        next,
-        leftover,
-        remainingAfterMain: afterMain.size,
-      });
-    });
+function cheapLeftover(remaining) {
+  if (!remaining.size) return 0;
+  const groups = components(remaining);
+  let cost = groups.length * 6;
+  groups.forEach((group) => {
+    const n = group.length;
+    if (n === 1) cost += 120;
+    else if (n === 2) cost += 62;
+    else if (n === 3) cost += perfectFit(group, COMMON_PIECES) ? 2 : 52;
+    else if (n === 4) cost += 48;
+    else if (n === 5) cost += perfectFit(group, RARE_PIECES) ? 6 : 34;
+    else if (n === 6) cost += 20;
+    else if (n % 3 === 1) cost += 16 + n;
+    else if (n % 3 === 2) cost += 12 + n;
+    else cost += 8 + n;
   });
-  return finishBest(candidates, bestCoarse);
+  return cost;
+}
+
+function expectedFuture(remaining) {
+  if (!remaining.size) return 0;
+  const base = cheapLeftover(remaining);
+  if (remaining.size > 22) return base;
+  let common = 0;
+  COMMON_PIECES.forEach((piece) => {
+    const bite = bestBite(piece, remaining);
+    common += bite ? bite.cost : base + 40;
+  });
+  let rare = 0;
+  RARE_PIECES.forEach((piece) => {
+    const bite = bestBite(piece, remaining);
+    rare += bite ? bite.cost : base + 40;
+  });
+  return (
+    COMMON_CHANCE * (common / COMMON_PIECES.length) +
+    RARE_CHANCE * (rare / RARE_PIECES.length)
+  );
+}
+
+let leftoverMemo = new Map();
+
+function leftoverKey(remaining) {
+  return [...remaining].sort().join(";");
+}
+
+export function leftoverShapeCost(remaining) {
+  if (!remaining.size) return 0;
+  if (remaining.size > 28) return remaining.size * 4;
+  const key = leftoverKey(remaining);
+  if (leftoverMemo.has(key)) return leftoverMemo.get(key);
+  const extra = remaining.size <= 12 ? expectedFuture(remaining) * 0.5 : 0;
+  const value = cheapLeftover(remaining) + extra;
+  leftoverMemo.set(key, value);
+  return value;
+}
+
+function evaluatePair(main, next, leftover) {
+  return (
+    main.waste * 26 +
+    (next ? next.waste * 20 : 0) +
+    leftoverShapeCost(leftover)
+  );
+}
+
+function pack(value, main, next, leftover, remainingAfterMain) {
+  return {
+    value,
+    main,
+    next,
+    leftover: leftover.size,
+    leftoverKeys: leftover,
+    remainingAfterMain,
+  };
 }
 
 export function bestMainPlacement(remainingKeys, mainPiece, nextPiece = null) {
+  leftoverMemo = new Map();
   const remaining = remainingSet(remainingKeys);
   if (!mainPiece || remaining.size === 0) return null;
-  const pairSearch = Boolean(nextPiece) && remaining.size <= 36;
+  const deep = remaining.size <= 40;
+  let best = null;
 
-  if (!pairSearch) {
-    const mainOnly = searchMains(remaining, mainPiece, (main, afterMain, consider) => {
-      consider(null, afterMain);
-    });
-    if (!mainOnly || !nextPiece || mainOnly.leftoverKeys.size === 0) return mainOnly;
-    const follow = searchMains(mainOnly.leftoverKeys, nextPiece, (next, leftover, consider) => {
-      consider(next, leftover);
-    });
-    if (!follow) return mainOnly;
-    return {
-      ...mainOnly,
-      next: follow.main,
-      leftover: follow.leftover,
-      leftoverKeys: follow.leftoverKeys,
-      value: coarseValue(mainOnly.main.waste, follow.main.waste, follow.leftover) + leftoverShapeCost(follow.leftoverKeys),
-    };
-  }
+  originsFor(mainPiece, remaining).forEach(([oq, or]) => {
+    const main = scorePlacement(mainPiece, oq, or, remaining);
+    const afterMain = subtractKeys(remaining, main.hitKeys);
 
-  return searchMains(remaining, mainPiece, (main, afterMain, consider) => {
-    if (afterMain.size === 0) {
-      consider(null, afterMain);
+    if (!nextPiece || afterMain.size === 0) {
+      const value = evaluatePair(main, null, afterMain);
+      if (!best || value < best.value) {
+        best = pack(value, main, null, afterMain, afterMain.size);
+      }
       return;
     }
+
+    if (!deep) {
+      const value = evaluatePair(main, null, afterMain);
+      if (!best || value < best.value) {
+        let next = null;
+        let leftover = afterMain;
+        if (nextPiece && afterMain.size) {
+          let follow = null;
+          originsFor(nextPiece, afterMain).forEach(([nq, nr]) => {
+            const placed = scorePlacement(nextPiece, nq, nr, afterMain);
+            const left = subtractKeys(afterMain, placed.hitKeys);
+            const nvalue = evaluatePair(main, placed, left);
+            if (!follow || nvalue < follow.value) {
+              follow = { placed, left, nvalue };
+            }
+          });
+          if (follow) {
+            next = follow.placed;
+            leftover = follow.left;
+          }
+        }
+        best = pack(value, main, next, leftover, afterMain.size);
+      }
+      return;
+    }
+
     originsFor(nextPiece, afterMain).forEach(([nq, nr]) => {
       const next = scorePlacement(nextPiece, nq, nr, afterMain);
-      consider(next, subtractKeys(afterMain, next.hitKeys));
+      const leftover = subtractKeys(afterMain, next.hitKeys);
+      const value = evaluatePair(main, next, leftover);
+      if (!best || value < best.value) {
+        best = pack(value, main, next, leftover, afterMain.size);
+      }
     });
   });
+
+  return best;
 }
 
 export function applyPlacement(remainingKeys, placement) {
@@ -370,3 +371,41 @@ export function applyPlacement(remainingKeys, placement) {
 export function expectedPieceMix() {
   return { common: COMMON_CHANCE, rare: RARE_CHANCE };
 }
+
+export function axialPixel(q, r, size) {
+  return {
+    x: size * Math.sqrt(3) * (q + r / 2),
+    y: size * 1.5 * r,
+  };
+}
+
+export function hexCornerPoints(q, r, size) {
+  const { x, y } = axialPixel(q, r, size);
+  const pts = [];
+  for (let i = 0; i < 6; i += 1) {
+    const angle = ((60 * i - 30) * Math.PI) / 180;
+    pts.push(`${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`);
+  }
+  return pts.join(" ");
+}
+
+export const BOARD_CELLS = (() => {
+  const cells = [];
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      const [q, r] = oddRToAxial(col, row);
+      cells.push({ col, row, q, r, key: cellKey(q, r) });
+    }
+  }
+  return cells;
+})();
+
+export const BOARD_KEYS = new Set(BOARD_CELLS.map((cell) => cell.key));
+
+const BOARD_PIX = BOARD_CELLS.map((cell) => axialPixel(cell.q, cell.r, 1));
+export const BOARD_BOUNDS = {
+  minX: Math.min(...BOARD_PIX.map((p) => p.x)),
+  maxX: Math.max(...BOARD_PIX.map((p) => p.x)),
+  minY: Math.min(...BOARD_PIX.map((p) => p.y)),
+  maxY: Math.max(...BOARD_PIX.map((p) => p.y)),
+};
