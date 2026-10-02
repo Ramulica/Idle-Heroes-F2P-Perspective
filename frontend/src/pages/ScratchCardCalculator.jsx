@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CanAmount from "../components/CanAmount.jsx";
 import HelpTip from "../components/HelpTip.jsx";
 import fairyIcon from "../assets/scratch-fairy.png";
 import { formatNumber } from "../rewards";
+import { CAN_ICONS } from "../rngCelebration";
 import { useSgCalc } from "../useSgCalc";
 import {
   DEFAULT_FAIRY_CHANCE,
@@ -15,8 +16,10 @@ import {
   analyzeBoard,
   canPlaceNumber,
   clampFairyChance,
+  expectedCansPerCard,
   explainStep,
   lineCombinations,
+  peekExpectedCansPerCard,
   remainingNumbers,
   revealedCount,
   suggestReveal,
@@ -90,6 +93,31 @@ const SCRATCH_ADVANCED = [
     paragraphs: [
       "After 4 scratches, stop uncovering. The gold line is the one with the highest EV. That is the line to confirm in-game.",
       "Tap a bubble (or a row under Line averages) to see every leftover set. If the line is still 1-2-X, those rows mix fairy. If it is already 1-2-7, they do not.",
+    ],
+  },
+];
+
+const ROUND_HELP = [
+  "This is the average cans one card pays if you follow this calculator every scratch.",
+  "The first scratch is random. Each later scratch uses the suggested tile — the empty cell that raises the best line’s expected cans the most.",
+  "If a line already shows two of 1-2-3 or 7-8-9, the next scratch has the fairy % chance to become the missing number. That mix stays in the line average only while that last cell is still X.",
+  "After 4 tiles, fairy stops. Leftover numbers fill the rest of each line, and you pick the line with the highest leftover average.",
+  "The number updates when you change the fairy %. 20% is only an estimate of the real fairy rate.",
+];
+
+const ROUND_ADVANCED = [
+  {
+    heading: "What the number is",
+    paragraphs: [
+      "It is E[cans] for one Celebration Scratchcard played with this page’s policy, including the fairy % you set.",
+    ],
+    formula:
+      "first scratch: random tile and random 1–9\nthen 3 times: scratch the suggested cell\n  leftover numbers equally likely\n  if a near-max line is open: p chance the new number is the missing 1-2-3 / 7-8-9\nafter 4 tiles: score = highest line leftover average (no fairy)",
+  },
+  {
+    heading: "Why it is not 162",
+    paragraphs: [
+      "With no scratches every line averages about 162 cans. Four informed scratches, plus fairy on a 1-2-X line, raise the line you actually pick. That higher average is the number shown beside the board.",
     ],
   },
 ];
@@ -203,9 +231,32 @@ export default function ScratchCardCalculator() {
   const [fairyInput, setFairyInput] = useState(String(DEFAULT_FAIRY_CHANCE));
   const [fairyTip, setFairyTip] = useState(false);
   const [fairyWarnGone, setFairyWarnGone] = useState(false);
+  const [roundEv, setRoundEv] = useState(() =>
+    peekExpectedCansPerCard(DEFAULT_FAIRY_CHANCE)
+  );
   const fairyChance = clampFairyChance(fairyInput);
   const showFairyWarn =
     loaded && !state.hideScratchFairyWarning && !fairyWarnGone;
+
+  useEffect(() => {
+    let live = true;
+    const cached = peekExpectedCansPerCard(fairyChance);
+    if (cached != null) {
+      setRoundEv(cached);
+      return () => {
+        live = false;
+      };
+    }
+    setRoundEv(null);
+    const id = window.setTimeout(() => {
+      const ev = expectedCansPerCard(fairyChance);
+      if (live) setRoundEv(ev);
+    }, 0);
+    return () => {
+      live = false;
+      window.clearTimeout(id);
+    };
+  }, [fairyChance]);
 
   function hideFairyWarn(persist) {
     setFairyWarnGone(true);
@@ -498,6 +549,26 @@ export default function ScratchCardCalculator() {
                   Bubbles sit on each row, column, and diagonal. Tap one to see
                   every leftover combination. Gold is the current best line.
                 </p>
+              </div>
+              <div className="scratch-ev-side">
+                <div className="head-with-help">
+                  <div className="scratch-ev-line">
+                    <strong>
+                      {roundEv == null ? "…" : formatNumber(Math.round(roundEv))}
+                    </strong>
+                    <img
+                      src={CAN_ICONS.normal}
+                      alt=""
+                      className="csg-icon"
+                    />
+                    <span>/ round</span>
+                  </div>
+                  <HelpTip
+                    title="Cans per round"
+                    steps={ROUND_HELP}
+                    advanced={ROUND_ADVANCED}
+                  />
+                </div>
               </div>
             </div>
 

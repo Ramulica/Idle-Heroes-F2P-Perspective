@@ -2560,8 +2560,37 @@ input[type="range"] {
   box-shadow: 0 8px 18px rgba(40, 20, 10, 0.2);
 }
 
+.scratch-ev-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 132px;
+  width: 132px;
+}
+
+.scratch-ev-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: center;
+}
+
+.scratch-ev-line strong {
+  font-size: 1.25rem;
+}
+
+.scratch-ev-line .csg-icon {
+  width: 1.7em;
+  height: 1.7em;
+}
+
 .scratch-board {
-  width: min(560px, calc(100% - 140px));
+  width: min(560px, calc(100% - 250px));
   background:
     radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7) 0 40px, transparent 41px),
     linear-gradient(180deg, #e7fff6, #c5f3e2);
@@ -2820,6 +2849,12 @@ input[type="range"] {
     width: 100%;
     max-width: 420px;
     padding: 10px 8px 8px;
+  }
+
+  .scratch-ev-side {
+    flex: 1 0 100%;
+    width: auto;
+    padding: 4px 0 2px;
   }
 
   .scratch-layout > .scratch-bubble,

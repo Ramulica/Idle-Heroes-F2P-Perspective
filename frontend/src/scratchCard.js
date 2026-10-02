@@ -323,6 +323,125 @@ export function lineCombinations(board, line, fairyChance = DEFAULT_FAIRY_CHANCE
     .sort((a, b) => b.cans - a.cans || a.sum - b.sum);
 }
 
+const expectedCache = new Map();
+
+function boardKey(board) {
+  let key = "";
+  for (let i = 0; i < 9; i += 1) {
+    key += board[i] == null ? "x" : String(board[i]);
+  }
+  return key;
+}
+
+export function expectedCansPerCard(fairyChance = DEFAULT_FAIRY_CHANCE) {
+  const percent = clampFairyChance(fairyChance);
+  if (expectedCache.has(percent)) return expectedCache.get(percent);
+
+  const fairyP = percent / 100;
+  const valueMemo = new Map();
+  const suggestMemo = new Map();
+  const analyzeMemo = new Map();
+
+  function analyze(board) {
+    const key = boardKey(board);
+    if (analyzeMemo.has(key)) return analyzeMemo.get(key);
+    const result = analyzeBoard(board, percent);
+    analyzeMemo.set(key, result);
+    return result;
+  }
+
+  function pickCell(board) {
+    const key = boardKey(board);
+    if (suggestMemo.has(key)) return suggestMemo.get(key);
+    const analysis = analyze(board);
+    let best = null;
+    for (const cell of analysis.empty) {
+      const boost = fairyP > 0 ? nextScratchFairy(board, cell, analysis.remaining) : null;
+      let weighted = 0;
+      for (const number of analysis.remaining) {
+        const natural = board.slice();
+        natural[cell] = number;
+        let score = analyze(natural).bestLine.ev;
+        if (boost && number !== boost.missing) {
+          const changed = board.slice();
+          changed[cell] = boost.missing;
+          score = fairyP * analyze(changed).bestLine.ev + (1 - fairyP) * score;
+        }
+        weighted += score;
+      }
+      const ev = weighted / analysis.remaining.length;
+      const lineCount = LINES.filter((line) => line.cells.includes(cell)).length;
+      if (
+        !best ||
+        ev > best.ev + 0.01 ||
+        (Math.abs(ev - best.ev) <= 0.01 && lineCount > best.lineCount)
+      ) {
+        best = { index: cell, ev, lineCount };
+      }
+    }
+    suggestMemo.set(key, best);
+    return best;
+  }
+
+  function value(board) {
+    const key = boardKey(board);
+    if (valueMemo.has(key)) return valueMemo.get(key);
+    const revealed = revealedCount(board);
+    let ev;
+    if (revealed >= MAX_REVEALS) {
+      ev = analyze(board).bestLine.ev;
+    } else if (revealed === 0) {
+      const leftover = remainingNumbers(board);
+      const reps = [
+        [0, 4],
+        [1, 4],
+        [4, 1],
+      ];
+      let total = 0;
+      let weight = 0;
+      for (const [index, w] of reps) {
+        let inner = 0;
+        for (const n of leftover) {
+          const next = board.slice();
+          next[index] = n;
+          inner += value(next);
+        }
+        total += (w * inner) / leftover.length;
+        weight += w;
+      }
+      ev = total / weight;
+    } else {
+      const leftover = remainingNumbers(board);
+      const cell = pickCell(board).index;
+      const boost = fairyP > 0 ? nextScratchFairy(board, cell, leftover) : null;
+      let sum = 0;
+      for (const n of leftover) {
+        const natural = board.slice();
+        natural[cell] = n;
+        let score = value(natural);
+        if (boost && n !== boost.missing) {
+          const changed = board.slice();
+          changed[cell] = boost.missing;
+          score = fairyP * value(changed) + (1 - fairyP) * score;
+        }
+        sum += score;
+      }
+      ev = sum / leftover.length;
+    }
+    valueMemo.set(key, ev);
+    return ev;
+  }
+
+  const ev = value(Array(9).fill(null));
+  expectedCache.set(percent, ev);
+  return ev;
+}
+
+export function peekExpectedCansPerCard(fairyChance = DEFAULT_FAIRY_CHANCE) {
+  const percent = clampFairyChance(fairyChance);
+  return expectedCache.has(percent) ? expectedCache.get(percent) : null;
+}
+
 export function canPlaceNumber(board, index, number) {
   const n = Number(number);
   if (n < 1 || n > 9) return false;
