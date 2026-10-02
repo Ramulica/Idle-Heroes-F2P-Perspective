@@ -2944,3 +2944,228 @@ input[type="range"] {
   align-self: flex-start;
   margin-top: 8px;
 }
+
+.ff-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ff-play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+  padding: 12px 8px 4px;
+}
+
+.ff-board {
+  position: relative;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.35) 0 36px, transparent 37px),
+    linear-gradient(180deg, #7eb7e8, #4d7fc4);
+  border: 3px solid #3d6aa8;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.12);
+  overflow: visible;
+}
+
+.ff-hex:hover {
+  filter: brightness(1.08);
+}
+
+.ff-hex.empty {
+  background: linear-gradient(180deg, #5b86c8, #3d68ae);
+}
+
+.ff-hex.filled {
+  background: linear-gradient(180deg, #9fe3ff, #5db6e6);
+  box-shadow:
+    inset 0 0 0 2px rgba(30, 70, 120, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.ff-hex.filled::after {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: #fff6d8;
+  box-shadow: 0 1px 0 rgba(80, 50, 10, 0.35);
+}
+
+.ff-hex.main-hit {
+  background: linear-gradient(180deg, #b6ff8a, #5fce4a);
+  box-shadow: inset 0 0 0 3px #1f8a2c, 0 0 10px rgba(80, 220, 90, 0.7);
+  z-index: 2;
+}
+
+.ff-hex.next-hit {
+  background: linear-gradient(180deg, #ffe27a, #f0b430);
+  box-shadow: inset 0 0 0 3px #b07a12, 0 0 10px rgba(240, 180, 50, 0.55);
+  z-index: 2;
+}
+
+.ff-hex.main-hit.next-hit {
+  background: linear-gradient(180deg, #d8ff8a, #e6c84a);
+}
+
+.ff-hex.main-waste,
+.ff-hex.next-waste {
+  background: linear-gradient(180deg, #ffb3a0, #e45a4a);
+  box-shadow: inset 0 0 0 3px #a32222, 0 0 10px rgba(220, 70, 50, 0.55);
+  z-index: 3;
+}
+
+.ff-hex.ghost {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.ff-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: 10px 0 4px;
+  font-weight: 700;
+}
+
+.ff-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.ff-swatch.filled {
+  background: #6ec8ea;
+}
+
+.ff-swatch.main-hit {
+  background: #62d24c;
+}
+
+.ff-swatch.next-hit {
+  background: #f0b430;
+}
+
+.ff-swatch.main-waste {
+  background: #e45a4a;
+}
+
+.ff-slots {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 14px;
+}
+
+.ff-slot {
+  flex: 1 1 160px;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 3px solid #8a5a2a;
+  border-radius: 16px;
+  background: #fff8e8;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.ff-slot.main.on,
+.ff-slot.main:focus-visible {
+  border-color: #1f8a2c;
+  box-shadow: 0 0 0 3px rgba(80, 200, 90, 0.35);
+}
+
+.ff-slot.next.on,
+.ff-slot.next:focus-visible {
+  border-color: #b07a12;
+  box-shadow: 0 0 0 3px rgba(240, 180, 50, 0.4);
+}
+
+.ff-slot em {
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.ff-slot .ff-shape {
+  width: 92px;
+  height: 72px;
+}
+
+.ff-bag-label {
+  margin: 8px 0 6px;
+  font-family: Cinzel, serif;
+  font-size: 0.95rem;
+}
+
+.ff-bag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ff-piece {
+  width: 76px;
+  height: 68px;
+  padding: 4px;
+  border: 2px solid #6b3e16;
+  border-radius: 12px;
+  background: #1c120c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ff-piece.rare {
+  background: #2a1608;
+}
+
+.ff-piece.is-main {
+  border-color: #2f9a38;
+  box-shadow: 0 0 0 2px rgba(80, 200, 90, 0.55);
+}
+
+.ff-piece.is-next {
+  border-color: #e0a020;
+  box-shadow: 0 0 0 2px rgba(240, 180, 50, 0.55);
+}
+
+.ff-piece.is-main.is-next {
+  border-color: #d4c24a;
+}
+
+.ff-shape {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ff-shape polygon {
+  fill: #12100c;
+  stroke: #39e36a;
+  stroke-width: 1.4;
+}
+
+@media (max-width: 720px) {
+  .ff-board {
+    transform: scale(0.72);
+    transform-origin: top center;
+    margin-bottom: -90px;
+  }
+
+  .ff-piece {
+    width: 64px;
+    height: 58px;
+  }
+}

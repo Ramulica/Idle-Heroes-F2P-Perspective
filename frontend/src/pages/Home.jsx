@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, and Scratch Card calculators, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, and Fantasy Factory calculators, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -377,6 +377,30 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/scratch-card")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Fantasy Factory Calculator</h3>
+                    <HelpTip
+                      title="Fantasy Factory Calculator"
+                      steps={[
+                        "Paint leftover little heroes on the hex map.",
+                        "Pick the Main Dream Pattern and the Next one.",
+                        "Place Main on the green hexes. Red is waste. Then tap I placed this and pick the new Next.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Cover the leftover Fantasy Factory hexes with your current
+                    piece and the next one, using as little waste as possible.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/fantasy-factory")}
                   >
                     Open tool
                   </button>
