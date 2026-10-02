@@ -2565,8 +2565,24 @@ input[type="range"] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 132px;
-  width: 132px;
+  gap: 6px;
+  flex: 0 0 156px;
+  width: 156px;
+}
+
+.scratch-ev-side .head-with-help {
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.scratch-ev-title {
+  font-family: Cinzel, serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .scratch-ev-line {
@@ -2590,7 +2606,7 @@ input[type="range"] {
 }
 
 .scratch-board {
-  width: min(560px, calc(100% - 250px));
+  width: min(560px, calc(100% - 280px));
   background:
     radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.7) 0 40px, transparent 41px),
     linear-gradient(180deg, #e7fff6, #c5f3e2);

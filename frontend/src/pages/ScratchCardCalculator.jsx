@@ -98,26 +98,68 @@ const SCRATCH_ADVANCED = [
 ];
 
 const ROUND_HELP = [
-  "This is the average cans one card pays if you follow this calculator every scratch.",
-  "The first scratch is random. Each later scratch uses the suggested tile — the empty cell that raises the best line’s expected cans the most.",
-  "If a line already shows two of 1-2-3 or 7-8-9, the next scratch has the fairy % chance to become the missing number. That mix stays in the line average only while that last cell is still X.",
-  "After 4 tiles, fairy stops. Leftover numbers fill the rest of each line, and you pick the line with the highest leftover average.",
-  "The number updates when you change the fairy %. 20% is only an estimate of the real fairy rate.",
+  "This is the expected cans from one Celebration Scratchcard if you play every scratch the way this page tells you, using the fairy % on the left.",
+  "The 3×3 is a shuffle of 1–9, each number once. You uncover 4 tiles, then pick one of 8 lines: 3 rows, 3 columns, and 2 diagonals. A line is scored by the sum of its three numbers. Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. Mid sums pay much less.",
+  "With no tiles open, every leftover set of three numbers is equally likely on a line, so every line averages about 162 cans. That is not the round average — you still get four scratches, then pick the best leftover line.",
+  "Scratch 1 is random. The game opens a corner, an edge, or the center; this calculator does not choose that tile. Each leftover number 1–9 is equally likely on it.",
+  "Scratches 2, 3, and 4 follow the green ring: the empty cell that raises the best line’s expected cans the most after you see that number. Each leftover number is treated as equally likely on that cell.",
+  "Fairy only affects the next scratch. If a line already shows two of 1-2-3 or 7-8-9, there is a p% chance the next number is the missing one. Line averages mix that chance only while that last cell is still X. Once X is a real number, the mix is gone. 1-2-7 is only 1-2-7.",
+  "After 4 tiles, fairy is fully off. Unknown cells on each line are filled with leftover combinations. You pick the line with the highest leftover average.",
+  "The number updates when you change the fairy %. 20% is only an estimate of the real fairy rate. At 20% this walk averages about 489 cans per card.",
 ];
 
 const ROUND_ADVANCED = [
   {
     heading: "What the number is",
     paragraphs: [
-      "It is E[cans] for one Celebration Scratchcard played with this page’s policy, including the fairy % you set.",
+      "It is E[cans] for one card played with this page’s policy: random first scratch, then the suggested tile three times, then pick the highest leftover line. Fairy uses the % you set, and only on the next scratch while a 1-2-X or 7-8-X line is still open.",
     ],
     formula:
-      "first scratch: random tile and random 1–9\nthen 3 times: scratch the suggested cell\n  leftover numbers equally likely\n  if a near-max line is open: p chance the new number is the missing 1-2-3 / 7-8-9\nafter 4 tiles: score = highest line leftover average (no fairy)",
+      "empty card → walk every first scratch (by symmetry)\nthen 3 times: scratch the suggested cell\n  leftover numbers equally likely\n  if a near-max line is open: p chance the new number is the missing 1-2-3 / 7-8-9\nafter 4 tiles: score = highest line leftover average (no fairy)\nround EV = average of that score over the walk",
+  },
+  {
+    heading: "Line leftover average",
+    paragraphs: [
+      "Typed tiles stay fixed. Unknown tiles on a line take leftover unused numbers. Order does not matter because payout uses the sum, so the calculator averages leftover combinations of the right size.",
+    ],
+    formula:
+      "leftover = {1…9} minus typed numbers\ncombos  = leftover sets of size (unknown cells on this line)\nEV      = average of payout(sum of the three numbers) over those combos",
+    items: [
+      "1 unknown cell: try each leftover number once.",
+      "2 unknown cells: try every leftover pair once.",
+      "3 unknown cells: try every leftover triple once.",
+      "Line fully known: one value, the real payout.",
+    ],
+  },
+  {
+    heading: "First scratch",
+    paragraphs: [
+      "The first tile is random, not chosen by the calculator. Corners are equivalent, edges are equivalent, and the center is its own class. The walk uses one corner, one edge, and the center, then weights them 4 : 4 : 1. Each leftover 1–9 is equally likely on that tile.",
+    ],
+    formula:
+      "E = (4 × E[corner first] + 4 × E[edge first] + 1 × E[center first]) / 9",
+  },
+  {
+    heading: "Which tile to uncover next",
+    paragraphs: [
+      "Until 4 tiles are open, the suggested cell is a one-step look-ahead: pick the empty cell that makes the best line worth the most after you see that number. After pretending a leftover number is there, every line EV is recomputed, then the walk continues until 4 tiles and the final pick.",
+    ],
+    formula:
+      "for each empty cell c:\n  for each leftover number n:\n    place n on c\n    if a near-max line is open: mix p × (missing number) + (1−p) × n\n    score = expected cans from here on (keep using suggested tiles)\n  VoI(c) = average of those scores\n\nsuggest the cell with the highest VoI\ntie-break: the cell that sits on more lines (center sits on 4)",
+  },
+  {
+    heading: "Fairy on the next scratch only",
+    paragraphs: [
+      "If a line already shows two of 1-2-3 or 7-8-9 and the third cell is still X, the next scratch has p chance to become the missing number. That mix stays in the line average only while X is still unknown and you still have a scratch left.",
+      "Once X is revealed, fairy is off for that line. After all 4 tiles are open, leftover fills also have no fairy.",
+    ],
+    formula:
+      "line is 1, 2, X  and scratches remain:\n  each leftover n:  p × 1680  +  (1−p) × payout(1+2+n)\n  except n = 3: payout = 1680\n\nline is 1, 2, 7  or 4 tiles already open:\n  payout = table[sum]   (no fairy)",
   },
   {
     heading: "Why it is not 162",
     paragraphs: [
-      "With no scratches every line averages about 162 cans. Four informed scratches, plus fairy on a 1-2-X line, raise the line you actually pick. That higher average is the number shown beside the board.",
+      "162 is the empty-board line average — what a random line would pay with no information. Four informed scratches, plus fairy on a 1-2-X line, raise the line you actually pick. At 20% fairy that walk averages about 489 cans per card.",
     ],
   },
 ];
@@ -552,22 +594,23 @@ export default function ScratchCardCalculator() {
               </div>
               <div className="scratch-ev-side">
                 <div className="head-with-help">
-                  <div className="scratch-ev-line">
-                    <strong>
-                      {roundEv == null ? "…" : formatNumber(Math.round(roundEv))}
-                    </strong>
-                    <img
-                      src={CAN_ICONS.normal}
-                      alt=""
-                      className="csg-icon"
-                    />
-                    <span>/ round</span>
-                  </div>
+                  <h3 className="scratch-ev-title">Average Cans</h3>
                   <HelpTip
-                    title="Cans per round"
+                    title="Average Cans"
                     steps={ROUND_HELP}
                     advanced={ROUND_ADVANCED}
                   />
+                </div>
+                <div className="scratch-ev-line">
+                  <strong>
+                    {roundEv == null ? "…" : formatNumber(Math.round(roundEv))}
+                  </strong>
+                  <img
+                    src={CAN_ICONS.normal}
+                    alt=""
+                    className="csg-icon"
+                  />
+                  <span>/ round</span>
                 </div>
               </div>
             </div>
