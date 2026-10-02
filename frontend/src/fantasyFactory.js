@@ -336,14 +336,6 @@ export function leftoverShapeCost(remaining) {
   return value;
 }
 
-function evaluatePair(main, next, leftover) {
-  return (
-    main.waste * 26 +
-    (next ? next.waste * 20 : 0) +
-    leftoverShapeCost(leftover)
-  );
-}
-
 function pack(value, main, next, leftover, remainingAfterMain) {
   return {
     value,
@@ -359,48 +351,57 @@ export function bestMainPlacement(remainingKeys, mainPiece, nextPiece = null) {
   leftoverMemo = new Map();
   const remaining = remainingSet(remainingKeys);
   if (!mainPiece || remaining.size === 0) return null;
-  const deep = remaining.size <= 28;
+
   let best = null;
+  let bestMainWaste = Infinity;
+  let bestNextWaste = Infinity;
+  let bestLeft = Infinity;
+  let leftoverGoodEnough = false;
+
+  function consider(main, next, leftover, afterMainSize) {
+    const nextW = next ? next.waste : 0;
+    if (main.waste > bestMainWaste) return;
+    if (main.waste < bestMainWaste) {
+      bestMainWaste = main.waste;
+      bestNextWaste = Infinity;
+      bestLeft = Infinity;
+      leftoverGoodEnough = false;
+      best = null;
+    }
+    if (nextW > bestNextWaste) return;
+    if (nextW < bestNextWaste) {
+      bestNextWaste = nextW;
+      bestLeft = Infinity;
+      leftoverGoodEnough = false;
+      best = null;
+    }
+    if (leftoverGoodEnough) return;
+    const leftCost =
+      leftover.size > 16 ? cheapLeftover(leftover) : leftoverShapeCost(leftover);
+    if (leftCost < bestLeft) {
+      bestLeft = leftCost;
+      best = pack(leftCost, main, next, leftover, afterMainSize);
+      leftoverGoodEnough = leftover.size > 20 && leftCost < 80;
+    }
+  }
 
   eachPlacement(mainPiece, remaining, (main) => {
+    if (main.waste > bestMainWaste) return;
     const afterMain = subtractKeys(remaining, main.hitKeys);
 
     if (!nextPiece || afterMain.size === 0) {
-      const value = evaluatePair(main, null, afterMain);
-      if (!best || value < best.value) {
-        best = pack(value, main, null, afterMain, afterMain.size);
-      }
-      return;
-    }
-
-    if (!deep) {
-      const value = evaluatePair(main, null, afterMain);
-      if (!best || value < best.value) {
-        let next = null;
-        let leftover = afterMain;
-        let follow = null;
-        eachPlacement(nextPiece, afterMain, (placed) => {
-          const left = subtractKeys(afterMain, placed.hitKeys);
-          const nvalue = evaluatePair(main, placed, left);
-          if (!follow || nvalue < follow.value) {
-            follow = { placed, left, nvalue };
-          }
-        });
-        if (follow) {
-          next = follow.placed;
-          leftover = follow.left;
-        }
-        best = pack(value, main, next, leftover, afterMain.size);
-      }
+      consider(main, null, afterMain, afterMain.size);
       return;
     }
 
     eachPlacement(nextPiece, afterMain, (next) => {
-      const leftover = subtractKeys(afterMain, next.hitKeys);
-      const value = evaluatePair(main, next, leftover);
-      if (!best || value < best.value) {
-        best = pack(value, main, next, leftover, afterMain.size);
-      }
+      if (main.waste === bestMainWaste && next.waste > bestNextWaste) return;
+      consider(
+        main,
+        next,
+        subtractKeys(afterMain, next.hitKeys),
+        afterMain.size
+      );
     });
   });
 

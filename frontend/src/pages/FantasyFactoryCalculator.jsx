@@ -30,7 +30,7 @@ const FACTORY_HELP = [
   "The game always shows two Dream Patterns: the one you must place now (Main) and the one after it (Next). Tap a slot, then tap the matching shape below.",
   "Green hexes are where Main should go. Gold is the planned Next. Red is waste — a cell of the piece that hangs off remaining heroes or off the map.",
   "Place Main in-game on those green hexes, then tap I placed this. Next becomes Main. Pick the new Next pattern the game just revealed.",
-  "The calculator rotates each piece through all 6 hex turns and picks the Main spot that leaves the easiest leftover. Isolated singles are very expensive. After Main and Next, leftovers are scored with the 80% / 20% bag: 10 four-hex patterns, then three six-hex bites and one seven-hex flower.",
+  "The calculator rotates each piece through all 6 hex turns. Zero waste comes first: if Main and Next can both sit fully on remaining heroes, it will never recommend a red hex. Only after that does it score leftovers so it does not strand singles.",
   "Common 4-hex patterns are about 80% of draws. Rare patterns are about 20%: three 6-hex bites and one 7-hex flower. The calculator rotates every piece 6 ways.",
 ];
 
@@ -45,11 +45,11 @@ const FACTORY_ADVANCED = [
   {
     heading: "How the best Main spot is chosen",
     paragraphs: [
-      "Every rotation and translation of Main that covers at least one remaining hero is tried. For leftover puzzles, every rotation of Next is tried on what Main would leave. Isolated singles score worst. A 0-waste bite that strands hexes loses to a slightly wasteful bite that stays tileable.",
+      "Every rotation and translation of Main that covers at least one remaining hero is tried, then every rotation of Next on what Main would leave. Waste is ranked first: the smallest Main waste wins; then the smallest Next waste; leftover shape is only a tie-break. If a zero-waste pair exists, red hexes are never suggested. Isolated leftover singles score worst among those zero-waste options.",
       "A later unknown piece is 80% one of the 10 common 4-hex patterns and 20% rare (three 6-hex bites and one 7-hex flower). After Main and Next, the leftover is scored by how well that bag can still cover it.",
     ],
     formula:
-      "score = waste(Main)×26 + waste(Next)×20 + leftoverCost\nleftoverCost = 140 per isolated hex\n             + 80 per 2-hex stub\n             + 70 per 3-hex (no 3-hex pieces exist)\n             + 2 if a leftover 4-hex matches a common piece\n             + expected future bite from the 80/20 bag\neach piece is tried in all 6 rotations",
+      "score = (Main waste, Next waste, leftoverCost)  — lexicographic, waste first\nleftoverCost = 140 per isolated hex\n             + 80 per 2-hex stub\n             + 70 per 3-hex (no 3-hex pieces exist)\n             + 2 if a leftover 4-hex matches a common piece\n             + expected future bite from the 80/20 bag (small leftovers only)\neach piece is tried in all 6 rotations",
   },
   {
     heading: "Future 80% / 20% pieces",
@@ -257,7 +257,11 @@ export default function FantasyFactoryCalculator() {
         : `${suggestion.main.waste} waste hex${suggestion.main.waste === 1 ? "" : "es"}`;
     advice = `Put Main on the green hexes. That covers ${suggestion.main.hit} and has ${wasteBit}.`;
     if (suggestion.next) {
-      advice += ` Gold is the planned Next (${suggestion.next.hit} more, ${suggestion.next.waste} waste). Leftover after both: ${suggestion.leftover}.`;
+      if (suggestion.next.waste === 0) {
+        advice += ` Gold is the planned Next: ${suggestion.next.hit} more, no waste. Leftover after both: ${suggestion.leftover}.`;
+      } else {
+        advice += ` Gold is the planned Next (${suggestion.next.hit} more, ${suggestion.next.waste} waste — no zero-waste fit after this Main). Leftover after both: ${suggestion.leftover}.`;
+      }
     } else if (!nextPiece) {
       advice += " Pick Next so the solver can look one piece ahead.";
     } else {
