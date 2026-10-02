@@ -51,9 +51,28 @@ export function rotateCells(cells, times = 1) {
   return normalizeCells(out);
 }
 
+function uniqueRotations(cells) {
+  const seen = new Set();
+  const out = [];
+  for (let k = 0; k < 6; k += 1) {
+    const rot = rotateCells(cells, k);
+    const id = rot.map(([q, r]) => `${q},${r}`).join(";");
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(rot);
+  }
+  return out;
+}
+
 function makePiece(id, rarity, cells) {
   const norm = normalizeCells(cells);
-  return { id, rarity, cells: norm, size: norm.length };
+  return {
+    id,
+    rarity,
+    cells: norm,
+    size: norm.length,
+    rotations: uniqueRotations(norm),
+  };
 }
 
 export const COMMON_PIECES = [
@@ -61,66 +80,87 @@ export const COMMON_PIECES = [
     [0, 0],
     [1, 0],
     [2, 0],
+    [3, 0],
   ]),
   makePiece("c2", "common", [
     [0, 0],
     [1, 0],
-    [1, -1],
+    [0, 1],
+    [1, 1],
   ]),
   makePiece("c3", "common", [
     [0, 0],
     [1, 0],
-    [2, -1],
+    [2, 0],
+    [1, 1],
   ]),
   makePiece("c4", "common", [
     [0, 0],
+    [1, 0],
     [1, -1],
-    [0, -1],
+    [2, -1],
   ]),
   makePiece("c5", "common", [
     [0, 0],
     [1, 0],
-    [0, 1],
+    [2, 0],
+    [2, 1],
   ]),
   makePiece("c6", "common", [
     [0, 0],
-    [0, 1],
-    [1, 1],
+    [1, 0],
+    [2, 0],
+    [2, -1],
   ]),
   makePiece("c7", "common", [
     [0, 0],
+    [1, 0],
+    [2, 0],
     [0, 1],
-    [0, 2],
   ]),
   makePiece("c8", "common", [
     [0, 0],
-    [1, -1],
-    [2, -1],
+    [1, 0],
+    [2, 0],
+    [0, -1],
   ]),
   makePiece("c9", "common", [
     [0, 0],
-    [1, -1],
-    [2, -2],
+    [1, 0],
+    [1, 1],
+    [2, 1],
   ]),
   makePiece("c10", "common", [
     [0, 0],
-    [0, 1],
+    [1, 0],
+    [0, -1],
     [-1, 1],
   ]),
 ];
 
-const TRAP = [
+const HEX7 = [
   [0, 0],
   [1, 0],
-  [2, 0],
+  [1, -1],
+  [0, -1],
+  [-1, 0],
+  [-1, 1],
   [0, 1],
-  [1, 1],
 ];
+const HEX6 = [
+  [0, 0],
+  [1, -1],
+  [0, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, 1],
+];
+
 export const RARE_PIECES = [
-  makePiece("r1", "rare", rotateCells(TRAP, 1)),
-  makePiece("r2", "rare", rotateCells(TRAP, 2)),
-  makePiece("r3", "rare", rotateCells(TRAP, 4)),
-  makePiece("r4", "rare", TRAP),
+  makePiece("r1", "rare", HEX6),
+  makePiece("r2", "rare", rotateCells(HEX6, 1)),
+  makePiece("r3", "rare", rotateCells(HEX6, 2)),
+  makePiece("r4", "rare", HEX7),
 ];
 
 export const ALL_PIECES = [...COMMON_PIECES, ...RARE_PIECES];
@@ -152,6 +192,16 @@ export function originsFor(piece, remaining) {
     });
   });
   return origins;
+}
+
+function eachPlacement(piece, remaining, fn) {
+  const spins = piece.rotations || uniqueRotations(piece.cells);
+  spins.forEach((cells) => {
+    const rotated = { ...piece, cells };
+    originsFor(rotated, remaining).forEach(([oq, or]) => {
+      fn(scorePlacement(rotated, oq, or, remaining));
+    });
+  });
 }
 
 export function scorePlacement(piece, oq, or, remaining) {
@@ -209,19 +259,19 @@ function perfectFit(keys, pieces) {
   for (let i = 0; i < pieces.length; i += 1) {
     const piece = pieces[i];
     if (piece.size !== size) continue;
-    const origins = originsFor(piece, remaining);
-    for (let j = 0; j < origins.length; j += 1) {
-      const scored = scorePlacement(piece, origins[j][0], origins[j][1], remaining);
-      if (scored.waste === 0 && scored.hit === size) return true;
-    }
+    let found = false;
+    eachPlacement(piece, remaining, (scored) => {
+      if (found) return;
+      if (scored.waste === 0 && scored.hit === size) found = true;
+    });
+    if (found) return true;
   }
   return false;
 }
 
 function bestBite(piece, remaining) {
   let best = null;
-  originsFor(piece, remaining).forEach(([oq, or]) => {
-    const scored = scorePlacement(piece, oq, or, remaining);
+  eachPlacement(piece, remaining, (scored) => {
     const leftover = subtractKeys(remaining, scored.hitKeys);
     const cost = scored.waste * 22 + cheapLeftover(leftover);
     if (!best || cost < best.cost) best = { cost, scored, leftover };
@@ -235,14 +285,16 @@ function cheapLeftover(remaining) {
   let cost = groups.length * 6;
   groups.forEach((group) => {
     const n = group.length;
-    if (n === 1) cost += 120;
-    else if (n === 2) cost += 62;
-    else if (n === 3) cost += perfectFit(group, COMMON_PIECES) ? 2 : 52;
-    else if (n === 4) cost += 48;
-    else if (n === 5) cost += perfectFit(group, RARE_PIECES) ? 6 : 34;
-    else if (n === 6) cost += 20;
-    else if (n % 3 === 1) cost += 16 + n;
-    else if (n % 3 === 2) cost += 12 + n;
+    if (n === 1) cost += 140;
+    else if (n === 2) cost += 80;
+    else if (n === 3) cost += 70;
+    else if (n === 4) cost += perfectFit(group, COMMON_PIECES) ? 2 : 55;
+    else if (n === 5) cost += 48;
+    else if (n === 6) cost += perfectFit(group, RARE_PIECES) ? 4 : 36;
+    else if (n === 7) cost += perfectFit(group, RARE_PIECES) ? 3 : 32;
+    else if (n % 4 === 1) cost += 18 + n;
+    else if (n % 4 === 2) cost += 14 + n;
+    else if (n % 4 === 3) cost += 16 + n;
     else cost += 8 + n;
   });
   return cost;
@@ -276,7 +328,6 @@ function leftoverKey(remaining) {
 
 export function leftoverShapeCost(remaining) {
   if (!remaining.size) return 0;
-  if (remaining.size > 28) return remaining.size * 4;
   const key = leftoverKey(remaining);
   if (leftoverMemo.has(key)) return leftoverMemo.get(key);
   const extra = remaining.size <= 12 ? expectedFuture(remaining) * 0.5 : 0;
@@ -308,11 +359,10 @@ export function bestMainPlacement(remainingKeys, mainPiece, nextPiece = null) {
   leftoverMemo = new Map();
   const remaining = remainingSet(remainingKeys);
   if (!mainPiece || remaining.size === 0) return null;
-  const deep = remaining.size <= 40;
+  const deep = remaining.size <= 28;
   let best = null;
 
-  originsFor(mainPiece, remaining).forEach(([oq, or]) => {
-    const main = scorePlacement(mainPiece, oq, or, remaining);
+  eachPlacement(mainPiece, remaining, (main) => {
     const afterMain = subtractKeys(remaining, main.hitKeys);
 
     if (!nextPiece || afterMain.size === 0) {
@@ -328,28 +378,24 @@ export function bestMainPlacement(remainingKeys, mainPiece, nextPiece = null) {
       if (!best || value < best.value) {
         let next = null;
         let leftover = afterMain;
-        if (nextPiece && afterMain.size) {
-          let follow = null;
-          originsFor(nextPiece, afterMain).forEach(([nq, nr]) => {
-            const placed = scorePlacement(nextPiece, nq, nr, afterMain);
-            const left = subtractKeys(afterMain, placed.hitKeys);
-            const nvalue = evaluatePair(main, placed, left);
-            if (!follow || nvalue < follow.value) {
-              follow = { placed, left, nvalue };
-            }
-          });
-          if (follow) {
-            next = follow.placed;
-            leftover = follow.left;
+        let follow = null;
+        eachPlacement(nextPiece, afterMain, (placed) => {
+          const left = subtractKeys(afterMain, placed.hitKeys);
+          const nvalue = evaluatePair(main, placed, left);
+          if (!follow || nvalue < follow.value) {
+            follow = { placed, left, nvalue };
           }
+        });
+        if (follow) {
+          next = follow.placed;
+          leftover = follow.left;
         }
         best = pack(value, main, next, leftover, afterMain.size);
       }
       return;
     }
 
-    originsFor(nextPiece, afterMain).forEach(([nq, nr]) => {
-      const next = scorePlacement(nextPiece, nq, nr, afterMain);
+    eachPlacement(nextPiece, afterMain, (next) => {
       const leftover = subtractKeys(afterMain, next.hitKeys);
       const value = evaluatePair(main, next, leftover);
       if (!best || value < best.value) {

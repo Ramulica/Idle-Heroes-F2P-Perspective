@@ -30,31 +30,31 @@ const FACTORY_HELP = [
   "The game always shows two Dream Patterns: the one you must place now (Main) and the one after it (Next). Tap a slot, then tap the matching shape below.",
   "Green hexes are where Main should go. Gold is the planned Next. Red is waste — a cell of the piece that hangs off remaining heroes or off the map.",
   "Place Main in-game on those green hexes, then tap I placed this. Next becomes Main. Pick the new Next pattern the game just revealed.",
-  "The solver tries every legal Main spot, then every Next spot on what would remain. It scores leftover groups: isolated singles are very expensive, then it averages how well the real 80% / 20% bag can bite what is left. A 0-waste move that creates stranded hexes loses to a slightly wasteful move that keeps the leftover tileable.",
-  "Common 3-hex patterns are about 80% of draws. Rare 5-hex patterns are about 20%. That mix is only used to prefer leftovers that future pieces can still cover cleanly.",
+  "The calculator rotates each piece through all 6 hex turns and picks the Main spot that leaves the easiest leftover. Isolated singles are very expensive. After Main and Next, leftovers are scored with the 80% / 20% bag: 10 four-hex patterns, then three six-hex bites and one seven-hex flower.",
+  "Common 4-hex patterns are about 80% of draws. Rare patterns are about 20%: three 6-hex bites and one 7-hex flower. The calculator rotates every piece 6 ways.",
 ];
 
 const FACTORY_ADVANCED = [
   {
     heading: "What the puzzle is",
     paragraphs: [
-      "The board is a honeycomb 20 hexes wide and 7 hexes tall. Cells sit in a zigzag honeycomb: they touch on vertical and diagonal edges, not as a square grid. Painted hexes are remaining little heroes. A Dream Pattern is a fixed polyhex: you get that exact orientation, and you cannot rotate it.",
+      "The board is a honeycomb 20 hexes wide and 7 hexes tall. Painted hexes are remaining little heroes. Common Dream Patterns are 4 hexes. Rare ones are a 6-hex bite (hexagon minus one) or the 7-hex flower. You can rotate a piece to any of the 6 hex turns; the calculator tries all of them.",
       "Placing a piece clears every remaining hero under it. Any cell of the piece that lands on a cleared hex, or off the remaining set, is waste.",
     ],
   },
   {
     heading: "How the best Main spot is chosen",
     paragraphs: [
-      "Every translation of Main that covers at least one remaining hero is tried. For each of those, every translation of Next on the leftover is tried. The winner is not the lowest waste by itself — leftover shape and the 80/20 future bag matter more. Isolated singles score worst. That full pair search runs while 40 or fewer hexes remain.",
-      "A later unknown piece is 80% one of the 10 common 3-hex patterns (equal chance each) and 20% one of the 4 rare 5-hex patterns. After Main and Next, the leftover is scored by the expected best bite from that bag, so the solver plans past the two pieces you can see.",
+      "Every rotation and translation of Main that covers at least one remaining hero is tried. For leftover puzzles, every rotation of Next is tried on what Main would leave. Isolated singles score worst. A 0-waste bite that strands hexes loses to a slightly wasteful bite that stays tileable.",
+      "A later unknown piece is 80% one of the 10 common 4-hex patterns and 20% rare (three 6-hex bites and one 7-hex flower). After Main and Next, the leftover is scored by how well that bag can still cover it.",
     ],
     formula:
-      "score = waste(Main)×26 + waste(Next)×20 + leftoverCost\nleftoverCost = 120 per isolated hex\n             + 62 per 2-hex stub\n             + 2 if a leftover 3-hex matches a common piece\n             + 52 if that 3-hex matches none\n             + expected future bite from the 80/20 bag",
+      "score = waste(Main)×26 + waste(Next)×20 + leftoverCost\nleftoverCost = 140 per isolated hex\n             + 80 per 2-hex stub\n             + 70 per 3-hex (no 3-hex pieces exist)\n             + 2 if a leftover 4-hex matches a common piece\n             + expected future bite from the 80/20 bag\neach piece is tried in all 6 rotations",
   },
   {
     heading: "Future 80% / 20% pieces",
     paragraphs: [
-      "There are 10 common Dream Patterns and 4 rare ones, in the orientations the game gives you. You cannot rotate them. After the two known patterns, later draws are 80% common (equal among the 10) and 20% rare (equal among the 4). That mix is used when scoring leftovers, so Main is chosen with those probabilities in mind.",
+      "There are 10 common 4-hex Dream Patterns and 4 rare ones (three 6-hex, one 7-hex). After you pick the shape, the calculator rotates it through all 6 hex turns. Later draws are 80% common and 20% rare; that mix is used when scoring leftovers.",
     ],
   },
   {
@@ -372,7 +372,7 @@ export default function FantasyFactoryCalculator() {
                   onClick={() => setPickTarget("next")}
                 />
               </div>
-              <h4 className="ff-bag-label">Common · about 80%</h4>
+              <h4 className="ff-bag-label">Common · about 80% · 4 hexes</h4>
               <div className="ff-bag">
                 {COMMON_PIECES.map((piece) => (
                   <button
@@ -381,14 +381,14 @@ export default function FantasyFactoryCalculator() {
                       mainId === piece.id ? " is-main" : ""
                     }${nextId === piece.id ? " is-next" : ""}`}
                     type="button"
-                    title="Common 3-hex"
+                    title="Common 4-hex"
                     onClick={() => pickPiece(piece.id)}
                   >
                     <HexShape cells={piece.cells} />
                   </button>
                 ))}
               </div>
-              <h4 className="ff-bag-label">Rare · about 20%</h4>
+              <h4 className="ff-bag-label">Rare · about 20% · 6 or 7 hexes</h4>
               <div className="ff-bag">
                 {RARE_PIECES.map((piece) => (
                   <button
@@ -397,7 +397,7 @@ export default function FantasyFactoryCalculator() {
                       mainId === piece.id ? " is-main" : ""
                     }${nextId === piece.id ? " is-next" : ""}`}
                     type="button"
-                    title="Rare 5-hex"
+                    title="Rare 6-hex or 7-hex"
                     onClick={() => pickPiece(piece.id)}
                   >
                     <HexShape cells={piece.cells} />
