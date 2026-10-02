@@ -147,31 +147,38 @@ export function nextScratchFairy(board, cellIndex, leftover) {
   return choices.reduce((lead, hit) => (hit.cans > lead.cans ? hit : lead));
 }
 
-function comboValue(numbers) {
+function comboValue(numbers, fairyP, lineFairy) {
   const sum = numbers.reduce((total, n) => total + Number(n), 0);
   const natural = SUM_SCORE[sum] || 0;
-  return { sum, natural, cans: natural, fairy: null };
+  const fairy = fairyP > 0 && lineFairy && sum !== lineFairy.sum ? lineFairy : null;
+  const cans = fairy ? fairyP * fairy.cans + (1 - fairyP) * natural : natural;
+  return { sum, natural, fairy, cans };
 }
 
-function lineStats(board, line, leftover) {
+function lineStats(board, line, leftover, fairyP) {
   const knownNums = [];
   let unknown = 0;
   for (const index of line.cells) {
     if (board[index] == null) unknown += 1;
     else knownNums.push(Number(board[index]));
   }
+  const lineFairy = unknown > 0 ? fairyTarget(knownNums) : null;
   const combos = unknown === 0 ? [[]] : combinations(leftover, unknown);
   let score = 0;
   let sum = 0;
   let best = 0;
   let high = 0;
+  let fairyHits = 0;
   for (const combo of combos) {
     const numbers = knownNums.concat(combo);
-    const valued = comboValue(numbers);
+    const valued = comboValue(numbers, fairyP, lineFairy);
     score += valued.cans;
     sum += valued.sum;
     if (valued.sum === 6) best += 1;
+    else if (valued.fairy?.kind === "low") best += fairyP;
     if (valued.sum === 24) high += 1;
+    else if (valued.fairy?.kind === "high") high += fairyP;
+    if (valued.fairy) fairyHits += 1;
   }
   const count = combos.length || 1;
   return {
@@ -179,7 +186,9 @@ function lineStats(board, line, leftover) {
     avgSum: sum / count,
     pBest: best / count,
     pHigh: high / count,
-    knownFairy: unknown > 0 ? missingOfTrio(knownNums)?.kind || null : null,
+    pFairy: fairyP > 0 && lineFairy ? fairyHits / count : 0,
+    fairyKind: fairyP > 0 && lineFairy ? lineFairy.kind : null,
+    knownFairy: fairyP > 0 && lineFairy ? lineFairy.kind : null,
   };
 }
 
@@ -191,18 +200,11 @@ export function analyzeBoard(board, fairyChance = DEFAULT_FAIRY_CHANCE) {
     if (known[i] == null) empty.push(i);
   }
   const revealed = revealedCount(known);
-  const fairyLive = revealed < MAX_REVEALS && clampFairyChance(fairyChance) > 0;
-  const lines = LINES.map((line) => {
-    const stats = lineStats(known, line, leftover);
-    const live = Boolean(fairyLive && stats.knownFairy);
-    return {
-      ...line,
-      ...stats,
-      pFairy: live ? 1 : 0,
-      fairyKind: live ? stats.knownFairy : null,
-      knownFairy: live ? stats.knownFairy : null,
-    };
-  });
+  const fairyP = revealed < MAX_REVEALS ? clampFairyChance(fairyChance) / 100 : 0;
+  const lines = LINES.map((line) => ({
+    ...line,
+    ...lineStats(known, line, leftover, fairyP),
+  }));
   const bestLine = lines.reduce((lead, line) => (line.ev > lead.ev ? line : lead));
   return {
     count: leftover.length,
@@ -279,6 +281,9 @@ export function explainStep(board, suggestion, fairyChance = DEFAULT_FAIRY_CHANC
   let text = `Uncover ${tile} next. It sits on ${onLines}, so it updates the most line averages. After this scratch the best line would be worth about ${Math.round(
     suggestion.ev
   )} cans`;
+  if (percent > 0 && analysis.lines.some((line) => line.knownFairy)) {
+    text += `. Lines that already show two of 1-2-3 or 7-8-9 still mix a ${percent}% fairy into their average until that last cell is revealed`;
+  }
   const boost =
     percent > 0
       ? suggestion.fairy ||
@@ -290,23 +295,28 @@ export function explainStep(board, suggestion, fairyChance = DEFAULT_FAIRY_CHANC
   return `${text}.`;
 }
 
-export function lineCombinations(board, line) {
+export function lineCombinations(board, line, fairyChance = DEFAULT_FAIRY_CHANCE) {
   const known = (board || []).map((value) => (value == null ? null : Number(value)));
   const leftover = remainingNumbers(known);
   const slots = line.cells.map((index) => known[index]);
   const unknown = slots.filter((value) => value == null).length;
   const picks = unknown === 0 ? [[]] : combinations(leftover, unknown);
+  const fairyP =
+    revealedCount(known) < MAX_REVEALS && unknown > 0
+      ? clampFairyChance(fairyChance) / 100
+      : 0;
+  const lineFairy = unknown > 0 ? fairyTarget(slots.filter((value) => value != null)) : null;
   return picks
     .map((pick) => {
       let next = 0;
       const numbers = slots.map((value) => (value == null ? pick[next++] : value));
-      const valued = comboValue(numbers);
+      const valued = comboValue(numbers, fairyP, lineFairy);
       return {
         numbers,
         sum: valued.sum,
         cans: valued.cans,
         natural: valued.natural,
-        fairy: null,
+        fairy: valued.fairy,
         known: slots.map((value) => value != null),
       };
     })

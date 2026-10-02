@@ -64,24 +64,23 @@ const SCRATCH_ADVANCED = [
     ],
   },
   {
-    heading: "Fairy on the next scratch only",
+    heading: "Fairy on the last unknown cell",
     paragraphs: [
-      "Fairy does not change the line you pick at the end. After 4 tiles are open, a line that shows 1-2-7 is just 1-2-7.",
-      "Fairy only fires on the next uncover. If a line already shows two of 1-2-3 or two of 7-8-9, and that line still has an empty cell, the next scratched number can become the missing one.",
+      "If a line already shows two of 1-2-3 or 7-8-9 and the third cell is still X, the line average mixes in the fairy chance until that X is revealed. Same while you still have scratches left.",
+      "Once X is a real number, fairy is off. 1-2-7 is only 1-2-7. After all 4 tiles are open, leftover fills also have no fairy.",
     ],
     formula:
-      "after 4 tiles: payout = table[sum]   (no fairy)\n\nbefore 4 tiles, next scratch on a near-max line:\n  with chance p: that tile becomes the missing 1-2-3 or 7-8-9 number\n  with chance 1−p: that tile is a normal leftover number",
+      "line is 1, 2, X  and scratches remain:\n  each leftover n:  p × 1680  +  (1−p) × payout(1+2+n)\n  except n = 3: payout = 1680\n\nline is 1, 2, 7  or 4 tiles already open:\n  payout = table[sum]   (no fairy)",
     items: [
-      "Example: a line already shows 1 and 3. The next scratch on that line has p chance to become 2.",
-      "If you then open 7 there instead, the line is 1-3-7. No leftover fairy mix is added.",
-      "The % field is used only for that next-scratch look-ahead, not for the final score.",
+      "Example: 1 and 2 showing, X unknown, p = 20%. The bubble is the leftover average with 20% of 1680 mixed in.",
+      "Reveal X as 7 → the line is 1-2-7 and the mix disappears.",
     ],
   },
   {
     heading: "Which tile to uncover next",
     paragraphs: [
       "Until 4 tiles are open, the green ring is a one-step look-ahead: pick the empty cell that makes the best line worth the most after you see that number.",
-      "Each leftover number is treated as equally likely on that cell. If a line already has two of 1-2-3 or 7-8-9, this next number can be changed by the fairy. After pretending the number (or the fairy number) is there, every line EV is recomputed with no fairy on the final score, and the best of those 8 lines is kept.",
+      "Each leftover number is treated as equally likely on that cell. If a line already has two of 1-2-3 or 7-8-9 and X is still open, that line’s average still includes fairy. After pretending the number is there, every line EV is recomputed: 1-2-7 has no fairy; 1-2-X still does until X is filled.",
     ],
     formula:
       "for each empty cell c:\n  for each leftover number n:\n    place n on c\n    score(n) = highest line EV on that new board\n  VoI(c) = average of score(n)\n\nsuggest the cell with the highest VoI\ntie-break: the cell that sits on more lines (center sits on 4)",
@@ -90,7 +89,7 @@ const SCRATCH_ADVANCED = [
     heading: "Which line to pick",
     paragraphs: [
       "After 4 scratches, stop uncovering. The gold line is the one with the highest EV. That is the line to confirm in-game.",
-      "Tap a bubble (or a row under Line averages) to see every leftover set still possible on that axis. Those lists are the real leftover numbers — fairy is not mixed into the score.",
+      "Tap a bubble (or a row under Line averages) to see every leftover set. If the line is still 1-2-X, those rows mix fairy. If it is already 1-2-7, they do not.",
     ],
   },
 ];
@@ -112,8 +111,9 @@ function LineBubble({ line, recommended, onClick, className = "" }) {
   );
 }
 
-function ComboModal({ line, board, onClose }) {
-  const rows = lineCombinations(board, line);
+function ComboModal({ line, board, fairyChance, onClose }) {
+  const rows = lineCombinations(board, line, fairyChance);
+  const percent = clampFairyChance(fairyChance);
   return (
     <div className="modal-back" onClick={onClose}>
       <div
@@ -124,14 +124,15 @@ function ComboModal({ line, board, onClose }) {
         <p className="muted">
           {rows.length} leftover set{rows.length === 1 ? "" : "s"} that can still
           land on this line. Known tiles stay fixed; empty tiles take leftover
-          numbers. After 4 scratches, fairy does not change these scores.
+          numbers. Fairy is mixed only while that last cell is still X and you
+          still have a scratch left.
         </p>
         <div className="scratch-combo-list">
           {rows.map((row) => (
             <div
               key={row.numbers.join("-")}
               className={`scratch-combo-row${
-                row.sum === 6 || row.sum === 24 ? " hot" : ""
+                row.sum === 6 || row.sum === 24 || row.fairy ? " hot" : ""
               }`}
             >
               <span className="scratch-combo-nums">
@@ -141,7 +142,10 @@ function ComboModal({ line, board, onClose }) {
                   </strong>
                 ))}
               </span>
-              <span>sum {row.sum}</span>
+              <span>
+                sum {row.sum}
+                {row.fairy ? ` · fairy ${percent}% → ${row.fairy.label}` : ""}
+              </span>
               <CanAmount value={row.cans} />
             </div>
           ))}
@@ -264,7 +268,7 @@ export default function ScratchCardCalculator() {
                   "The first scratch is random. Tap that tile and type the number you see.",
                   "The calculator then marks the next tile that teaches the most, and updates every line’s average cans.",
                   "Tap a line average to see every leftover number set still possible on that row, column, or diagonal.",
-                  "If a line already has two of 1-2-3 or 7-8-9, the next scratch can be changed by the fairy. After 4 tiles are open, pick the line as it is — fairy does not change that score.",
+                  "If a line already has two of 1-2-3 or 7-8-9 and the last cell is still X, the average includes the fairy chance until X is revealed. 1-2-7 is just 1-2-7. After 4 tiles, leftover scores have no fairy.",
                   "Sum 6 (1-2-3) pays 1680 cans. Sum 24 (7-8-9) pays 1008. After 4 scratches, pick the highlighted line.",
                 ]}
                 advanced={SCRATCH_ADVANCED}
@@ -357,9 +361,9 @@ export default function ScratchCardCalculator() {
                 </label>
                 {fairyTip ? (
                   <div className="scratch-fairy-pop">
-                    If a line already shows two of 1-2-3 or 7-8-9, the next
-                    scratch can become the missing number. After 4 tiles, fairy
-                    does not change the score.
+                    If a line already shows two of 1-2-3 or 7-8-9 and X is
+                    still open, the average mixes this % until X is revealed.
+                    1-2-7 has no fairy.
                   </div>
                 ) : null}
               </div>
@@ -565,6 +569,7 @@ export default function ScratchCardCalculator() {
         <ComboModal
           line={comboLine}
           board={board}
+          fairyChance={fairyChance}
           onClose={() => setComboLine(null)}
         />
       ) : null}

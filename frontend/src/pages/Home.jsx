@@ -365,7 +365,7 @@ export default function Home() {
                       steps={[
                         "The grid is 1–9 once each. Scratch 4 tiles, then pick a row, column, or diagonal.",
                         "Type the first random number, then follow the suggested tile for the most information.",
-                        "Each line shows leftover averages. Fairy can change only the next scratch if a line already has two of 1-2-3 or 7-8-9, not the final score.",
+                        "Each line shows leftover averages. If a line is 1-2-X, fairy is mixed in until X is revealed. 1-2-7 has no fairy.",
                       ]}
                     />
                   </div>
