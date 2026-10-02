@@ -98,6 +98,10 @@ function countIn(numbers, group) {
   return numbers.reduce((total, n) => total + (group.has(Number(n)) ? 1 : 0), 0);
 }
 
+function knownBoard(board) {
+  return (board || []).map((value) => (value == null ? null : Number(value)));
+}
+
 export function fairyTarget(numbers) {
   const vals = (numbers || []).map(Number);
   const sum = vals.reduce((total, n) => total + n, 0);
@@ -110,42 +114,64 @@ export function fairyTarget(numbers) {
   return null;
 }
 
-function knownFairyKind(knownNums) {
-  return fairyTarget(knownNums)?.kind || null;
+function missingOfTrio(knownNums) {
+  const target = fairyTarget(knownNums);
+  if (!target) return null;
+  const have = new Set(knownNums.map(Number));
+  const trio = target.kind === "low" ? [1, 2, 3] : [7, 8, 9];
+  const missing = trio.find((n) => !have.has(n));
+  return missing == null ? null : { ...target, missing };
 }
 
-function comboValue(numbers, fairyP, lineFairy) {
+export function nextScratchFairy(board, cellIndex, leftover) {
+  const known = knownBoard(board);
+  const pool = leftover || remainingNumbers(known);
+  const hits = [];
+  for (const line of LINES) {
+    const knownNums = [];
+    let unknown = 0;
+    let onCell = false;
+    for (const index of line.cells) {
+      if (index === cellIndex) onCell = true;
+      if (known[index] == null) unknown += 1;
+      else knownNums.push(Number(known[index]));
+    }
+    if (!unknown) continue;
+    const info = missingOfTrio(knownNums);
+    if (!info || !pool.includes(info.missing)) continue;
+    hits.push({ ...info, onCell, lineId: line.id, name: line.name });
+  }
+  if (!hits.length) return null;
+  const prefer = hits.filter((hit) => hit.onCell);
+  const choices = prefer.length ? prefer : hits;
+  return choices.reduce((lead, hit) => (hit.cans > lead.cans ? hit : lead));
+}
+
+function comboValue(numbers) {
   const sum = numbers.reduce((total, n) => total + Number(n), 0);
   const natural = SUM_SCORE[sum] || 0;
-  const fairy = fairyP > 0 && lineFairy && sum !== lineFairy.sum ? lineFairy : null;
-  const cans = fairy ? fairyP * fairy.cans + (1 - fairyP) * natural : natural;
-  return { sum, natural, fairy, cans };
+  return { sum, natural, cans: natural, fairy: null };
 }
 
-function lineStats(board, line, leftover, fairyP) {
+function lineStats(board, line, leftover) {
   const knownNums = [];
   let unknown = 0;
   for (const index of line.cells) {
     if (board[index] == null) unknown += 1;
     else knownNums.push(Number(board[index]));
   }
-  const lineFairy = fairyTarget(knownNums);
   const combos = unknown === 0 ? [[]] : combinations(leftover, unknown);
   let score = 0;
   let sum = 0;
   let best = 0;
   let high = 0;
-  let fairyHits = 0;
   for (const combo of combos) {
     const numbers = knownNums.concat(combo);
-    const valued = comboValue(numbers, fairyP, lineFairy);
+    const valued = comboValue(numbers);
     score += valued.cans;
     sum += valued.sum;
     if (valued.sum === 6) best += 1;
-    else if (valued.fairy?.kind === "low") best += fairyP;
     if (valued.sum === 24) high += 1;
-    else if (valued.fairy?.kind === "high") high += fairyP;
-    if (valued.fairy) fairyHits += 1;
   }
   const count = combos.length || 1;
   return {
@@ -153,9 +179,7 @@ function lineStats(board, line, leftover, fairyP) {
     avgSum: sum / count,
     pBest: best / count,
     pHigh: high / count,
-    pFairy: fairyP > 0 ? fairyHits / count : 0,
-    fairyKind: fairyP > 0 && lineFairy ? lineFairy.kind : null,
-    knownFairy: fairyP > 0 ? knownFairyKind(knownNums) : null,
+    knownFairy: unknown > 0 ? missingOfTrio(knownNums)?.kind || null : null,
   };
 }
 
@@ -166,11 +190,19 @@ export function analyzeBoard(board, fairyChance = DEFAULT_FAIRY_CHANCE) {
   for (let i = 0; i < 9; i += 1) {
     if (known[i] == null) empty.push(i);
   }
-  const fairyP = clampFairyChance(fairyChance) / 100;
-  const lines = LINES.map((line) => ({
-    ...line,
-    ...lineStats(known, line, leftover, fairyP),
-  }));
+  const revealed = revealedCount(known);
+  const fairyLive = revealed < MAX_REVEALS && clampFairyChance(fairyChance) > 0;
+  const lines = LINES.map((line) => {
+    const stats = lineStats(known, line, leftover);
+    const live = Boolean(fairyLive && stats.knownFairy);
+    return {
+      ...line,
+      ...stats,
+      pFairy: live ? 1 : 0,
+      fairyKind: live ? stats.knownFairy : null,
+      knownFairy: live ? stats.knownFairy : null,
+    };
+  });
   const bestLine = lines.reduce((lead, line) => (line.ev > lead.ev ? line : lead));
   return {
     count: leftover.length,
@@ -178,7 +210,7 @@ export function analyzeBoard(board, fairyChance = DEFAULT_FAIRY_CHANCE) {
     bestLine,
     remaining: leftover,
     empty,
-    revealed: revealedCount(known),
+    revealed,
     fairyChance: clampFairyChance(fairyChance),
   };
 }
@@ -194,13 +226,23 @@ export function suggestReveal(board, fairyChance = DEFAULT_FAIRY_CHANCE) {
     };
   }
 
+  const fairyP = clampFairyChance(fairyChance) / 100;
   let best = null;
   for (const cell of analysis.empty) {
+    const boost = fairyP > 0 ? nextScratchFairy(board, cell, analysis.remaining) : null;
     let weighted = 0;
     for (const number of analysis.remaining) {
-      const next = knownBoard(board);
-      next[cell] = number;
-      weighted += analyzeBoard(next, fairyChance).bestLine.ev;
+      const natural = knownBoard(board);
+      natural[cell] = number;
+      let score = analyzeBoard(natural, fairyChance).bestLine.ev;
+      if (boost && number !== boost.missing) {
+        const changed = knownBoard(board);
+        changed[cell] = boost.missing;
+        score =
+          fairyP * analyzeBoard(changed, fairyChance).bestLine.ev +
+          (1 - fairyP) * score;
+      }
+      weighted += score;
     }
     const ev = weighted / analysis.remaining.length;
     const lineCount = LINES.filter((line) => line.cells.includes(cell)).length;
@@ -209,31 +251,10 @@ export function suggestReveal(board, fairyChance = DEFAULT_FAIRY_CHANCE) {
       ev > best.ev + 0.01 ||
       (Math.abs(ev - best.ev) <= 0.01 && lineCount > best.lineCount)
     ) {
-      best = { index: cell, ev, lineCount };
+      best = { index: cell, ev, lineCount, fairy: boost };
     }
   }
   return { ...best, readyToPick: false, analysis };
-}
-
-function knownBoard(board) {
-  return (board || []).map((value) => (value == null ? null : Number(value)));
-}
-
-function fairyPhrase(line, percent) {
-  const label =
-    line.fairyKind === "high"
-      ? "7-8-9 (1008)"
-      : line.fairyKind === "mixed"
-        ? "1-2-3 (1680) or 7-8-9 (1008)"
-        : "1-2-3 (1680)";
-  if (line.knownFairy) {
-    const pair =
-      line.knownFairy === "high"
-        ? "two of 7, 8, 9"
-        : "two of 1, 2, 3";
-    return ` This line already has ${pair}, so a ${percent}% fairy can complete ${label} no matter what the last number is`;
-  }
-  return ` A ${percent}% fairy can complete ${label} on leftover fills that already hold two of those max numbers`;
 }
 
 export function explainStep(board, suggestion, fairyChance = DEFAULT_FAIRY_CHANCE) {
@@ -249,8 +270,7 @@ export function explainStep(board, suggestion, fairyChance = DEFAULT_FAIRY_CHANC
     const chance = Math.round((best.pBest || 0) * 100);
     let text = `Pick the ${best.name}. It is worth about ${Math.round(best.ev)} cans from the leftover 1–9 layouts`;
     if (chance) text += `, with a ${chance}% shot at 1-2-3 (1680)`;
-    if (percent > 0 && best.pFairy > 0) text += fairyPhrase(best, percent);
-    return `${text}.`;
+    return `${text}. Fairy does not change the score after 4 tiles are open.`;
   }
   const tile = cellLabel(suggestion.index);
   const onLines = LINES.filter((line) => line.cells.includes(suggestion.index))
@@ -259,31 +279,34 @@ export function explainStep(board, suggestion, fairyChance = DEFAULT_FAIRY_CHANC
   let text = `Uncover ${tile} next. It sits on ${onLines}, so it updates the most line averages. After this scratch the best line would be worth about ${Math.round(
     suggestion.ev
   )} cans`;
-  if (percent > 0 && analysis.lines.some((line) => line.knownFairy)) {
-    text += `, counting a ${percent}% fairy on lines that already hold two of 1-2-3 or 7-8-9`;
+  const boost =
+    percent > 0
+      ? suggestion.fairy ||
+        nextScratchFairy(board, suggestion.index, analysis.remaining)
+      : null;
+  if (boost) {
+    text += `. A ${percent}% fairy can change this next number to ${boost.missing} and complete ${boost.label}`;
   }
   return `${text}.`;
 }
 
-export function lineCombinations(board, line, fairyChance = DEFAULT_FAIRY_CHANCE) {
+export function lineCombinations(board, line) {
   const known = (board || []).map((value) => (value == null ? null : Number(value)));
   const leftover = remainingNumbers(known);
   const slots = line.cells.map((index) => known[index]);
   const unknown = slots.filter((value) => value == null).length;
   const picks = unknown === 0 ? [[]] : combinations(leftover, unknown);
-  const fairyP = clampFairyChance(fairyChance) / 100;
-  const lineFairy = fairyTarget(slots.filter((value) => value != null));
   return picks
     .map((pick) => {
       let next = 0;
       const numbers = slots.map((value) => (value == null ? pick[next++] : value));
-      const valued = comboValue(numbers, fairyP, lineFairy);
+      const valued = comboValue(numbers);
       return {
         numbers,
         sum: valued.sum,
         cans: valued.cans,
         natural: valued.natural,
-        fairy: valued.fairy,
+        fairy: null,
         known: slots.map((value) => value != null),
       };
     })
