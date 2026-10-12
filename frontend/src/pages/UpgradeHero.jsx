@@ -170,6 +170,7 @@ function HaveResources({ owned, onChange }) {
 }
 
 function CostPreview({ used, need, full }) {
+  const [sumView, setSumView] = useState("picks");
   const columns = [
     { id: "full", title: "Full want cost", cost: full },
     { id: "used", title: "Used so far", cost: used },
@@ -180,6 +181,18 @@ function CostPreview({ used, need, full }) {
     need: eventMatsFromCost(need),
     full: eventMatsFromCost(full),
   };
+  const showPicks = sumView === "picks";
+
+  function HeaderRow({ className }) {
+    return (
+      <tr className={className}>
+        <th>Resource</th>
+        {columns.map((col) => (
+          <th key={col.id}>{col.title}</th>
+        ))}
+      </tr>
+    );
+  }
 
   return (
     <div className="hero-cost-table-wrap">
@@ -190,12 +203,7 @@ function CostPreview({ used, need, full }) {
       </p>
       <table className="hero-cost-table">
         <thead>
-          <tr>
-            <th>Resource</th>
-            {columns.map((col) => (
-              <th key={col.id}>{col.title}</th>
-            ))}
-          </tr>
+          <HeaderRow />
         </thead>
         <tbody>
           {COST_ROWS.map((row) => (
@@ -235,25 +243,54 @@ function CostPreview({ used, need, full }) {
               </tr>
             </Fragment>
           ))}
+          <HeaderRow className="hero-cost-sum-head" />
           <tr className="hero-cost-sum">
             <th scope="row">
-              <span className="hero-cost-rate">Event picks</span>
+              <div className="hero-sum-toggle" role="group" aria-label="Conclusion view">
+                <button
+                  type="button"
+                  className={showPicks ? "" : "on"}
+                  aria-pressed={!showPicks}
+                  onClick={() => setSumView("resources")}
+                >
+                  Resources
+                </button>
+                <button
+                  type="button"
+                  className={showPicks ? "on" : ""}
+                  aria-pressed={showPicks}
+                  onClick={() => setSumView("picks")}
+                >
+                  Event picks
+                </button>
+              </div>
               <span className="hero-cost-rate-note">
-                If you pay that way — not the resource amounts you still need
-                above
+                {showPicks
+                  ? "If you pay that way — not the resource amounts you still need above"
+                  : "Resource totals for this column — not event picks"}
               </span>
             </th>
             {columns.map((col) => (
               <td key={col.id}>
                 <div className="hero-cost-sum-stack">
-                  {COST_ROWS.map((row) => (
-                    <MatAmount
-                      key={row.key}
-                      icon={row.icon}
-                      alt={row.alt}
-                      value={mats[col.id][row.matKey]}
-                    />
-                  ))}
+                  {COST_ROWS.map((row) =>
+                    showPicks ? (
+                      <MatAmount
+                        key={row.key}
+                        icon={row.icon}
+                        alt={row.alt}
+                        value={mats[col.id][row.matKey]}
+                      />
+                    ) : (
+                      <ResourceAmount
+                        key={row.key}
+                        icon={row.icon}
+                        alt={row.alt}
+                        value={col.cost[row.key]}
+                        compact={row.compact}
+                      />
+                    )
+                  )}
                 </div>
               </td>
             ))}
@@ -459,7 +496,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
-                  "Below the heroes, type resources you already have in bag or shop. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need.",
+                  "Below the heroes, type resources you already have in bag or shop. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
