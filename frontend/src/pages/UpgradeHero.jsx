@@ -145,8 +145,13 @@ function MatAmount({ icon, alt, value }) {
   );
 }
 
-function CostBits({ cost }) {
-  const bits = COST_ROWS.filter((row) => Number(cost?.[row.key]) > 0);
+function CostBits({ cost, order }) {
+  const rows = order
+    ? order
+        .map((key) => COST_ROWS.find((row) => row.key === key))
+        .filter(Boolean)
+    : COST_ROWS;
+  const bits = rows.filter((row) => Number(cost?.[row.key]) > 0);
   if (!bits.length) return <span className="muted">No event mats</span>;
   return (
     <span className="hero-cost-bits">
@@ -164,22 +169,13 @@ function CostBits({ cost }) {
 
 const T_STEP_IDS = ["T1", "T2", "T3", "T4", "T5", "T120"];
 const T_STEP_LABELS = {
-  T1: "T1 · lv 20",
-  T2: "T2 · lv 40",
-  T3: "T3 · lv 60",
-  T4: "T4 · lv 80",
-  T5: "T5 · lv 100",
-  T120: "T max · lv 120",
+  T1: "T1 · lv 20 Core",
+  T2: "T2 · lv 40 A",
+  T3: "T3 · lv 60 P1",
+  T4: "T4 · lv 80 P2",
+  T5: "T5 · lv 100 P3",
+  T120: "T max · lv 120 Destiny Transition",
 };
-
-function tStepCost(id, index) {
-  const cur = T_COSTS[id];
-  const prev = index ? T_COSTS[T_STEP_IDS[index - 1]] : { essence: 0, stellar: 0 };
-  return {
-    essence: cur.essence - prev.essence,
-    stellar: cur.stellar - prev.stellar,
-  };
-}
 
 function TemplePresetsPanel({ currentLevel, onPick }) {
   return (
@@ -235,11 +231,14 @@ function UpgradeCostsPanel() {
       </article>
       <article>
         <h4>Origin tree</h4>
-        <p>Essence and stellar extra to go up one Origin tree step after V4.</p>
-        {T_STEP_IDS.map((id, index) => (
+        <p>
+          Totals to reach that tree level after V4. Spiritual Essence first,
+          then stellar.
+        </p>
+        {T_STEP_IDS.map((id) => (
           <div key={id} className="hero-cost-guide-row">
             <strong>{T_STEP_LABELS[id]}</strong>
-            <CostBits cost={tStepCost(id, index)} />
+            <CostBits cost={T_COSTS[id]} order={["essence", "stellar"]} />
           </div>
         ))}
       </article>
