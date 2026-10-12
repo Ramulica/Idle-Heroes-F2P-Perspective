@@ -282,11 +282,6 @@ export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
     cost.stellar += tRow.stellar;
   }
 
-  if (stage.rank >= stageOf("T120").rank) {
-    cost.stellar += DT_UNLOCK_STELLAR;
-    cost.cot += DT_UNLOCK_COT;
-  }
-
   const owned = resolvedOptionals({ stage: stageId, ...optionals });
   T_OPTIONALS.forEach((item) => {
     if (!optionalUnlocked(stageId, item.id) || !owned[item.id]) return;

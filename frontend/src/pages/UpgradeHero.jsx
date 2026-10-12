@@ -267,12 +267,14 @@ function UpgradeCostsPanel() {
       <article>
         <h4>Destiny Transition</h4>
         <p>
-          T120 already paid 5000k CoT and 14.93m stellar. D1–D6 do not add that
-          again — only the extra D rank cost.
+          DT unlock costs 0. The 5000k CoT and 14.93m stellar on that game row
+          are only a preview of Trans + V1–V4 + T1–T5, already counted above.
+          The first extra DT cost is D1.
         </p>
         <div className="hero-cost-guide-row">
-          <strong>T120 · already spent</strong>
+          <strong>DT unlock</strong>
           <span className="hero-cost-bits">
+            <span className="muted">0 extra</span>
             <ResourceAmount
               icon={COST_ROWS.find((row) => row.key === "cot").icon}
               alt="Crystals of Transcendence"
@@ -283,6 +285,7 @@ function UpgradeCostsPanel() {
               alt="Stellar Shards"
               value={DT_UNLOCK_STELLAR}
             />
+            <span className="hero-cost-rate-note">preview of V + T spend</span>
           </span>
         </div>
         {["D1", "D2", "D3", "D4", "D5", "D6"].map((id) => {
@@ -704,7 +707,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. Trans is 5000k CoT. V1–V4 is stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "1 origin pick = 1 skill sub = 90k of that sub resource. An ability needs 2 picks, so 180k.",
-                  "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. T120 already paid 5000k CoT and 14.93m stellar; D ranks do not add that again.",
+                  "DT unlock costs 0 — the 5000k CoT and 14.93m stellar there are only a preview of V1–V4 and T1–T5. D1 is the first extra Destiny cost.",
                   "Below the heroes, type bag resources you already have. You can type 1000000 or 1000k. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
                   "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs next to the title shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
