@@ -184,26 +184,34 @@ const T_STEP_LABELS = {
 };
 
 function TemplePresetsPanel({ currentLevel, onPick }) {
+  const selected = templeRow(currentLevel);
   return (
-    <div className="hero-preset-list">
+    <div className="hero-preset-panel">
       <p className="muted">
-        Click a temple to set this board’s level and replace its heroes with the
-        required Destiny heroes.
+        Click a temple (1–{MAX_TEMPLE_LEVEL}) to set this board’s level and
+        replace its heroes with the required Destiny heroes.
       </p>
-      {TEMPLE_TABLE.map((row) => (
-        <button
-          key={row.lvl}
-          className={`hero-preset${currentLevel === row.lvl ? " selected" : ""}`}
-          type="button"
-          onClick={() => onPick(row.lvl)}
-        >
-          <span className="hero-preset-title">
-            Temple {row.lvl} · D+{row.bonus}
-          </span>
-          <span className="hero-preset-req">{templeReqLabel(row.req)}</span>
-          <span className="hero-preset-cap">{dtCapLabel(row.lvl)}</span>
-        </button>
-      ))}
+      <div className="hero-preset-grid">
+        {TEMPLE_TABLE.map((row) => (
+          <button
+            key={row.lvl}
+            className={`hero-preset${currentLevel === row.lvl ? " selected" : ""}`}
+            type="button"
+            title={`Temple ${row.lvl} · D+${row.bonus}. ${templeReqLabel(row.req)}. Cap: ${dtCapLabel(row.lvl)}`}
+            onClick={() => onPick(row.lvl)}
+          >
+            <span className="hero-preset-num">{row.lvl}</span>
+            <span className="hero-preset-plus">D+{row.bonus}</span>
+          </button>
+        ))}
+      </div>
+      <div className="hero-preset-detail">
+        <span className="hero-preset-title">
+          Temple {selected.lvl} · D+{selected.bonus}
+        </span>
+        <span className="hero-preset-req">{templeReqLabel(selected.req)}</span>
+        <span className="hero-preset-cap">{dtCapLabel(selected.lvl)}</span>
+      </div>
     </div>
   );
 }

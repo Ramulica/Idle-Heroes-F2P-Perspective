@@ -2340,26 +2340,55 @@ input[type="range"] {
   margin-top: 10px;
 }
 
-.hero-preset-list {
+.hero-preset-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 56vh;
-  overflow: auto;
+  gap: 10px;
+}
+
+.hero-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .hero-preset {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 52px;
+  padding: 6px 4px;
   border: 2px solid #8a5a2a;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff8e8;
   color: var(--ink);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
+}
+
+.hero-preset-num {
+  font-family: Cinzel, serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.hero-preset-plus {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #8a6a3a;
+}
+
+.hero-preset-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 2px solid #c9a36a;
+  border-radius: 12px;
+  background: #fffaf0;
 }
 
 .hero-preset.selected {
@@ -2380,6 +2409,12 @@ input[type="range"] {
   font-size: 0.78rem;
   font-weight: 700;
   color: #8a6a3a;
+}
+
+@media (max-width: 640px) {
+  .hero-preset-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .hero-cost-bits {
