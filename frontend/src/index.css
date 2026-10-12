@@ -2130,7 +2130,7 @@ input[type="range"] {
 .hero-cost-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 920px;
+  min-width: 720px;
 }
 
 .hero-cost-table th,
@@ -2229,6 +2229,37 @@ input[type="range"] {
   background: #fffaf0;
   color: var(--ink);
   font-weight: 800;
+}
+
+.hero-have-res {
+  background: linear-gradient(180deg, #fffdf7, #f4e6c8);
+  border: 2px solid #7a4a22;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.hero-have-res h3,
+.hero-board h3 {
+  margin: 0;
+  font-family: Cinzel, serif;
+}
+
+.hero-have-res-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 12px;
+  margin-top: 12px;
+}
+
+.hero-have-res-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.hero-have-res-item .hero-other-input {
+  max-width: none;
 }
 
 .hero-temple-check {

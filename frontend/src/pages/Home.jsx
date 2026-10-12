@@ -338,7 +338,7 @@ export default function Home() {
                     <HelpTip
                       title="Upgrade Hero Tool"
                       steps={[
-                        "Set what you have and what you want. The top bar shows mats already spent, what is still missing, and the full want cost.",
+                        "Set what you have and what you want. Below the heroes, type bag resources you already have. The table is Full want cost, Used so far, and Still need.",
                         "Event mats from All rewards pay those costs: void for CoT and stellar, origin for essence, cores, and subs, DT for Aurora and Spirit Vein.",
                         "On T heroes, tick core and skill subs per hero. Destiny Transition always includes all of them.",
                         "Have and Want each have their own temple. Auto uses that board’s Destiny heroes; you can set either side by hand.",

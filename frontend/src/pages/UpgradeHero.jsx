@@ -134,16 +134,49 @@ function MatAmount({ icon, alt, value }) {
   );
 }
 
-function CostPreview({ used, other, need, full, onOther }) {
+function HaveResources({ owned, onChange }) {
+  return (
+    <article className="hero-have-res">
+      <div className="calc-row-head">
+        <h3>Resources I have</h3>
+      </div>
+      <p className="muted">
+        Bag, shop, or extra income not already on the boards. Type a number or
+        5000k. This lowers Still need.
+      </p>
+      <div className="hero-have-res-grid">
+        {COST_ROWS.map((row) => (
+          <label key={row.key} className="hero-have-res-item">
+            <span className="hero-cost-name">
+              <img src={row.icon} alt="" className="csg-icon hero-res-icon" />
+              {row.name}
+            </span>
+            <input
+              className="hero-other-input"
+              type="text"
+              inputMode="decimal"
+              aria-label={`${row.name} I have`}
+              placeholder="0"
+              value={owned[row.key] ? String(owned[row.key]) : ""}
+              onChange={(event) =>
+                onChange(row.key, parseResourceInput(event.target.value))
+              }
+            />
+          </label>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function CostPreview({ used, need, full }) {
   const columns = [
-    { id: "used", title: "Used so far", cost: used },
-    { id: "other", title: "Other sources", cost: other, input: true },
-    { id: "need", title: "Still need", cost: need },
     { id: "full", title: "Full want cost", cost: full },
+    { id: "used", title: "Used so far", cost: used },
+    { id: "need", title: "Still need", cost: need },
   ];
   const mats = {
     used: eventMatsFromCost(used),
-    other: eventMatsFromCost(other),
     need: eventMatsFromCost(need),
     full: eventMatsFromCost(full),
   };
@@ -151,10 +184,9 @@ function CostPreview({ used, other, need, full, onOther }) {
   return (
     <div className="hero-cost-table-wrap">
       <p className="hero-cost-rates">
-        Other sources is bag, shop, or extra income not already on the boards.
-        Type a number or 5000k. 1 void mat = 1250k CoT or 1250k stellar · 1
-        origin mat = 150k essence, 1 core chest, or 1 skill sub · 1 DT mat = 5
-        Divine Aurora or 200k Spirit Vein
+        1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
+        core chest, or 1 skill sub · 1 DT mat = 5 Divine Aurora or 200k Spirit
+        Vein
       </p>
       <table className="hero-cost-table">
         <thead>
@@ -177,26 +209,12 @@ function CostPreview({ used, other, need, full, onOther }) {
                 </th>
                 {columns.map((col) => (
                   <td key={col.id}>
-                    {col.input ? (
-                      <input
-                        className="hero-other-input"
-                        type="text"
-                        inputMode="decimal"
-                        aria-label={`${row.name} from other sources`}
-                        placeholder="0"
-                        value={col.cost[row.key] ? String(col.cost[row.key]) : ""}
-                        onChange={(event) =>
-                          onOther(row.key, parseResourceInput(event.target.value))
-                        }
-                      />
-                    ) : (
-                      <ResourceAmount
-                        icon={row.icon}
-                        alt={row.alt}
-                        value={col.cost[row.key]}
-                        compact={row.compact}
-                      />
-                    )}
+                    <ResourceAmount
+                      icon={row.icon}
+                      alt={row.alt}
+                      value={col.cost[row.key]}
+                      compact={row.compact}
+                    />
                   </td>
                 ))}
               </tr>
@@ -441,7 +459,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
-                  "The preview has Used so far, Other sources you type in, Still need, and Full want. Other sources is bag or extra income, and it lowers Still need.",
+                  "Below the heroes, type resources you already have in bag or shop. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
@@ -463,42 +481,6 @@ export default function UpgradeHero() {
         ) : null}
         <div className="shell-body no-sidebar">
           <section className="main-panel calc-panel">
-            <div className="total-banner preview-banner hero-cost-banner">
-              <div className="head-with-help">
-                <h3>Resource preview</h3>
-                <button
-                  className="info-btn"
-                  type="button"
-                  aria-label="Yearly income"
-                  title="What you get in a year"
-                  onClick={() => setYearOpen(true)}
-                >
-                  <svg className="info-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
-                    <circle cx="12" cy="7.6" r="1.4" fill="currentColor" />
-                    <path
-                      d="M12 11.1v6.3"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <CostPreview
-                used={used}
-                other={upgrade.otherSources}
-                need={need}
-                full={full}
-                onOther={(key, value) =>
-                  setUpgrade({
-                    otherSources: { ...upgrade.otherSources, [key]: value },
-                  })
-                }
-              />
-            </div>
-
             <div className="hero-boards">
               <HeroBoard
                 title="What I have"
@@ -540,6 +522,41 @@ export default function UpgradeHero() {
                   ) : null
                 }
               />
+            </div>
+
+            <HaveResources
+              owned={upgrade.otherSources}
+              onChange={(key, value) =>
+                setUpgrade({
+                  otherSources: { ...upgrade.otherSources, [key]: value },
+                })
+              }
+            />
+
+            <div className="total-banner preview-banner hero-cost-banner">
+              <div className="head-with-help">
+                <h3>Resource preview</h3>
+                <button
+                  className="info-btn"
+                  type="button"
+                  aria-label="Yearly income"
+                  title="What you get in a year"
+                  onClick={() => setYearOpen(true)}
+                >
+                  <svg className="info-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <circle cx="12" cy="7.6" r="1.4" fill="currentColor" />
+                    <path
+                      d="M12 11.1v6.3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <CostPreview used={used} need={need} full={full} />
             </div>
           </section>
         </div>
