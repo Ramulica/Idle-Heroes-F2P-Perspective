@@ -24,6 +24,7 @@ import {
   SUBS_PER_SKILL,
   T_COSTS,
   T_OPTIONALS,
+  T_STEP_IDS,
   TEMPLE_TABLE,
   V_COT,
   V_STELLAR,
@@ -167,7 +168,6 @@ function CostBits({ cost, order }) {
   );
 }
 
-const T_STEP_IDS = ["T1", "T2", "T3", "T4", "T5", "T120"];
 const T_STEP_LABELS = {
   T1: "T1 · lv 20 Core",
   T2: "T2 · lv 40 A",
@@ -232,8 +232,8 @@ function UpgradeCostsPanel() {
       <article>
         <h4>Origin tree</h4>
         <p>
-          Totals to reach that tree level after V4. Spiritual Essence first,
-          then stellar.
+          Each tree step adds Spiritual Essence then stellar. These add up — they
+          are not a checkpoint. T max tree stellar alone is over 10m.
         </p>
         {T_STEP_IDS.map((id) => (
           <div key={id} className="hero-cost-guide-row">
@@ -241,6 +241,19 @@ function UpgradeCostsPanel() {
             <CostBits cost={T_COSTS[id]} order={["essence", "stellar"]} />
           </div>
         ))}
+        <div className="hero-cost-guide-row">
+          <strong>All T steps added</strong>
+          <CostBits
+            cost={T_STEP_IDS.reduce(
+              (total, id) => ({
+                essence: total.essence + T_COSTS[id].essence,
+                stellar: total.stellar + T_COSTS[id].stellar,
+              }),
+              { essence: 0, stellar: 0 }
+            )}
+            order={["essence", "stellar"]}
+          />
+        </div>
       </article>
       <article>
         <h4>Core and skill subs</h4>
@@ -267,8 +280,8 @@ function UpgradeCostsPanel() {
         <h4>Destiny Transition</h4>
         <p>
           DT unlock costs 0. The 5000k CoT and 14.93m stellar on that game row
-          are only a preview of Trans + V1–V4 + T1–T5, already counted above.
-          The first extra DT cost is D1.
+          are the sum of Trans + V1–V4 + every T step added, already counted
+          above. The first extra DT cost is D1.
         </p>
         <div className="hero-cost-guide-row">
           <strong>DT unlock</strong>

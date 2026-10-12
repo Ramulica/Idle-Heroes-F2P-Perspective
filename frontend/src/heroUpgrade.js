@@ -22,6 +22,19 @@ export const T_COSTS = {
   T120: { essence: 465_020, stellar: 3_557_350 },
 };
 
+export const T_STEP_IDS = ["T1", "T2", "T3", "T4", "T5", "T120"];
+
+export function tCostsUpTo(stageId) {
+  const rank = stageOf(stageId).rank;
+  const cost = { essence: 0, stellar: 0 };
+  T_STEP_IDS.forEach((id) => {
+    if (rank < stageOf(id).rank) return;
+    cost.essence += T_COSTS[id].essence;
+    cost.stellar += T_COSTS[id].stellar;
+  });
+  return cost;
+}
+
 export const CORE_CHESTS = 8;
 export const SUBS_PER_SKILL = 2;
 export const SUB_RESOURCE_EACH = 90_000;
@@ -270,17 +283,9 @@ export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
   if (stage.rank >= stageOf("V3").rank) cost.stellar += V_STELLAR.V3;
   if (stage.rank >= stageOf("V4").rank) cost.stellar += V_STELLAR.V4;
 
-  let tRow = null;
-  if (stage.rank >= stageOf("T120").rank) tRow = T_COSTS.T120;
-  else if (stage.rank >= stageOf("T5").rank) tRow = T_COSTS.T5;
-  else if (stage.rank >= stageOf("T4").rank) tRow = T_COSTS.T4;
-  else if (stage.rank >= stageOf("T3").rank) tRow = T_COSTS.T3;
-  else if (stage.rank >= stageOf("T2").rank) tRow = T_COSTS.T2;
-  else if (stage.rank >= stageOf("T1").rank) tRow = T_COSTS.T1;
-  if (tRow) {
-    cost.essence += tRow.essence;
-    cost.stellar += tRow.stellar;
-  }
+  const tTree = tCostsUpTo(stageId);
+  cost.essence += tTree.essence;
+  cost.stellar += tTree.stellar;
 
   const owned = resolvedOptionals({ stage: stageId, ...optionals });
   T_OPTIONALS.forEach((item) => {
