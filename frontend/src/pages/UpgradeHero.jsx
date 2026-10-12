@@ -315,7 +315,7 @@ function HaveResourceInput({ name, value, onChange }) {
       type="text"
       inputMode="decimal"
       aria-label={`${name} I have`}
-      placeholder="5000k or 10m"
+      placeholder=""
       value={shown}
       onFocus={() => setDraft(value ? formatResourceAmount(value) : "")}
       onChange={(event) => {
@@ -336,10 +336,14 @@ function HaveResources({ owned, onChange }) {
     <article className="hero-have-res">
       <div className="calc-row-head">
         <h3>Resources I have</h3>
+        <HelpTip
+          title="Resources I have"
+          message="You can type 1000000 or 1000k. Bag, shop, or extra income not already on the boards lowers Still need."
+        />
       </div>
       <p className="muted">
-        Bag, shop, or extra income not already on the boards. Type 5000k or 10m.
-        This lowers Still need.
+        Bag, shop, or extra income not already on the boards. This lowers Still
+        need.
       </p>
       <div className="hero-have-res-grid">
         {COST_ROWS.map((row) => (
@@ -701,7 +705,7 @@ export default function UpgradeHero() {
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "1 origin pick = 1 skill sub = 90k of that sub resource. An ability needs 2 picks, so 180k.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. T120 already paid 5m stellar and 14.93m CoT; D ranks do not add that again.",
-                  "Below the heroes, type bag resources as 5000k or 10m. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
+                  "Below the heroes, type bag resources you already have. You can type 1000000 or 1000k. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
                   "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs next to the title shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
