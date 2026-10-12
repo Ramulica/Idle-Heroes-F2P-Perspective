@@ -3,8 +3,8 @@ export const ORIGIN_ESSENCE_VALUE = 150_000;
 export const DT_VEIN_PER_MAT = 200_000;
 export const DT_AURORA_PER_MAT = 5;
 export const V_COT = 5_000_000;
-export const DT_UNLOCK_STELLAR = 5_000_000;
-export const DT_UNLOCK_COT = 14_929_100;
+export const DT_UNLOCK_COT = 5_000_000;
+export const DT_UNLOCK_STELLAR = 14_929_100;
 
 export const V_STELLAR = {
   V1: 138_630,
