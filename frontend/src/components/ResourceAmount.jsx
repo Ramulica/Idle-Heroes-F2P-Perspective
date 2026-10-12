@@ -1,5 +1,23 @@
 import { formatNumber } from "../rewards";
 
+function formatScaled(scaled) {
+  if (Math.abs(scaled - Math.round(scaled)) < 0.001) {
+    return String(Math.round(scaled));
+  }
+  return String(Number(scaled.toFixed(2)));
+}
+
+export function formatResourceAmount(value, digits = 2) {
+  const amount = Number(value) || 0;
+  const abs = Math.abs(amount);
+  if (abs >= 10_000_000) return `${formatScaled(amount / 1_000_000)}m`;
+  if (abs >= 1000) return `${formatScaled(amount / 1000)}k`;
+  if (Math.abs(amount - Math.round(amount)) < 0.001) {
+    return formatNumber(Math.round(amount));
+  }
+  return amount.toLocaleString(undefined, { maximumFractionDigits: digits });
+}
+
 export default function ResourceAmount({
   icon,
   alt,
@@ -7,25 +25,12 @@ export default function ResourceAmount({
   className = "",
   digits = 2,
   suffix = "",
-  compact = false,
 }) {
-  const amount = Number(value) || 0;
-  let label;
-  if (compact && Math.abs(amount) >= 1000) {
-    const k = amount / 1000;
-    label = `${k.toLocaleString(undefined, {
-      maximumFractionDigits: Number.isInteger(k) ? 0 : 2,
-    })}k`;
-  } else if (Math.abs(amount - Math.round(amount)) < 0.001) {
-    label = formatNumber(Math.round(amount));
-  } else {
-    label = amount.toLocaleString(undefined, { maximumFractionDigits: digits });
-  }
   return (
     <span className={`csg-amount ${className}`.trim()}>
       {icon ? <img src={icon} alt={alt} className="csg-icon hero-res-icon" /> : null}
       <strong>
-        {label}
+        {formatResourceAmount(value, digits)}
         {suffix}
       </strong>
     </span>

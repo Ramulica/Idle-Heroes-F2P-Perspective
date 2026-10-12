@@ -55,7 +55,6 @@ const COST_ROWS = [
     name: "CoT",
     icon: voidIcon,
     alt: "Crystals of Transcendence",
-    compact: true,
     matKey: "voidForCot",
     matName: "void mats",
     rate: "1 void = 1250k CoT",
@@ -65,7 +64,6 @@ const COST_ROWS = [
     name: "Stellar",
     icon: cotIcon,
     alt: "Stellar Shards",
-    compact: true,
     matKey: "voidForStellar",
     matName: "void mats",
     rate: "1 void = 1250k stellar",
@@ -221,7 +219,6 @@ function CostPreview({ used, need, full }) {
                       icon={row.icon}
                       alt={row.alt}
                       value={col.cost[row.key]}
-                      compact={row.compact}
                     />
                   </td>
                 ))}
@@ -287,7 +284,6 @@ function CostPreview({ used, need, full }) {
                         icon={row.icon}
                         alt={row.alt}
                         value={col.cost[row.key]}
-                        compact={row.compact}
                       />
                     )
                   )}
