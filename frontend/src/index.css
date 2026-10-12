@@ -2195,6 +2195,10 @@ input[type="range"] {
   gap: 4px;
 }
 
+.hero-cost-sum .hero-cost-rate {
+  color: var(--ink);
+}
+
 .hero-cost-banner .hero-cost-table .csg-amount,
 .hero-cost-banner .hero-mat-amount {
   color: var(--ink);

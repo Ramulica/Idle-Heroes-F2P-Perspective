@@ -5,7 +5,6 @@ import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
 import LootChips from "../components/LootChips.jsx";
 import ResourceAmount from "../components/ResourceAmount.jsx";
-import RewardIcon from "../components/RewardIcon.jsx";
 import { formatNumber } from "../rewards";
 import auroraIcon from "../assets/hero/aurora.png";
 import coreChestIcon from "../assets/hero/core-chest.png";
@@ -54,22 +53,20 @@ const COST_ROWS = [
   {
     key: "cot",
     name: "CoT",
-    icon: cotIcon,
+    icon: voidIcon,
     alt: "Crystals of Transcendence",
     compact: true,
     matKey: "voidForCot",
-    matType: "Void",
     matName: "void mats",
     rate: "1 void = 1250k CoT",
   },
   {
     key: "stellar",
     name: "Stellar",
-    icon: voidIcon,
+    icon: cotIcon,
     alt: "Stellar Shards",
     compact: true,
     matKey: "voidForStellar",
-    matType: "Void",
     matName: "void mats",
     rate: "1 void = 1250k stellar",
   },
@@ -79,7 +76,6 @@ const COST_ROWS = [
     icon: essenceIcon,
     alt: "Spiritual Essence",
     matKey: "originForEssence",
-    matType: "Origin",
     matName: "origin mats",
     rate: "1 origin = 150k essence",
   },
@@ -89,7 +85,6 @@ const COST_ROWS = [
     icon: coreChestIcon,
     alt: "Core Chest",
     matKey: "originForCores",
-    matType: "Origin",
     matName: "origin mats",
     rate: "1 origin = 1 core chest",
   },
@@ -97,9 +92,8 @@ const COST_ROWS = [
     key: "subs",
     name: "Skill subs",
     icon: originIcon,
-    alt: "Origin Material",
+    alt: "Skill Substitute",
     matKey: "originForSubs",
-    matType: "Origin",
     matName: "origin mats",
     rate: "1 origin = 1 sub",
   },
@@ -109,7 +103,6 @@ const COST_ROWS = [
     icon: auroraIcon,
     alt: "Divine Aurora",
     matKey: "dtForAurora",
-    matType: "DT",
     matName: "DT mats",
     rate: "1 DT mat = 5 Aurora",
   },
@@ -119,7 +112,6 @@ const COST_ROWS = [
     icon: spiritVeinIcon,
     alt: "Spirit Vein Shards",
     matKey: "dtForVein",
-    matType: "DT",
     matName: "DT mats",
     rate: "1 DT mat = 200k Spirit Vein",
   },
@@ -133,10 +125,10 @@ function formatMats(value) {
   return amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-function MatAmount({ type, value }) {
+function MatAmount({ icon, alt, value }) {
   return (
     <span className="hero-mat-amount">
-      <RewardIcon type={type} />
+      <img src={icon} alt={alt || ""} className="csg-icon hero-res-icon" />
       <strong>{formatMats(value)}</strong>
     </span>
   );
@@ -199,6 +191,7 @@ function CostPreview({ used, other, need, full, onOther }) {
                       />
                     ) : (
                       <ResourceAmount
+                        icon={row.icon}
                         alt={row.alt}
                         value={col.cost[row.key]}
                         compact={row.compact}
@@ -214,20 +207,35 @@ function CostPreview({ used, other, need, full, onOther }) {
                 </th>
                 {columns.map((col) => (
                   <td key={col.id}>
-                    <MatAmount type={row.matType} value={mats[col.id][row.matKey]} />
+                    <MatAmount
+                      icon={row.icon}
+                      alt={row.alt}
+                      value={mats[col.id][row.matKey]}
+                    />
                   </td>
                 ))}
               </tr>
             </Fragment>
           ))}
           <tr className="hero-cost-sum">
-            <th scope="row">Event mats if you pay that way</th>
+            <th scope="row">
+              <span className="hero-cost-rate">Event picks</span>
+              <span className="hero-cost-rate-note">
+                If you pay that way — not the resource amounts you still need
+                above
+              </span>
+            </th>
             {columns.map((col) => (
               <td key={col.id}>
                 <div className="hero-cost-sum-stack">
-                  <MatAmount type="Void" value={mats[col.id].voidTotal} />
-                  <MatAmount type="Origin" value={mats[col.id].originTotal} />
-                  <MatAmount type="DT" value={mats[col.id].dtTotal} />
+                  {COST_ROWS.map((row) => (
+                    <MatAmount
+                      key={row.key}
+                      icon={row.icon}
+                      alt={row.alt}
+                      value={mats[col.id][row.matKey]}
+                    />
+                  ))}
                 </div>
               </td>
             ))}
