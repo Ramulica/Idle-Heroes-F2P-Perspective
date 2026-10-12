@@ -337,6 +337,28 @@ export function eventMatsFromCost(cost) {
   };
 }
 
+export function templeReqLabel(req) {
+  const parts = [];
+  for (let i = 5; i >= 0; i -= 1) {
+    const count = Number(req?.[i]) || 0;
+    if (count) parts.push(`${count} D${i + 1}`);
+  }
+  return parts.length ? parts.join(" · ") : "No Destiny heroes required";
+}
+
+export function heroesForTemplePreset(level) {
+  const row = templeRow(level);
+  const heroes = [];
+  for (let i = 5; i >= 0; i -= 1) {
+    const count = Number(row.req[i]) || 0;
+    const stage = `D${i + 1}`;
+    for (let n = 0; n < count; n += 1) {
+      heroes.push(newHero(stage));
+    }
+  }
+  return heroes;
+}
+
 export function newHero(stage = "E5", extra = {}) {
   const id =
     extra.id ||

@@ -15,12 +15,23 @@ import spiritVeinIcon from "../assets/hero/spirit-vein.png";
 import originIcon from "../assets/rewards/origin.png";
 import voidIcon from "../assets/rewards/void.png";
 import {
+  CORE_CHESTS,
+  DT_COSTS,
+  DT_UNLOCK_COT,
+  DT_UNLOCK_STELLAR,
   STAGES,
+  SUBS_PER_SKILL,
+  T_COSTS,
+  T_OPTIONALS,
+  TEMPLE_TABLE,
+  V_COT,
+  V_STELLAR,
   addCosts,
   autoTempleLevel,
   canPlaceStage,
   dtCapLabel,
   eventMatsFromCost,
+  heroesForTemplePreset,
   isDtStage,
   isTStage,
   newHero,
@@ -32,6 +43,7 @@ import {
   rosterCost,
   stageOf,
   subCosts,
+  templeReqLabel,
   templeRow,
   visibleOptionals,
 } from "../heroUpgrade";
@@ -129,6 +141,148 @@ function MatAmount({ icon, alt, value }) {
       <img src={icon} alt={alt || ""} className="csg-icon hero-res-icon" />
       <strong>{formatMats(value)}</strong>
     </span>
+  );
+}
+
+function CostBits({ cost }) {
+  const bits = COST_ROWS.filter((row) => Number(cost?.[row.key]) > 0);
+  if (!bits.length) return <span className="muted">No event mats</span>;
+  return (
+    <span className="hero-cost-bits">
+      {bits.map((row) => (
+        <ResourceAmount
+          key={row.key}
+          icon={row.icon}
+          alt={row.alt}
+          value={cost[row.key]}
+        />
+      ))}
+    </span>
+  );
+}
+
+const T_STEP_IDS = ["T1", "T2", "T3", "T4", "T5", "T120"];
+const T_STEP_LABELS = {
+  T1: "T1 · lv 20",
+  T2: "T2 · lv 40",
+  T3: "T3 · lv 60",
+  T4: "T4 · lv 80",
+  T5: "T5 · lv 100",
+  T120: "T max · lv 120",
+};
+
+function tStepCost(id, index) {
+  const cur = T_COSTS[id];
+  const prev = index ? T_COSTS[T_STEP_IDS[index - 1]] : { essence: 0, stellar: 0 };
+  return {
+    essence: cur.essence - prev.essence,
+    stellar: cur.stellar - prev.stellar,
+  };
+}
+
+function TemplePresetsPanel({ currentLevel, onPick }) {
+  return (
+    <div className="hero-preset-list">
+      <p className="muted">
+        Click a temple to set this board’s level and replace its heroes with the
+        required Destiny heroes.
+      </p>
+      {TEMPLE_TABLE.map((row) => (
+        <button
+          key={row.lvl}
+          className={`hero-preset${currentLevel === row.lvl ? " selected" : ""}`}
+          type="button"
+          onClick={() => onPick(row.lvl)}
+        >
+          <span className="hero-preset-title">
+            Temple {row.lvl} · D+{row.bonus}
+          </span>
+          <span className="hero-preset-req">{templeReqLabel(row.req)}</span>
+          <span className="hero-preset-cap">{dtCapLabel(row.lvl)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function UpgradeCostsPanel() {
+  return (
+    <div className="help-advanced">
+      <article>
+        <h4>Event mat rates</h4>
+        <p>1 void = 1250k CoT or 1250k stellar</p>
+        <p>1 origin = 150k essence, 1 core chest, or 1 skill sub</p>
+        <p>1 DT mat = 5 Divine Aurora or 200k Spirit Vein</p>
+      </article>
+      <article>
+        <h4>Enablement</h4>
+        <p>E1–E5 costs no event mats.</p>
+      </article>
+      <article>
+        <h4>Void</h4>
+        <p>CoT is paid once at V1. Stellar is extra on each V rank.</p>
+        {["V1", "V2", "V3", "V4"].map((id) => (
+          <div key={id} className="hero-cost-guide-row">
+            <strong>{id}</strong>
+            <CostBits
+              cost={{
+                cot: id === "V1" ? V_COT : 0,
+                stellar: V_STELLAR[id],
+              }}
+            />
+          </div>
+        ))}
+      </article>
+      <article>
+        <h4>Origin tree</h4>
+        <p>Essence and stellar extra to go up one Origin tree step after V4.</p>
+        {T_STEP_IDS.map((id, index) => (
+          <div key={id} className="hero-cost-guide-row">
+            <strong>{T_STEP_LABELS[id]}</strong>
+            <CostBits cost={tStepCost(id, index)} />
+          </div>
+        ))}
+      </article>
+      <article>
+        <h4>Core and skill subs</h4>
+        {T_OPTIONALS.map((item) => (
+          <div key={item.id} className="hero-cost-guide-row">
+            <strong>{item.label}</strong>
+            <CostBits
+              cost={{ cores: item.cores, subs: item.subs }}
+            />
+          </div>
+        ))}
+        <p>
+          All of them: {CORE_CHESTS} core chests and {SUBS_PER_SKILL * 4} skill
+          subs. Destiny Transition always includes all of them.
+        </p>
+      </article>
+      <article>
+        <h4>Destiny Transition</h4>
+        <p>Unlock (first DT hero) is paid once, then each D rank adds its own cost.</p>
+        <div className="hero-cost-guide-row">
+          <strong>DT unlock</strong>
+          <CostBits cost={{ cot: DT_UNLOCK_COT, stellar: DT_UNLOCK_STELLAR }} />
+        </div>
+        {["D1", "D2", "D3", "D4", "D5", "D6"].map((id) => {
+          const row = DT_COSTS[id];
+          return (
+            <div key={id} className="hero-cost-guide-row">
+              <strong>{id}</strong>
+              <CostBits
+                cost={{
+                  dtMats: row.dtMats,
+                  stellar: row.stellar,
+                  spiritVein: row.spiritVein,
+                  cot: row.cot,
+                }}
+              />
+            </div>
+          );
+        })}
+      </article>
+    </div>
   );
 }
 
@@ -332,6 +486,8 @@ function HeroBoard({
   onAdd,
   onPick,
   onRemove,
+  onPresets,
+  onCosts,
   extra,
 }) {
   const row = templeRow(templeLevel);
@@ -373,7 +529,15 @@ function HeroBoard({
       ) : (
         <p className="muted">Auto from this board’s Destiny heroes: {autoLevel}</p>
       )}
-      {extra}
+      <div className="hero-board-actions">
+        <button className="tan-btn" type="button" onClick={onPresets}>
+          Presets
+        </button>
+        <button className="tan-btn" type="button" onClick={onCosts}>
+          Costs
+        </button>
+        {extra}
+      </div>
       <div className="hero-slot-grid">
         {heroes.map((hero) => (
           <HeroCard
@@ -399,6 +563,7 @@ export default function UpgradeHero() {
   const [cases, setCases] = useState([]);
   const [picker, setPicker] = useState(null);
   const [yearOpen, setYearOpen] = useState(false);
+  const [guide, setGuide] = useState(null);
 
   useEffect(() => {
     api
@@ -429,6 +594,14 @@ export default function UpgradeHero() {
     const plan = scaleEventPlan(selected, 12);
     return mergeRewardCounts(result.awakenEventPeriod?.counts, plan.counts);
   }, [state, cases]);
+
+  function applyTemplePreset(side, level) {
+    setUpgrade({
+      [side]: heroesForTemplePreset(level),
+      [`${side}TempleManual`]: level,
+    });
+    setGuide(null);
+  }
 
   function addHero(side) {
     setUpgrade({ [side]: [...upgrade[side], newHero("E5")] });
@@ -493,6 +666,7 @@ export default function UpgradeHero() {
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
                   "Below the heroes, type resources you already have in bag or shop. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
+                  "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
@@ -525,6 +699,8 @@ export default function UpgradeHero() {
                 onAdd={() => addHero("have")}
                 onPick={(hero) => setPicker({ side: "have", hero })}
                 onRemove={(id) => removeHero("have", id)}
+                onPresets={() => setGuide({ side: "have", tab: "presets" })}
+                onCosts={() => setGuide({ side: "have", tab: "costs" })}
               />
               <HeroBoard
                 title="What I want"
@@ -536,6 +712,8 @@ export default function UpgradeHero() {
                 onAdd={() => addHero("want")}
                 onPick={(hero) => setPicker({ side: "want", hero })}
                 onRemove={(id) => removeHero("want", id)}
+                onPresets={() => setGuide({ side: "want", tab: "presets" })}
+                onCosts={() => setGuide({ side: "want", tab: "costs" })}
                 extra={
                   upgrade.have.length ? (
                     <button
@@ -594,6 +772,52 @@ export default function UpgradeHero() {
           </section>
         </div>
       </div>
+
+      {guide ? (
+        <div className="modal-back" onClick={() => setGuide(null)}>
+          <div
+            className="modal wide"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>
+              {guide.tab === "costs"
+                ? "Upgrade costs"
+                : `Temple presets · ${guide.side === "have" ? "What I have" : "What I want"}`}
+            </h3>
+            <div className="help-tabs">
+              <button
+                className={`help-tab${guide.tab === "presets" ? " on" : ""}`}
+                type="button"
+                onClick={() => setGuide({ ...guide, tab: "presets" })}
+              >
+                Presets
+              </button>
+              <button
+                className={`help-tab${guide.tab === "costs" ? " on" : ""}`}
+                type="button"
+                onClick={() => setGuide({ ...guide, tab: "costs" })}
+              >
+                Costs
+              </button>
+            </div>
+            {guide.tab === "costs" ? (
+              <UpgradeCostsPanel />
+            ) : (
+              <TemplePresetsPanel
+                currentLevel={
+                  guide.side === "have" ? haveTemple : wantTemple
+                }
+                onPick={(level) => applyTemplePreset(guide.side, level)}
+              />
+            )}
+            <div className="row-actions">
+              <button className="gold-btn" type="button" onClick={() => setGuide(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {picker && pickerHero ? (
         <div className="modal-back" onClick={() => setPicker(null)}>
