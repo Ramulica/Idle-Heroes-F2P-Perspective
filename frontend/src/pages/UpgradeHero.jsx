@@ -107,7 +107,8 @@ const COST_ROWS = [
     alt: "Skill Substitute",
     matKey: "originForSubs",
     matName: "origin mats",
-    rate: "1 origin = 1 sub",
+    rate: "1 origin = 1 sub = 90k",
+    displayTimes: SUB_RESOURCE_EACH,
   },
   {
     key: "dtMats",
@@ -128,6 +129,10 @@ const COST_ROWS = [
     rate: "1 DT mat = 200k Spirit Vein",
   },
 ];
+
+function resourceValue(row, amount) {
+  return (Number(amount) || 0) * (row.displayTimes || 1);
+}
 
 function formatMats(value) {
   const amount = Number(value) || 0;
@@ -161,7 +166,7 @@ function CostBits({ cost, order }) {
           key={row.key}
           icon={row.icon}
           alt={row.alt}
-          value={cost[row.key]}
+          value={resourceValue(row, cost[row.key])}
         />
       ))}
     </span>
@@ -208,7 +213,7 @@ function UpgradeCostsPanel() {
       <article>
         <h4>Event mat rates</h4>
         <p>1 void = 1250k CoT or 1250k stellar</p>
-        <p>1 origin = 150k essence, 1 core chest, or 1 skill sub</p>
+        <p>1 origin = 150k essence, 1 core chest, or 1 skill sub (90k)</p>
         <p>1 DT mat = 5 Divine Aurora or 200k Spirit Vein</p>
       </article>
       <article>
@@ -408,8 +413,8 @@ function CostPreview({ used, need, full }) {
     <div className="hero-cost-table-wrap">
       <p className="hero-cost-rates">
         1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
-        core chest, or 1 skill sub · 1 DT mat = 5 Divine Aurora or 200k Spirit
-        Vein
+        core chest, or 1 skill sub (90k) · 1 DT mat = 5 Divine Aurora or 200k
+        Spirit Vein
       </p>
       <table className="hero-cost-table">
         <thead>
@@ -430,7 +435,7 @@ function CostPreview({ used, need, full }) {
                     <ResourceAmount
                       icon={row.icon}
                       alt={row.alt}
-                      value={col.cost[row.key]}
+                      value={resourceValue(row, col.cost[row.key])}
                     />
                   </td>
                 ))}
@@ -495,7 +500,7 @@ function CostPreview({ used, need, full }) {
                         key={row.key}
                         icon={row.icon}
                         alt={row.alt}
-                        value={col.cost[row.key]}
+                        value={resourceValue(row, col.cost[row.key])}
                       />
                     )
                   )}
@@ -974,7 +979,7 @@ export default function UpgradeHero() {
             />
             <p className="muted">
               1 void mat = 1250k CoT or 1250k stellar. 1 origin mat = 150k
-              Spiritual Essence, 1 core chest, or 1 skill sub. 1 DT mat = 5 Divine
+              Spiritual Essence, 1 core chest, or 1 skill sub (90k). 1 DT mat = 5 Divine
               Aurora or 200k Spirit Vein.
             </p>
             <div className="row-actions">
