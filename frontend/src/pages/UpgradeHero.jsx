@@ -20,6 +20,7 @@ import {
   DT_UNLOCK_COT,
   DT_UNLOCK_STELLAR,
   STAGES,
+  SUB_RESOURCE_EACH,
   SUBS_PER_SKILL,
   T_COSTS,
   T_OPTIONALS,
@@ -220,16 +221,15 @@ function UpgradeCostsPanel() {
       </article>
       <article>
         <h4>Void</h4>
-        <p>CoT is paid once at V1. Stellar is extra on each V rank.</p>
+        <p>Trans is 5000k CoT once. V1–V4 are stellar only.</p>
+        <div className="hero-cost-guide-row">
+          <strong>Trans</strong>
+          <CostBits cost={{ cot: V_COT }} />
+        </div>
         {["V1", "V2", "V3", "V4"].map((id) => (
           <div key={id} className="hero-cost-guide-row">
             <strong>{id}</strong>
-            <CostBits
-              cost={{
-                cot: id === "V1" ? V_COT : 0,
-                stellar: V_STELLAR[id],
-              }}
-            />
+            <CostBits cost={{ stellar: V_STELLAR[id] }} />
           </div>
         ))}
       </article>
@@ -245,6 +245,11 @@ function UpgradeCostsPanel() {
       </article>
       <article>
         <h4>Core and skill subs</h4>
+        <p>
+          1 origin pick = 1 skill sub = {formatResourceAmount(SUB_RESOURCE_EACH)}{" "}
+          of that sub’s resource. An ability needs 2 picks, so{" "}
+          {formatResourceAmount(SUB_RESOURCE_EACH * SUBS_PER_SKILL)}.
+        </p>
         {T_OPTIONALS.map((item) => (
           <div key={item.id} className="hero-cost-guide-row">
             <strong>{item.label}</strong>
@@ -255,15 +260,30 @@ function UpgradeCostsPanel() {
         ))}
         <p>
           All of them: {CORE_CHESTS} core chests and {SUBS_PER_SKILL * 4} skill
-          subs. Destiny Transition always includes all of them.
+          subs ({formatResourceAmount(SUB_RESOURCE_EACH * SUBS_PER_SKILL * 4)}{" "}
+          sub resource). Destiny Transition always includes all of them.
         </p>
       </article>
       <article>
         <h4>Destiny Transition</h4>
-        <p>Unlock (first DT hero) is paid once, then each D rank adds its own cost.</p>
+        <p>
+          T120 already paid the 5m stellar and 14.93m CoT. D1–D6 do not add that
+          again — only the extra D rank cost.
+        </p>
         <div className="hero-cost-guide-row">
-          <strong>DT unlock</strong>
-          <CostBits cost={{ cot: DT_UNLOCK_COT, stellar: DT_UNLOCK_STELLAR }} />
+          <strong>T120 · already spent</strong>
+          <span className="hero-cost-bits">
+            <ResourceAmount
+              icon={COST_ROWS.find((row) => row.key === "stellar").icon}
+              alt="Stellar Shards"
+              value={DT_UNLOCK_STELLAR}
+            />
+            <ResourceAmount
+              icon={COST_ROWS.find((row) => row.key === "cot").icon}
+              alt="Crystals of Transcendence"
+              value={DT_UNLOCK_COT}
+            />
+          </span>
         </div>
         {["D1", "D2", "D3", "D4", "D5", "D6"].map((id) => {
           const row = DT_COSTS[id];
@@ -506,7 +526,6 @@ function HeroBoard({
   onPick,
   onRemove,
   onPresets,
-  onCosts,
   extra,
 }) {
   const row = templeRow(templeLevel);
@@ -551,9 +570,6 @@ function HeroBoard({
       <div className="hero-board-actions">
         <button className="tan-btn" type="button" onClick={onPresets}>
           Presets
-        </button>
-        <button className="tan-btn" type="button" onClick={onCosts}>
-          Costs
         </button>
         {extra}
       </div>
@@ -681,14 +697,22 @@ export default function UpgradeHero() {
                 title="Upgrade Hero"
                 steps={[
                   "Left is what you have. Right is what you want. Press + to add a hero, then tap the portrait to pick E1 through D6.",
-                  "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
+                  "E1–E5 costs no event mats. Trans is 5000k CoT. V1–V4 is stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
-                  "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
+                  "1 origin pick = 1 skill sub = 90k of that sub resource. An ability needs 2 picks, so 180k.",
+                  "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. T120 already paid 5m stellar and 14.93m CoT; D ranks do not add that again.",
                   "Below the heroes, type bag resources as 5000k or 10m. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
-                  "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs shows every upgrade cost.",
+                  "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs next to the title shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
               />
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => setGuide({ side: "want", tab: "costs" })}
+              >
+                Costs
+              </button>
             </div>
             <p>
               Turn event mats from the calculators into E5, V4, T5, and Destiny
@@ -719,7 +743,6 @@ export default function UpgradeHero() {
                 onPick={(hero) => setPicker({ side: "have", hero })}
                 onRemove={(id) => removeHero("have", id)}
                 onPresets={() => setGuide({ side: "have", tab: "presets" })}
-                onCosts={() => setGuide({ side: "have", tab: "costs" })}
               />
               <HeroBoard
                 title="What I want"
@@ -732,7 +755,6 @@ export default function UpgradeHero() {
                 onPick={(hero) => setPicker({ side: "want", hero })}
                 onRemove={(id) => removeHero("want", id)}
                 onPresets={() => setGuide({ side: "want", tab: "presets" })}
-                onCosts={() => setGuide({ side: "want", tab: "costs" })}
                 extra={
                   upgrade.have.length ? (
                     <button

@@ -24,6 +24,7 @@ export const T_COSTS = {
 
 export const CORE_CHESTS = 8;
 export const SUBS_PER_SKILL = 2;
+export const SUB_RESOURCE_EACH = 90_000;
 
 export const T_OPTIONALS = [
   { id: "core", short: "Core", label: "Core · 8 chests", min: "T1", cores: CORE_CHESTS, subs: 0 },
@@ -281,6 +282,11 @@ export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
     cost.stellar += tRow.stellar;
   }
 
+  if (stage.rank >= stageOf("T120").rank) {
+    cost.stellar += DT_UNLOCK_STELLAR;
+    cost.cot += DT_UNLOCK_COT;
+  }
+
   const owned = resolvedOptionals({ stage: stageId, ...optionals });
   T_OPTIONALS.forEach((item) => {
     if (!optionalUnlocked(stageId, item.id) || !owned[item.id]) return;
@@ -289,8 +295,6 @@ export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
   });
 
   if (stage.rank >= stageOf("D1").rank) {
-    cost.stellar += DT_UNLOCK_STELLAR;
-    cost.cot += DT_UNLOCK_COT;
     ["D1", "D2", "D3", "D4", "D5", "D6"].forEach((id) => {
       if (stage.rank >= stageOf(id).rank) {
         const row = DT_COSTS[id];

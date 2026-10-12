@@ -745,6 +745,11 @@ button.option-row.pick {
   flex-wrap: wrap;
 }
 
+.head-with-help .tan-btn {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+
 .guide-card .head-with-help,
 .info-card .head-with-help {
   margin-bottom: 8px;
