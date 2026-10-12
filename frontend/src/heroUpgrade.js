@@ -440,11 +440,17 @@ export function parseResourceInput(text) {
     .replace(/_/g, "")
     .replace(/\s/g, "");
   if (!value) return 0;
-  const kilo = /k$/i.test(value);
-  if (kilo) value = value.slice(0, -1);
+  let mult = 1;
+  if (/m$/i.test(value)) {
+    mult = 1_000_000;
+    value = value.slice(0, -1);
+  } else if (/k$/i.test(value)) {
+    mult = 1000;
+    value = value.slice(0, -1);
+  }
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) return 0;
-  return kilo ? amount * 1000 : amount;
+  return amount * mult;
 }
 
 export function formatCap(value) {

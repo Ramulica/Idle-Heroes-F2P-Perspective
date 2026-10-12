@@ -4,7 +4,7 @@ import { api } from "../api";
 import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
 import LootChips from "../components/LootChips.jsx";
-import ResourceAmount from "../components/ResourceAmount.jsx";
+import ResourceAmount, { formatResourceAmount } from "../components/ResourceAmount.jsx";
 import { formatNumber } from "../rewards";
 import auroraIcon from "../assets/hero/aurora.png";
 import coreChestIcon from "../assets/hero/core-chest.png";
@@ -286,6 +286,31 @@ function UpgradeCostsPanel() {
   );
 }
 
+function HaveResourceInput({ name, value, onChange }) {
+  const [draft, setDraft] = useState(null);
+  const shown = draft ?? (value ? formatResourceAmount(value) : "");
+  return (
+    <input
+      className="hero-other-input"
+      type="text"
+      inputMode="decimal"
+      aria-label={`${name} I have`}
+      placeholder="5000k or 10m"
+      value={shown}
+      onFocus={() => setDraft(value ? formatResourceAmount(value) : "")}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        onChange(parseResourceInput(next));
+      }}
+      onBlur={() => {
+        onChange(parseResourceInput(draft ?? ""));
+        setDraft(null);
+      }}
+    />
+  );
+}
+
 function HaveResources({ owned, onChange }) {
   return (
     <article className="hero-have-res">
@@ -293,8 +318,8 @@ function HaveResources({ owned, onChange }) {
         <h3>Resources I have</h3>
       </div>
       <p className="muted">
-        Bag, shop, or extra income not already on the boards. Type a number or
-        5000k. This lowers Still need.
+        Bag, shop, or extra income not already on the boards. Type 5000k or 10m.
+        This lowers Still need.
       </p>
       <div className="hero-have-res-grid">
         {COST_ROWS.map((row) => (
@@ -303,16 +328,10 @@ function HaveResources({ owned, onChange }) {
               <img src={row.icon} alt="" className="csg-icon hero-res-icon" />
               {row.name}
             </span>
-            <input
-              className="hero-other-input"
-              type="text"
-              inputMode="decimal"
-              aria-label={`${row.name} I have`}
-              placeholder="0"
-              value={owned[row.key] ? String(owned[row.key]) : ""}
-              onChange={(event) =>
-                onChange(row.key, parseResourceInput(event.target.value))
-              }
+            <HaveResourceInput
+              name={row.name}
+              value={owned[row.key]}
+              onChange={(amount) => onChange(row.key, amount)}
             />
           </label>
         ))}
@@ -665,7 +684,7 @@ export default function UpgradeHero() {
                   "E1–E5 costs no event mats. V1–V4 costs 5000k CoT plus 4935k stellar. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "D1–D6 also needs Divine Aurora, Spirit Vein, CoT, and stellar. 1 DT mat = 5 Divine Aurora or 200k Spirit Vein.",
-                  "Below the heroes, type resources you already have in bag or shop. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
+                  "Below the heroes, type bag resources as 5000k or 10m. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
                   "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
