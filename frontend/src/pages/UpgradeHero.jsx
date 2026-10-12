@@ -36,6 +36,7 @@ import {
   heroesForTemplePreset,
   isDtStage,
   isTStage,
+  MAX_TEMPLE_LEVEL,
   newHero,
   normalizeHeroUpgrade,
   optionalsRequired,
@@ -579,11 +580,14 @@ function HeroBoard({
           <input
             type="number"
             min="1"
-            max="22"
+            max={MAX_TEMPLE_LEVEL}
             value={templeManual}
             onChange={(event) =>
               onTempleManual(
-                Math.min(22, Math.max(1, Number(event.target.value) || 1))
+                Math.min(
+                  MAX_TEMPLE_LEVEL,
+                  Math.max(1, Number(event.target.value) || 1)
+                )
               )
             }
           />

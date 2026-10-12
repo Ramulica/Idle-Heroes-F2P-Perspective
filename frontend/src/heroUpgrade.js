@@ -113,7 +113,17 @@ export const TEMPLE_TABLE = [
   { lvl: 20, bonus: 10, cap: [16, 16, 16, 16, 12, 10], req: [0, 0, 0, 12, 8, 6] },
   { lvl: 21, bonus: 10, cap: [16, 16, 16, 16, 14, 12], req: [0, 0, 0, 14, 10, 6] },
   { lvl: 22, bonus: 10, cap: [16, 16, 16, 16, 16, 12], req: [0, 0, 0, 16, 12, 8] },
+  { lvl: 23, bonus: 10, cap: [18, 18, 18, 16, 16, 12], req: [0, 0, 0, 16, 14, 10] },
+  { lvl: 24, bonus: 10, cap: [18, 18, 18, 18, 16, 14], req: [0, 0, 0, 18, 14, 12] },
+  { lvl: 25, bonus: 10, cap: [20, 20, 20, 18, 18, 14], req: [0, 0, 0, 18, 16, 12] },
+  { lvl: 26, bonus: 10, cap: [20, 20, 20, 20, 18, 14], req: [0, 0, 0, 20, 16, 14] },
+  { lvl: 27, bonus: 10, cap: [22, 22, 22, 20, 20, 16], req: [0, 0, 0, 20, 18, 14] },
+  { lvl: 28, bonus: 10, cap: [22, 22, 22, 22, 20, 16], req: [0, 0, 0, 22, 18, 16] },
+  { lvl: 29, bonus: 10, cap: [24, 24, 24, 22, 22, 16], req: [0, 0, 0, 22, 20, 16] },
+  { lvl: 30, bonus: 10, cap: [24, 24, 24, 24, 24, 18], req: [0, 0, 0, 24, 22, 18] },
 ];
+
+export const MAX_TEMPLE_LEVEL = TEMPLE_TABLE.length;
 
 export const DEFAULT_HERO_UPGRADE = {
   have: [],
@@ -165,7 +175,7 @@ export function stageOf(id) {
 
 export function clampTemple(value) {
   const lvl = Math.round(Number(value) || 1);
-  return Math.min(22, Math.max(1, lvl));
+  return Math.min(MAX_TEMPLE_LEVEL, Math.max(1, lvl));
 }
 
 export function templeRow(level) {
