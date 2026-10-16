@@ -227,15 +227,17 @@ function UpgradeCostsPanel() {
       </article>
       <article>
         <h4>Enablement</h4>
-        <p>E1–E5 costs no event mats.</p>
+        <p>
+          E1–E4 cost no event mats. An E5 hero costs 5000k CoT once (Trans).
+        </p>
+        <div className="hero-cost-guide-row">
+          <strong>E5 · Trans</strong>
+          <CostBits cost={{ cot: V_COT }} />
+        </div>
       </article>
       <article>
         <h4>Void</h4>
-        <p>Trans is 5000k CoT once. V1–V4 are stellar only.</p>
-        <div className="hero-cost-guide-row">
-          <strong>Trans</strong>
-          <CostBits cost={{ cot: V_COT }} />
-        </div>
+        <p>V1–V4 are stellar only. The 5000k CoT is already counted at E5.</p>
         {["V1", "V2", "V3", "V4"].map((id) => (
           <div key={id} className="hero-cost-guide-row">
             <strong>{id}</strong>
@@ -294,7 +296,7 @@ function UpgradeCostsPanel() {
         <h4>Destiny Transition</h4>
         <p>
           DT unlock costs 0. The 5000k CoT and 14.93m stellar on that game row
-          are the sum of Trans + V1–V4 + every T step added, already counted
+          are the sum of E5 Trans + V1–V4 + every T step added, already counted
           above. The first extra DT cost is D1.
         </p>
         <div className="hero-cost-guide-row">
@@ -733,10 +735,10 @@ export default function UpgradeHero() {
                 title="Upgrade Hero"
                 steps={[
                   "Left is what you have. Right is what you want. Press + to add a hero, then tap the portrait to pick E1 through D6.",
-                  "E1–E5 costs no event mats. Trans is 5000k CoT. V1–V4 is stellar. 1 void mat = 1250k CoT or 1250k stellar.",
+                  "E1–E4 cost no event mats. An E5 hero costs 5000k CoT once. V1–V4 is stellar only. 1 void mat = 1250k CoT or 1250k stellar.",
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "1 origin pick = 1 skill sub = 90k of that sub resource. An ability needs 2 picks, so 180k.",
-                  "DT unlock costs 0 — the 5000k CoT and 14.93m stellar there are only a preview of V1–V4 and T1–T5. D1 is the first extra Destiny cost.",
+                  "DT unlock costs 0 — the 5000k CoT and 14.93m stellar there are only a preview of E5 Trans + V1–V4 + T1–T max. D1 is the first extra Destiny cost.",
                   "Below the heroes, type bag resources you already have. You can type 1000000 or 1000k. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
                   "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs next to the title shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",

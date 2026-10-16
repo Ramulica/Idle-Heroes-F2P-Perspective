@@ -287,7 +287,7 @@ export function optionalSummary(hero) {
 export function costToStage(stageId, optionals = EMPTY_OPTIONALS) {
   const stage = stageOf(stageId);
   const cost = emptyCost();
-  if (stage.rank >= stageOf("V1").rank) cost.cot += V_COT;
+  if (stage.rank >= stageOf("E5").rank) cost.cot += V_COT;
   if (stage.rank >= stageOf("V1").rank) cost.stellar += V_STELLAR.V1;
   if (stage.rank >= stageOf("V2").rank) cost.stellar += V_STELLAR.V2;
   if (stage.rank >= stageOf("V3").rank) cost.stellar += V_STELLAR.V3;
