@@ -447,6 +447,13 @@ export function normalizeOtherSources(raw) {
   return out;
 }
 
+/** Bag skill subs are resource amounts (e.g. 720k); costs store sub pick counts. */
+export function ownedAsCostUnits(owned) {
+  const out = normalizeOtherSources(owned);
+  out.subs = out.subs / SUB_RESOURCE_EACH;
+  return out;
+}
+
 export function parseResourceInput(text) {
   let value = String(text ?? "")
     .trim()

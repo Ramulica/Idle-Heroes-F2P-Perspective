@@ -41,6 +41,7 @@ import {
   normalizeHeroUpgrade,
   optionalsRequired,
   optionalSummary,
+  ownedAsCostUnits,
   parseResourceInput,
   resolvedTempleLevel,
   rosterCost,
@@ -656,7 +657,7 @@ export default function UpgradeHero() {
   const used = useMemo(() => rosterCost(upgrade.have), [upgrade.have]);
   const full = useMemo(() => rosterCost(upgrade.want), [upgrade.want]);
   const need = useMemo(
-    () => subCosts(full, addCosts(used, upgrade.otherSources)),
+    () => subCosts(full, addCosts(used, ownedAsCostUnits(upgrade.otherSources))),
     [full, used, upgrade.otherSources]
   );
 
