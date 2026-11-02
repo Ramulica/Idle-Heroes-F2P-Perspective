@@ -3524,6 +3524,7 @@ input[type="range"] {
   font-size: 0.78rem;
   font-weight: 800;
   min-height: 1.1em;
+  line-height: 1.2;
 }
 
 .sc-gear-grid {
@@ -3634,6 +3635,14 @@ input[type="range"] {
   border-radius: 10px;
   border: 2px solid #8a5a2a;
   object-fit: cover;
+}
+
+.sc-pick-meta {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #8a6a3a;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .sc-pick-mark {

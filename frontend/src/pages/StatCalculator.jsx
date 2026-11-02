@@ -234,9 +234,7 @@ export default function StatCalculator() {
     if (picker.type === "hero") {
       return (
         <Modal title={`Select hero · ${slotTitle(picker.slotIndex)}`} onClose={() => setPicker(null)}>
-          <p className="muted">
-            Heroes are listed in the order you sent. Names and stats come next.
-          </p>
+          <p className="muted">Heroes are listed in the order you sent.</p>
           <PickGrid
             items={STAT_HEROES}
             selectedId={board.slots[picker.slotIndex].heroId}
@@ -254,6 +252,9 @@ export default function StatCalculator() {
               <>
                 <img src={hero.icon} alt="" className="sc-pick-hero" />
                 <span>{hero.name}</span>
+                <span className="sc-pick-meta">
+                  {hero.faction} · {hero.heroClass}
+                </span>
               </>
             )}
           />
