@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
 import {
   ENABLE_COUNT,
-  ENABLE_OPTIONS,
   GEAR_COUNT,
   GEAR_OPTIONS,
   IMPRINT_COUNT,
@@ -14,7 +13,10 @@ import {
   clearSlot,
   cloneBoard,
   emptyBoard,
+  enableOf,
+  enableOptionsForSlot,
   heroOf,
+  imprintOf,
   newLineupId,
   optionById,
   patchSlot,
@@ -127,7 +129,7 @@ function HeroCard({
 
       <div className="sc-enable-row">
         {Array.from({ length: ENABLE_COUNT }, (_, enableIndex) => {
-          const option = optionById(ENABLE_OPTIONS, slot.enables[enableIndex]);
+          const option = enableOf(slot.enables[enableIndex]);
           return (
             <button
               key={enableIndex}
@@ -136,7 +138,11 @@ function HeroCard({
               onClick={() => onPickEnable(enableIndex)}
               title={option ? option.label : `Enable ${enableIndex + 1}`}
             >
-              {option ? option.mark : "+"}
+              {option ? (
+                <img src={option.icon} alt="" />
+              ) : (
+                <span>+</span>
+              )}
             </button>
           );
         })}
@@ -144,16 +150,24 @@ function HeroCard({
 
       <div className="sc-imprint-row">
         {Array.from({ length: IMPRINT_COUNT }, (_, imprintIndex) => {
-          const option = optionById(IMPRINT_OPTIONS, slot.imprints[imprintIndex]);
+          const option = imprintOf(slot.imprints[imprintIndex]);
           return (
             <button
               key={imprintIndex}
               type="button"
               className={`sc-circle-slot sc-imprint-slot${option ? " filled" : ""}`}
               onClick={() => onPickImprint(imprintIndex)}
-              title={option ? option.label : `Imprint ${imprintIndex + 1}`}
+              title={
+                option
+                  ? `${option.name} +${option.percent}%`
+                  : `Imprint ${imprintIndex + 1}`
+              }
             >
-              {option ? option.mark : "+"}
+              {option ? (
+                <img src={option.icon} alt="" />
+              ) : (
+                <span>+</span>
+              )}
             </button>
           );
         })}
@@ -293,14 +307,17 @@ export default function StatCalculator() {
 
     if (picker.type === "enable") {
       const selected = board.slots[picker.slotIndex].enables[picker.listIndex];
+      const choices = enableOptionsForSlot(picker.listIndex);
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Enable ${picker.listIndex + 1}`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted">Pick 1 of 3. Stats for each option come later.</p>
+          <p className="muted">
+            Pick one icon for this enable. Stats for each choice come later.
+          </p>
           <PickGrid
-            items={ENABLE_OPTIONS}
+            items={choices}
             selectedId={selected}
             onPick={(id) => {
               updateBoard(
@@ -327,7 +344,10 @@ export default function StatCalculator() {
               setPicker(null);
             }}
             renderItem={(item) => (
-              <span className="sc-pick-mark">{item.mark}</span>
+              <>
+                <img src={item.icon} alt="" className="sc-pick-circle" />
+                <span>{item.label}</span>
+              </>
             )}
           />
         </Modal>
@@ -348,7 +368,7 @@ export default function StatCalculator() {
           onClose={() => setPicker(null)}
         >
           <p className="muted">
-            Choose 3 of 10. A stat already used on this hero stays locked.
+            Choose 3 of 10. You cannot pick the same imprint twice on one hero.
           </p>
           <div className="sc-pick-panel">
             <div className="sc-pick-grid sc-pick-grid-imprints">
@@ -374,8 +394,9 @@ export default function StatCalculator() {
                       setPicker(null);
                     }}
                   >
-                    <span className="sc-pick-mark">{item.mark}</span>
-                    <span>{item.label}</span>
+                    <img src={item.icon} alt="" className="sc-pick-circle" />
+                    <span>{item.name}</span>
+                    <span className="sc-pick-meta">+{item.percent}%</span>
                   </button>
                 );
               })}
@@ -517,7 +538,7 @@ export default function StatCalculator() {
                   "Save stores the current 6-hero setup as a lineup. Lineups lets you load a saved setup.",
                   "Select monster opens a popup for the team monster (icons come next).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Every choice opens a popup.",
-                  "Imprints are 3 of 10 on that hero. Enables are 1 of 3 per circle.",
+                  "Imprints are 3 of 10 on that hero — no duplicates. Each enable circle opens its own icon choices (Enable 3 has 6).",
                 ]}
               />
               <button

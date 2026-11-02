@@ -30,6 +30,31 @@ import hero29 from "./assets/stats/heroes/hero-29.png";
 import hero30 from "./assets/stats/heroes/hero-30.png";
 import hero31 from "./assets/stats/heroes/hero-31.png";
 import hero32 from "./assets/stats/heroes/hero-32.png";
+import enable01 from "./assets/stats/enables/enable-01.png";
+import enable02 from "./assets/stats/enables/enable-02.png";
+import enable03 from "./assets/stats/enables/enable-03.png";
+import enable04 from "./assets/stats/enables/enable-04.png";
+import enable05 from "./assets/stats/enables/enable-05.png";
+import enable06 from "./assets/stats/enables/enable-06.png";
+import enable07 from "./assets/stats/enables/enable-07.png";
+import enable08 from "./assets/stats/enables/enable-08.png";
+import enable09 from "./assets/stats/enables/enable-09.png";
+import enable10 from "./assets/stats/enables/enable-10.png";
+import enable11 from "./assets/stats/enables/enable-11.png";
+import enable12 from "./assets/stats/enables/enable-12.png";
+import enable13 from "./assets/stats/enables/enable-13.png";
+import enable14 from "./assets/stats/enables/enable-14.png";
+import enable15 from "./assets/stats/enables/enable-15.png";
+import imprint01 from "./assets/stats/imprints/imprint-01.png";
+import imprint02 from "./assets/stats/imprints/imprint-02.png";
+import imprint03 from "./assets/stats/imprints/imprint-03.png";
+import imprint04 from "./assets/stats/imprints/imprint-04.png";
+import imprint05 from "./assets/stats/imprints/imprint-05.png";
+import imprint06 from "./assets/stats/imprints/imprint-06.png";
+import imprint07 from "./assets/stats/imprints/imprint-07.png";
+import imprint08 from "./assets/stats/imprints/imprint-08.png";
+import imprint09 from "./assets/stats/imprints/imprint-09.png";
+import imprint10 from "./assets/stats/imprints/imprint-10.png";
 
 export const SLOT_COUNT = 6;
 export const GEAR_COUNT = 6;
@@ -95,26 +120,72 @@ export const GEAR_OPTIONS = [
   { id: "gear-6", label: "Gear F" },
 ];
 
-/** Each enable circle picks 1 of these 3 (stats later). */
+/**
+ * Enable icons in attachment order after the imprint list.
+ * Slot option lists below point into this pool. Stats come later.
+ * Option 2 and Option 4 share the same three choices.
+ */
 export const ENABLE_OPTIONS = [
-  { id: "enable-a", label: "Enable A", mark: "A" },
-  { id: "enable-b", label: "Enable B", mark: "B" },
-  { id: "enable-c", label: "Enable C", mark: "C" },
+  { id: "en-1a", label: "Enable 1 · A", icon: enable01 },
+  { id: "en-1b", label: "Enable 1 · B", icon: enable02 },
+  { id: "en-1c", label: "Enable 1 · C", icon: enable03 },
+  { id: "en-2a", label: "Enable 2/4 · A", icon: enable04 },
+  { id: "en-2b", label: "Enable 2/4 · B", icon: enable05 },
+  { id: "en-2c", label: "Enable 2/4 · C", icon: enable06 },
+  { id: "en-3a", label: "Enable 3 · A", icon: enable07 },
+  { id: "en-3b", label: "Enable 3 · B", icon: enable08 },
+  { id: "en-3c", label: "Enable 3 · C", icon: enable09 },
+  { id: "en-3d", label: "Enable 3 · D", icon: enable10 },
+  { id: "en-3e", label: "Enable 3 · E", icon: enable11 },
+  { id: "en-3f", label: "Enable 3 · F", icon: enable12 },
+  { id: "en-5a", label: "Enable 5 · A", icon: enable13 },
+  { id: "en-5b", label: "Enable 5 · B", icon: enable14 },
+  { id: "en-5c", label: "Enable 5 · C", icon: enable15 },
 ];
 
-/** Imprints: choose 3 of these 10 (stats later). */
-export const IMPRINT_OPTIONS = [
-  { id: "imp-1", label: "Stat 1", mark: "1" },
-  { id: "imp-2", label: "Stat 2", mark: "2" },
-  { id: "imp-3", label: "Stat 3", mark: "3" },
-  { id: "imp-4", label: "Stat 4", mark: "4" },
-  { id: "imp-5", label: "Stat 5", mark: "5" },
-  { id: "imp-6", label: "Stat 6", mark: "6" },
-  { id: "imp-7", label: "Stat 7", mark: "7" },
-  { id: "imp-8", label: "Stat 8", mark: "8" },
-  { id: "imp-9", label: "Stat 9", mark: "9" },
-  { id: "imp-10", label: "Stat 10", mark: "10" },
+export const ENABLE_BY_ID = Object.fromEntries(
+  ENABLE_OPTIONS.map((row) => [row.id, row])
+);
+
+/** Per enable circle (1–5): which choices appear in the popup. */
+export const ENABLE_SLOT_OPTION_IDS = [
+  ["en-1a", "en-1b", "en-1c"],
+  ["en-2a", "en-2b", "en-2c"],
+  ["en-3a", "en-3b", "en-3c", "en-3d", "en-3e", "en-3f"],
+  ["en-2a", "en-2b", "en-2c"],
+  ["en-5a", "en-5b", "en-5c"],
 ];
+
+export function enableOptionsForSlot(slotIndex) {
+  const ids = ENABLE_SLOT_OPTION_IDS[slotIndex] || [];
+  return ids.map((id) => ENABLE_BY_ID[id]).filter(Boolean);
+}
+
+export function enableOf(id) {
+  return ENABLE_BY_ID[id] || null;
+}
+
+/** Imprints: choose 3 of these 10; no duplicates on one hero. */
+export const IMPRINT_OPTIONS = [
+  { id: "armor", name: "Armor", percent: 80, icon: imprint01 },
+  { id: "armor-break", name: "Armor Break", percent: 60, icon: imprint02 },
+  { id: "precision", name: "Precision", percent: 60, icon: imprint03 },
+  { id: "block", name: "Block", percent: 70, icon: imprint04 },
+  { id: "control-immunity", name: "Control Immunity", percent: 35, icon: imprint05 },
+  { id: "damage-reduction", name: "Damage Reduction", percent: 35, icon: imprint06 },
+  { id: "crit", name: "Crit", percent: 35, icon: imprint07 },
+  { id: "crit-damage", name: "Crit Damage", percent: 60, icon: imprint08 },
+  { id: "holy-damage", name: "Holy Damage", percent: 30, icon: imprint09 },
+  { id: "skill-damage", name: "Skill Damage", percent: 100, icon: imprint10 },
+];
+
+export const IMPRINT_BY_ID = Object.fromEntries(
+  IMPRINT_OPTIONS.map((row) => [row.id, row])
+);
+
+export function imprintOf(id) {
+  return IMPRINT_BY_ID[id] || null;
+}
 
 /** Monster icons/stats come next — keep the slot ready. */
 export const MONSTER_OPTIONS = [];
@@ -155,14 +226,14 @@ export function cloneBoard(board) {
           { length: GEAR_COUNT },
           (_, i) => slot.gear?.[i] || null
         ),
-        enables: Array.from(
-          { length: ENABLE_COUNT },
-          (_, i) => slot.enables?.[i] || null
-        ),
-        imprints: Array.from(
-          { length: IMPRINT_COUNT },
-          (_, i) => slot.imprints?.[i] || null
-        ),
+        enables: Array.from({ length: ENABLE_COUNT }, (_, i) => {
+          const id = slot.enables?.[i] || null;
+          return enableOf(id) ? id : null;
+        }),
+        imprints: Array.from({ length: IMPRINT_COUNT }, (_, i) => {
+          const id = slot.imprints?.[i] || null;
+          return imprintOf(id) ? id : null;
+        }),
       };
     }),
   };
