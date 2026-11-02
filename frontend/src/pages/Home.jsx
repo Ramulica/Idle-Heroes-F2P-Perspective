@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, and Fantasy Factory calculators, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, Fantasy Factory, and Stat Calculator tools, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -401,6 +401,30 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/fantasy-factory")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Stat Calculator Tool</h3>
+                    <HelpTip
+                      title="Stat Calculator Tool"
+                      steps={[
+                        "Build a 6-hero lineup: portrait, 6 gear, 5 enables, 3 imprints.",
+                        "Save and Lineups store setups. Select monster is ready for icons next.",
+                        "Stats and caps will be added in later blocks.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Plan hero gear, enables, and imprints toward capped stats.
+                    Structure first — stats come next.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/stat-calculator")}
                   >
                     Open tool
                   </button>
