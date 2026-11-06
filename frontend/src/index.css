@@ -2522,9 +2522,53 @@ input[type="range"] {
 }
 
 .hero-void-boss-stage {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #7a4a22;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border: 2px solid #8a5a2a;
+  border-radius: 999px;
+  background: #fff8e8;
+  color: #3c2410;
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.hero-void-boss-stage.cleared {
+  background: linear-gradient(180deg, #ffe27a, #f4c430);
+  border-color: #a87a20;
+}
+
+.hero-void-boss-stage.soon {
+  background: linear-gradient(180deg, #dcecff, #9fc4f0);
+  border-color: #3a6ea5;
+  color: #17385f;
+}
+
+.hero-void-boss-stage.locked {
+  background: #ebe0cc;
+  color: #6a5438;
+  opacity: 0.9;
+}
+
+.hero-void-col-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.hero-void-col-toggle input {
+  width: 1.05em;
+  height: 1.05em;
+  accent-color: #7a4a22;
+  cursor: pointer;
 }
 
 .hero-void-boss-mini {

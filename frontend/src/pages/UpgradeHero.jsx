@@ -42,6 +42,7 @@ import {
   autoTempleLevel,
   canPlaceStage,
   dtCapLabel,
+  emptyCost,
   eventMatsFromCost,
   heroesForTemplePreset,
   isDtStage,
@@ -542,7 +543,19 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
                   <span className="hero-void-boss-name">
                     Void Boss {row.boss}
                   </span>
-                  <span className="hero-void-boss-stage">{label}</span>
+                  <span
+                    className={`hero-void-boss-stage${
+                      !row.unlocked
+                        ? " locked"
+                        : row.entry.soon > Math.max(0, row.entry.cleared)
+                          ? " soon"
+                          : row.entry.cleared > 0
+                            ? " cleared"
+                            : ""
+                    }`}
+                  >
+                    {label}
+                  </span>
                   <span className="hero-void-boss-mini">
                     <span className="muted">Got</span>
                     <VoidRewardBits rewards={row.got} />
@@ -704,7 +717,16 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
   );
 }
 
-function CostPreview({ used, need, full, voidBoss, owned, onOwnedChange }) {
+function CostPreview({
+  used,
+  need,
+  full,
+  voidBoss,
+  voidBossEnabled,
+  onVoidBossEnabledChange,
+  owned,
+  onOwnedChange,
+}) {
   const [sumView, setSumView] = useState("picks");
   const columns = [
     { id: "full", title: "Full want cost", cost: full },
@@ -734,11 +756,30 @@ function CostPreview({ used, need, full, voidBoss, owned, onOwnedChange }) {
         <th>Resource</th>
         {columns.map((col) => (
           <th key={col.id}>
-            {col.title}
+            {col.id === "void" ? (
+              <label className="hero-void-col-toggle" title="Count Soon loot toward Still need">
+                <input
+                  type="checkbox"
+                  checked={voidBossEnabled}
+                  onChange={(event) =>
+                    onVoidBossEnabledChange(event.target.checked)
+                  }
+                />
+                <span>{col.title}</span>
+              </label>
+            ) : (
+              col.title
+            )}
             {col.id === "have" ? (
               <HelpTip
                 title="Resources I have"
                 message="Bag, shop, or extra income not already on the boards. Type 1000000 or 1000k. This lowers Still need."
+              />
+            ) : null}
+            {col.id === "void" ? (
+              <HelpTip
+                title="Void bosses"
+                message="Soon loot from Void Bosses. Uncheck to ignore it in Still need."
               />
             ) : null}
           </th>
@@ -753,6 +794,7 @@ function CostPreview({ used, need, full, voidBoss, owned, onOwnedChange }) {
         1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
         core chest, or 1 skill sub (90k) · 1 DT mat = 5 Divine Aurora or 200k
         Spirit Vein · I have = bag/shop extras · Void bosses = Soon only
+        (checkbox applies it to Still need)
       </p>
       <table className="hero-cost-table">
         <thead>
@@ -1000,10 +1042,19 @@ export default function UpgradeHero() {
         full,
         addCosts(
           used,
-          addCosts(ownedAsCostUnits(upgrade.otherSources), voidOwned)
+          addCosts(
+            ownedAsCostUnits(upgrade.otherSources),
+            upgrade.voidBossCountTowardNeed ? voidOwned : emptyCost()
+          )
         )
       ),
-    [full, used, upgrade.otherSources, voidOwned]
+    [
+      full,
+      used,
+      upgrade.otherSources,
+      upgrade.voidBossCountTowardNeed,
+      voidOwned,
+    ]
   );
 
   const yearLoot = useMemo(() => {
@@ -1197,6 +1248,10 @@ export default function UpgradeHero() {
                 need={need}
                 full={full}
                 voidBoss={voidOwned}
+                voidBossEnabled={upgrade.voidBossCountTowardNeed}
+                onVoidBossEnabledChange={(value) =>
+                  setUpgrade({ voidBossCountTowardNeed: value })
+                }
                 owned={upgrade.otherSources}
                 onOwnedChange={(key, value) =>
                   setUpgrade({

@@ -142,6 +142,7 @@ export const DEFAULT_HERO_UPGRADE = {
     spiritVein: 0,
   },
   voidBossStages: Array.from({ length: 9 }, () => ({ cleared: 0, soon: 0 })),
+  voidBossCountTowardNeed: true,
 };
 
 export function emptyCost() {
@@ -446,6 +447,7 @@ export function normalizeHeroUpgrade(raw) {
     wantTempleManual: readTempleManual(src.wantTempleManual, legacy),
     otherSources: normalizeOtherSources(src.otherSources),
     voidBossStages: normalizeVoidBossStages(src.voidBossStages),
+    voidBossCountTowardNeed: src.voidBossCountTowardNeed !== false,
   };
 }
 
