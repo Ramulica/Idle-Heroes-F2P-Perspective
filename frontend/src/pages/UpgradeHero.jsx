@@ -520,7 +520,7 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
         </button>
         <HelpTip
           title="Void Bosses Progress"
-          message="Tap a stage once for Soon (near future), tap again to mark Cleared. Got + Soon lower Still need in the table below. Not unlocked bosses are left out of full-clear totals. 5000 Divine Aurora Shards = 1 Divine Aurora."
+          message="Tap a stage once for Soon (near future), tap again to mark Cleared. Only Soon lowers Still need in the table below. Not unlocked bosses are left out of totals. 5000 Divine Aurora Shards = 1 Divine Aurora."
         />
       </div>
       {!open ? (
@@ -550,8 +550,8 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
       {open ? (
         <div className="hero-void-bosses-body">
           <p className="muted">
-            Tap a boss, then tap a stage once for Soon or twice for Cleared. Got
-            and Soon both lower Still need.
+            Tap a boss, then tap a stage once for Soon or twice for Cleared. Only
+            Soon lowers Still need.
           </p>
           <div className="hero-void-boss-grid">
             {totals.perBoss.map((row) => {
@@ -602,12 +602,6 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
               <strong>Sum · left</strong>
               <VoidRewardBits rewards={totals.left} size="lg" />
             </div>
-            <div className="hero-void-total-row">
-              <strong>
-                Sum · full clear ({totals.unlockedCount} unlocked)
-              </strong>
-              <VoidRewardBits rewards={totals.full} size="lg" />
-            </div>
           </div>
         </div>
       ) : null}
@@ -621,7 +615,7 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
             <h3>Void Boss {pickerBoss}</h3>
             <p className="hero-void-picker-help">
               Tap a stage once for <strong>Soon</strong> (near future). Tap it
-              again to mark <strong>Cleared</strong>. Got + Soon lower Still
+              again to mark <strong>Cleared</strong>. Only Soon lowers Still
               need below.
             </p>
             <div className="hero-void-picker-preview">
@@ -743,17 +737,19 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
   );
 }
 
-function CostPreview({ used, need, full }) {
+function CostPreview({ used, need, full, voidBoss }) {
   const [sumView, setSumView] = useState("picks");
   const columns = [
     { id: "full", title: "Full want cost", cost: full },
     { id: "used", title: "Used so far", cost: used },
+    { id: "void", title: "Void bosses", cost: voidBoss },
     { id: "need", title: "Still need", cost: need },
   ];
   const mats = {
     used: eventMatsFromCost(used),
     need: eventMatsFromCost(need),
     full: eventMatsFromCost(full),
+    void: eventMatsFromCost(voidBoss),
   };
   const showPicks = sumView === "picks";
 
@@ -1214,7 +1210,12 @@ export default function UpgradeHero() {
                   </svg>
                 </button>
               </div>
-              <CostPreview used={used} need={need} full={full} />
+              <CostPreview
+                used={used}
+                need={need}
+                full={full}
+                voidBoss={voidOwned}
+              />
             </div>
           </section>
         </div>

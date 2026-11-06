@@ -224,7 +224,8 @@ export function voidBossRewardsAsOwned(rewards) {
   };
 }
 
+/** Only Soon loot counts toward Still need — Got is already spent/owned elsewhere. */
 export function voidBossOwnedFromStages(stages) {
   const totals = voidBossProgressTotals(stages);
-  return voidBossRewardsAsOwned(addVoidBossRewards(totals.got, totals.soon));
+  return voidBossRewardsAsOwned(totals.soon);
 }
