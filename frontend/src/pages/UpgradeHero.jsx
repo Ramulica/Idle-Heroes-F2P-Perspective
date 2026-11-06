@@ -69,9 +69,11 @@ import {
 import { useSgCalc } from "../useSgCalc";
 import {
   AURORA_SHARDS_PER_AURORA,
+  VOID_BOSS_LOCKED,
   VOID_BOSS_STAGES,
   auroraFromShards,
   voidBossProgressTotals,
+  voidBossStageLabel,
 } from "../voidBosses";
 
 const VOID_BOSS_ICONS = [
@@ -493,7 +495,7 @@ function VoidBossesProgress({ stages, onChangeStage }) {
         </button>
         <HelpTip
           title="Void Bosses Progress"
-          message="Tap a Void Boss and set the highest stage you cleared (1-1 through 9-10). Rewards rise on the diagonal: 1-2 matches 2-1, and so on. 5000 Divine Aurora Shards = 1 Divine Aurora."
+          message="Tap a Void Boss and set Not unlocked, Not cleared, or the highest stage you cleared (1-1 through 9-10). Not unlocked bosses are left out of full-clear totals. Rewards rise on the diagonal: 1-2 matches 2-1, and so on. 5000 Divine Aurora Shards = 1 Divine Aurora."
         />
       </div>
       {!open ? (
@@ -513,18 +515,18 @@ function VoidBossesProgress({ stages, onChangeStage }) {
       {open ? (
         <div className="hero-void-bosses-body">
           <p className="muted">
-            Click a boss to set your cleared stage. Totals below sum every boss.
+            Click a boss to set your stage. Not unlocked bosses are excluded from
+            full-clear totals.
           </p>
           <div className="hero-void-boss-grid">
             {totals.perBoss.map((row) => {
-              const label =
-                row.stage > 0 ? `${row.boss}-${row.stage}` : "Not cleared";
+              const label = voidBossStageLabel(row.boss, row.stage);
               return (
                 <button
                   key={row.boss}
                   className={`hero-void-boss-card${
                     pickerBoss === row.boss ? " selected" : ""
-                  }`}
+                  }${row.unlocked ? "" : " locked"}`}
                   type="button"
                   onClick={() => setPickerBoss(row.boss)}
                 >
@@ -556,7 +558,9 @@ function VoidBossesProgress({ stages, onChangeStage }) {
               <VoidRewardBits rewards={totals.got} />
             </div>
             <div className="hero-void-total-row">
-              <strong>Sum · full clear (all 9 × 10)</strong>
+              <strong>
+                Sum · full clear ({totals.unlockedCount} unlocked)
+              </strong>
               <VoidRewardBits rewards={totals.full} />
             </div>
           </div>
@@ -571,10 +575,11 @@ function VoidBossesProgress({ stages, onChangeStage }) {
           >
             <h3>Void Boss {pickerBoss}</h3>
             <p className="muted">
-              Highest stage cleared on this boss. Rewards include every stage up
-              to that point.
+              Not unlocked leaves this boss out of full-clear totals. Otherwise
+              pick the highest stage cleared; rewards include every stage up to
+              that point.
             </p>
-            <div className="hero-void-stage-picks">
+            <div className="hero-void-stage-status">
               <button
                 className={`hero-stage-pick${
                   stages[pickerBoss - 1] === 0 ? " selected" : ""
@@ -587,6 +592,20 @@ function VoidBossesProgress({ stages, onChangeStage }) {
               >
                 <span>Not cleared</span>
               </button>
+              <button
+                className={`hero-stage-pick${
+                  stages[pickerBoss - 1] === VOID_BOSS_LOCKED ? " selected" : ""
+                }`}
+                type="button"
+                onClick={() => {
+                  onChangeStage(pickerBoss, VOID_BOSS_LOCKED);
+                  setPickerBoss(null);
+                }}
+              >
+                <span>Not unlocked</span>
+              </button>
+            </div>
+            <div className="hero-void-stage-picks">
               {Array.from({ length: VOID_BOSS_STAGES }, (_, index) => {
                 const stage = index + 1;
                 const selected = stages[pickerBoss - 1] === stage;

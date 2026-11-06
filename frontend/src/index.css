@@ -2506,11 +2506,40 @@ input[type="range"] {
   min-width: 10em;
 }
 
+.hero-void-boss-card.locked {
+  opacity: 0.72;
+}
+
+.hero-void-boss-card.locked .hero-void-boss-icon {
+  filter: grayscale(0.35);
+}
+
+.hero-void-stage-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.hero-void-stage-status .hero-stage-pick,
+.hero-void-stage-picks .hero-stage-pick {
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .hero-void-stage-picks {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  margin: 12px 0;
+  margin: 0 0 12px;
+}
+
+@media (max-width: 520px) {
+  .hero-void-stage-picks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .hero-temple-check {

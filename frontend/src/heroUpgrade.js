@@ -423,7 +423,7 @@ function readTempleManual(value, fallback = null) {
 export function hasHeroUpgradeProgress(raw) {
   const upgrade = normalizeHeroUpgrade(raw);
   if (upgrade.have.length || upgrade.want.length) return true;
-  if (upgrade.voidBossStages.some((stage) => Number(stage) > 0)) return true;
+  if (upgrade.voidBossStages.some((stage) => Number(stage) !== 0)) return true;
   return Object.values(upgrade.otherSources).some((value) => Number(value) > 0);
 }
 

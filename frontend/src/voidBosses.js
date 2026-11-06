@@ -1,5 +1,6 @@
 export const VOID_BOSS_COUNT = 9;
 export const VOID_BOSS_STAGES = 10;
+export const VOID_BOSS_LOCKED = -1;
 export const AURORA_SHARDS_PER_AURORA = 5000;
 
 export function emptyVoidBossRewards() {
@@ -41,8 +42,14 @@ export function addVoidBossRewards(left, right) {
 }
 
 export function clampVoidBossStage(value) {
-  const stage = Math.round(Number(value) || 0);
+  const stage = Math.round(Number(value));
+  if (!Number.isFinite(stage)) return 0;
+  if (stage < 0) return VOID_BOSS_LOCKED;
   return Math.min(VOID_BOSS_STAGES, Math.max(0, stage));
+}
+
+export function isVoidBossUnlocked(stage) {
+  return clampVoidBossStage(stage) >= 0;
 }
 
 export function normalizeVoidBossStages(raw) {
@@ -55,6 +62,7 @@ export function normalizeVoidBossStages(raw) {
 /** Sum of stage clears 1..cleared for one boss. */
 export function voidBossClearedRewards(boss, clearedStage) {
   const cleared = clampVoidBossStage(clearedStage);
+  if (cleared < 1) return emptyVoidBossRewards();
   let total = emptyVoidBossRewards();
   for (let stage = 1; stage <= cleared; stage += 1) {
     total = addVoidBossRewards(total, voidBossStageReward(boss, stage));
@@ -66,19 +74,33 @@ export function voidBossFullRewards(boss) {
   return voidBossClearedRewards(boss, VOID_BOSS_STAGES);
 }
 
+export function voidBossStageLabel(boss, stage) {
+  const value = clampVoidBossStage(stage);
+  if (value === VOID_BOSS_LOCKED) return "Not unlocked";
+  if (value === 0) return "Not cleared";
+  return `${boss}-${value}`;
+}
+
 export function voidBossProgressTotals(stages) {
-  const cleared = normalizeVoidBossStages(stages);
+  const values = normalizeVoidBossStages(stages);
   let got = emptyVoidBossRewards();
   let full = emptyVoidBossRewards();
-  const perBoss = cleared.map((stage, index) => {
+  let unlockedCount = 0;
+  const perBoss = values.map((stage, index) => {
     const boss = index + 1;
-    const bossGot = voidBossClearedRewards(boss, stage);
-    const bossFull = voidBossFullRewards(boss);
+    const unlocked = isVoidBossUnlocked(stage);
+    const bossGot = unlocked
+      ? voidBossClearedRewards(boss, stage)
+      : emptyVoidBossRewards();
+    const bossFull = unlocked
+      ? voidBossFullRewards(boss)
+      : emptyVoidBossRewards();
+    if (unlocked) unlockedCount += 1;
     got = addVoidBossRewards(got, bossGot);
     full = addVoidBossRewards(full, bossFull);
-    return { boss, stage, got: bossGot, full: bossFull };
+    return { boss, stage, unlocked, got: bossGot, full: bossFull };
   });
-  return { perBoss, got, full };
+  return { perBoss, got, full, unlockedCount };
 }
 
 export function auroraFromShards(shards) {
