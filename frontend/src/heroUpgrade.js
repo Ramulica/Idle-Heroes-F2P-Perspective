@@ -1,3 +1,5 @@
+import { normalizeVoidBossStages } from "./voidBosses";
+
 export const VOID_MAT_VALUE = 1_250_000;
 export const ORIGIN_ESSENCE_VALUE = 150_000;
 export const DT_VEIN_PER_MAT = 200_000;
@@ -139,6 +141,7 @@ export const DEFAULT_HERO_UPGRADE = {
     dtMats: 0,
     spiritVein: 0,
   },
+  voidBossStages: [0, 0, 0, 0, 0, 0, 0, 0, 0],
 };
 
 export function emptyCost() {
@@ -420,6 +423,7 @@ function readTempleManual(value, fallback = null) {
 export function hasHeroUpgradeProgress(raw) {
   const upgrade = normalizeHeroUpgrade(raw);
   if (upgrade.have.length || upgrade.want.length) return true;
+  if (upgrade.voidBossStages.some((stage) => Number(stage) > 0)) return true;
   return Object.values(upgrade.otherSources).some((value) => Number(value) > 0);
 }
 
@@ -435,6 +439,7 @@ export function normalizeHeroUpgrade(raw) {
     haveTempleManual: readTempleManual(src.haveTempleManual, legacy),
     wantTempleManual: readTempleManual(src.wantTempleManual, legacy),
     otherSources: normalizeOtherSources(src.otherSources),
+    voidBossStages: normalizeVoidBossStages(src.voidBossStages),
   };
 }
 

@@ -126,6 +126,7 @@ export const DEFAULT_STATE = {
       dtMats: 0,
       spiritVein: 0,
     },
+    voidBossStages: [0, 0, 0, 0, 0, 0, 0, 0, 0],
   },
 };
 

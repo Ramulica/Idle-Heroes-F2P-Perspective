@@ -7,11 +7,21 @@ import LootChips from "../components/LootChips.jsx";
 import ResourceAmount, { formatResourceAmount } from "../components/ResourceAmount.jsx";
 import { formatNumber } from "../rewards";
 import auroraIcon from "../assets/hero/aurora.png";
+import auroraShardsIcon from "../assets/hero/aurora-shards.png";
 import coreChestIcon from "../assets/hero/core-chest.png";
 import cotIcon from "../assets/hero/cot.png";
 import essenceIcon from "../assets/hero/essence.png";
 import heroIcon from "../assets/hero/placeholder.png";
 import spiritVeinIcon from "../assets/hero/spirit-vein.png";
+import voidBoss1Icon from "../assets/hero/void-bosses/void-boss-1.png";
+import voidBoss2Icon from "../assets/hero/void-bosses/void-boss-2.png";
+import voidBoss3Icon from "../assets/hero/void-bosses/void-boss-3.png";
+import voidBoss4Icon from "../assets/hero/void-bosses/void-boss-4.png";
+import voidBoss5Icon from "../assets/hero/void-bosses/void-boss-5.png";
+import voidBoss6Icon from "../assets/hero/void-bosses/void-boss-6.png";
+import voidBoss7Icon from "../assets/hero/void-bosses/void-boss-7.png";
+import voidBoss8Icon from "../assets/hero/void-bosses/void-boss-8.png";
+import voidBoss9Icon from "../assets/hero/void-bosses/void-boss-9.png";
 import originIcon from "../assets/rewards/origin.png";
 import voidIcon from "../assets/rewards/void.png";
 import {
@@ -57,6 +67,51 @@ import {
   scaleEventPlan,
 } from "../sgCalc";
 import { useSgCalc } from "../useSgCalc";
+import {
+  AURORA_SHARDS_PER_AURORA,
+  VOID_BOSS_STAGES,
+  auroraFromShards,
+  voidBossProgressTotals,
+} from "../voidBosses";
+
+const VOID_BOSS_ICONS = [
+  voidBoss1Icon,
+  voidBoss2Icon,
+  voidBoss3Icon,
+  voidBoss4Icon,
+  voidBoss5Icon,
+  voidBoss6Icon,
+  voidBoss7Icon,
+  voidBoss8Icon,
+  voidBoss9Icon,
+];
+
+const VOID_REWARD_ROWS = [
+  {
+    key: "spiritVein",
+    name: "Spirit Vein",
+    icon: spiritVeinIcon,
+    alt: "Spirit Vein Shards",
+  },
+  {
+    key: "stellar",
+    name: "Stellar",
+    icon: cotIcon,
+    alt: "Stellar Shards",
+  },
+  {
+    key: "auroraShards",
+    name: "Divine Aurora Shards",
+    icon: auroraShardsIcon,
+    alt: "Divine Aurora Shards",
+  },
+  {
+    key: "cot",
+    name: "CoT",
+    icon: voidIcon,
+    alt: "Crystals of Transcendence",
+  },
+];
 
 const STAGE_GROUPS = [
   { id: "E", title: "Enablement" },
@@ -392,6 +447,176 @@ function HaveResources({ owned, onChange }) {
           </label>
         ))}
       </div>
+    </article>
+  );
+}
+
+function VoidRewardBits({ rewards }) {
+  return (
+    <span className="hero-void-reward-bits">
+      {VOID_REWARD_ROWS.map((row) => (
+        <ResourceAmount
+          key={row.key}
+          icon={row.icon}
+          alt={row.alt}
+          value={rewards[row.key]}
+        />
+      ))}
+      <span className="hero-void-aurora-eq" title={`${AURORA_SHARDS_PER_AURORA} shards = 1 Divine Aurora`}>
+        <img src={auroraIcon} alt="Divine Aurora" className="csg-icon hero-res-icon" />
+        <strong>{formatResourceAmount(auroraFromShards(rewards.auroraShards))}</strong>
+      </span>
+    </span>
+  );
+}
+
+function VoidBossesProgress({ stages, onChangeStage }) {
+  const [open, setOpen] = useState(false);
+  const [pickerBoss, setPickerBoss] = useState(null);
+  const totals = useMemo(() => voidBossProgressTotals(stages), [stages]);
+
+  return (
+    <article className={`hero-have-res hero-void-bosses${open ? " open" : ""}`}>
+      <div className="hero-void-bosses-head">
+        <button
+          className="hero-void-bosses-toggle"
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <h3>
+            <span className="hero-void-chevron" aria-hidden="true">
+              {open ? "▾" : "▸"}
+            </span>
+            Void Bosses Progress
+          </h3>
+        </button>
+        <HelpTip
+          title="Void Bosses Progress"
+          message="Tap a Void Boss and set the highest stage you cleared (1-1 through 9-10). Rewards rise on the diagonal: 1-2 matches 2-1, and so on. 5000 Divine Aurora Shards = 1 Divine Aurora."
+        />
+      </div>
+      {!open ? (
+        <button
+          className="hero-void-summary-btn"
+          type="button"
+          aria-expanded={false}
+          onClick={() => setOpen(true)}
+        >
+          <div className="hero-void-summary">
+            <span className="muted">Got so far</span>
+            <VoidRewardBits rewards={totals.got} />
+          </div>
+        </button>
+      ) : null}
+
+      {open ? (
+        <div className="hero-void-bosses-body">
+          <p className="muted">
+            Click a boss to set your cleared stage. Totals below sum every boss.
+          </p>
+          <div className="hero-void-boss-grid">
+            {totals.perBoss.map((row) => {
+              const label =
+                row.stage > 0 ? `${row.boss}-${row.stage}` : "Not cleared";
+              return (
+                <button
+                  key={row.boss}
+                  className={`hero-void-boss-card${
+                    pickerBoss === row.boss ? " selected" : ""
+                  }`}
+                  type="button"
+                  onClick={() => setPickerBoss(row.boss)}
+                >
+                  <img
+                    src={VOID_BOSS_ICONS[row.boss - 1]}
+                    alt=""
+                    className="hero-void-boss-icon"
+                  />
+                  <span className="hero-void-boss-name">
+                    Void Boss {row.boss}
+                  </span>
+                  <span className="hero-void-boss-stage">{label}</span>
+                  <span className="hero-void-boss-mini">
+                    <span className="muted">Got</span>
+                    <VoidRewardBits rewards={row.got} />
+                    <span className="muted">Full</span>
+                    <VoidRewardBits rewards={row.full} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hero-void-totals">
+            <div className="hero-void-total-row">
+              <strong>Sum · got so far</strong>
+              <VoidRewardBits rewards={totals.got} />
+            </div>
+            <div className="hero-void-total-row">
+              <strong>Sum · full clear (all 9 × 10)</strong>
+              <VoidRewardBits rewards={totals.full} />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pickerBoss ? (
+        <div className="modal-back" onClick={() => setPickerBoss(null)}>
+          <div
+            className="modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>Void Boss {pickerBoss}</h3>
+            <p className="muted">
+              Highest stage cleared on this boss. Rewards include every stage up
+              to that point.
+            </p>
+            <div className="hero-void-stage-picks">
+              <button
+                className={`hero-stage-pick${
+                  stages[pickerBoss - 1] === 0 ? " selected" : ""
+                }`}
+                type="button"
+                onClick={() => {
+                  onChangeStage(pickerBoss, 0);
+                  setPickerBoss(null);
+                }}
+              >
+                <span>Not cleared</span>
+              </button>
+              {Array.from({ length: VOID_BOSS_STAGES }, (_, index) => {
+                const stage = index + 1;
+                const selected = stages[pickerBoss - 1] === stage;
+                return (
+                  <button
+                    key={stage}
+                    className={`hero-stage-pick${selected ? " selected" : ""}`}
+                    type="button"
+                    onClick={() => {
+                      onChangeStage(pickerBoss, stage);
+                      setPickerBoss(null);
+                    }}
+                  >
+                    <span>
+                      {pickerBoss}-{stage}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="row-actions">
+              <button
+                className="gold-btn"
+                type="button"
+                onClick={() => setPickerBoss(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -822,6 +1047,15 @@ export default function UpgradeHero() {
                   otherSources: { ...upgrade.otherSources, [key]: value },
                 })
               }
+            />
+
+            <VoidBossesProgress
+              stages={upgrade.voidBossStages}
+              onChangeStage={(boss, stage) => {
+                const next = [...upgrade.voidBossStages];
+                next[boss - 1] = stage;
+                setUpgrade({ voidBossStages: next });
+              }}
             />
 
             <div className="total-banner preview-banner hero-cost-banner">
