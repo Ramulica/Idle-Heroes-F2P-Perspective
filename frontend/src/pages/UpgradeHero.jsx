@@ -528,11 +528,13 @@ function VoidBossesProgress({ stages, onChangeStage }) {
                   type="button"
                   onClick={() => setPickerBoss(row.boss)}
                 >
-                  <img
-                    src={VOID_BOSS_ICONS[row.boss - 1]}
-                    alt=""
-                    className="hero-void-boss-icon"
-                  />
+                  <span className="hero-void-boss-icon-wrap">
+                    <img
+                      src={VOID_BOSS_ICONS[row.boss - 1]}
+                      alt=""
+                      className="hero-void-boss-icon"
+                    />
+                  </span>
                   <span className="hero-void-boss-name">
                     Void Boss {row.boss}
                   </span>
