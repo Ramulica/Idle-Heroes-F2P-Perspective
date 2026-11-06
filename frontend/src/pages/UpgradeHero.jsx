@@ -405,11 +405,11 @@ function HaveResourceInput({ name, value, onChange }) {
   const shown = draft ?? (value ? formatResourceAmount(value) : "");
   return (
     <input
-      className="hero-other-input"
+      className="hero-other-input hero-have-table-input"
       type="text"
       inputMode="decimal"
       aria-label={`${name} I have`}
-      placeholder=""
+      placeholder="0"
       value={shown}
       onFocus={() => setDraft(value ? formatResourceAmount(value) : "")}
       onChange={(event) => {
@@ -422,39 +422,6 @@ function HaveResourceInput({ name, value, onChange }) {
         setDraft(null);
       }}
     />
-  );
-}
-
-function HaveResources({ owned, onChange }) {
-  return (
-    <article className="hero-have-res">
-      <div className="calc-row-head">
-        <h3>Resources I have</h3>
-        <HelpTip
-          title="Resources I have"
-          message="You can type 1000000 or 1000k. Bag, shop, or extra income not already on the boards lowers Still need."
-        />
-      </div>
-      <p className="muted">
-        Bag, shop, or extra income not already on the boards. This lowers Still
-        need.
-      </p>
-      <div className="hero-have-res-grid">
-        {COST_ROWS.map((row) => (
-          <label key={row.key} className="hero-have-res-item">
-            <span className="hero-cost-name">
-              <img src={row.icon} alt="" className="csg-icon hero-res-icon" />
-              {row.name}
-            </span>
-            <HaveResourceInput
-              name={row.name}
-              value={owned[row.key]}
-              onChange={(amount) => onChange(row.key, amount)}
-            />
-          </label>
-        ))}
-      </div>
-    </article>
   );
 }
 
@@ -737,12 +704,13 @@ function VoidBossesProgress({ stages, onChangeEntry }) {
   );
 }
 
-function CostPreview({ used, need, full, voidBoss }) {
+function CostPreview({ used, need, full, voidBoss, owned, onOwnedChange }) {
   const [sumView, setSumView] = useState("picks");
   const columns = [
     { id: "full", title: "Full want cost", cost: full },
     { id: "used", title: "Used so far", cost: used },
     { id: "void", title: "Void bosses", cost: voidBoss },
+    { id: "have", title: "I have", cost: owned, editable: true },
     { id: "need", title: "Still need", cost: need },
   ];
   const mats = {
@@ -750,15 +718,30 @@ function CostPreview({ used, need, full, voidBoss }) {
     need: eventMatsFromCost(need),
     full: eventMatsFromCost(full),
     void: eventMatsFromCost(voidBoss),
+    have: eventMatsFromCost(ownedAsCostUnits(owned)),
   };
   const showPicks = sumView === "picks";
+
+  function cellAmount(row, col) {
+    // Bag "I have" already stores display units (incl. skill-sub resource amounts).
+    if (col.id === "have") return Number(col.cost?.[row.key]) || 0;
+    return resourceValue(row, col.cost?.[row.key]);
+  }
 
   function HeaderRow({ className }) {
     return (
       <tr className={className}>
         <th>Resource</th>
         {columns.map((col) => (
-          <th key={col.id}>{col.title}</th>
+          <th key={col.id}>
+            {col.title}
+            {col.id === "have" ? (
+              <HelpTip
+                title="Resources I have"
+                message="Bag, shop, or extra income not already on the boards. Type 1000000 or 1000k. This lowers Still need."
+              />
+            ) : null}
+          </th>
         ))}
       </tr>
     );
@@ -769,7 +752,7 @@ function CostPreview({ used, need, full, voidBoss }) {
       <p className="hero-cost-rates">
         1 void mat = 1250k CoT or 1250k stellar · 1 origin mat = 150k essence, 1
         core chest, or 1 skill sub (90k) · 1 DT mat = 5 Divine Aurora or 200k
-        Spirit Vein
+        Spirit Vein · I have = bag/shop extras · Void bosses = Soon only
       </p>
       <table className="hero-cost-table">
         <thead>
@@ -787,11 +770,19 @@ function CostPreview({ used, need, full, voidBoss }) {
                 </th>
                 {columns.map((col) => (
                   <td key={col.id}>
-                    <ResourceAmount
-                      icon={row.icon}
-                      alt={row.alt}
-                      value={resourceValue(row, col.cost[row.key])}
-                    />
+                    {col.editable ? (
+                      <HaveResourceInput
+                        name={row.name}
+                        value={owned[row.key]}
+                        onChange={(amount) => onOwnedChange(row.key, amount)}
+                      />
+                    ) : (
+                      <ResourceAmount
+                        icon={row.icon}
+                        alt={row.alt}
+                        value={cellAmount(row, col)}
+                      />
+                    )}
                   </td>
                 ))}
               </tr>
@@ -855,7 +846,7 @@ function CostPreview({ used, need, full, voidBoss }) {
                         key={row.key}
                         icon={row.icon}
                         alt={row.alt}
-                        value={resourceValue(row, col.cost[row.key])}
+                        value={cellAmount(row, col)}
                       />
                     )
                   )}
@@ -1094,7 +1085,7 @@ export default function UpgradeHero() {
                   "T1–T max uses Spiritual Essence and stellar. On a T hero, tick the core and skill subs that hero actually has. Destiny Transition needs core and all four subs.",
                   "1 origin pick = 1 skill sub = 90k of that sub resource. An ability needs 2 picks, so 180k.",
                   "DT unlock costs 0 — the 5000k CoT and 14.93m stellar there are only a preview of E5 Trans + V1–V4 + T1–T max. D1 is the first extra Destiny cost.",
-                  "Below the heroes, type bag resources you already have. You can type 1000000 or 1000k. The table is Full want cost, Used so far, and Still need. Bag resources lower Still need. The last row can switch between Resources and Event picks.",
+                  "In Resource preview, the I have column is bag/shop extras (type 1000000 or 1000k). Void bosses shows Soon loot. Both lower Still need. The last row can switch between Resources and Event picks.",
                   "Presets lists every temple and its required Destiny heroes. Click Temple 10 to set that board to temple 10 and add 2 D5, 2 D4, and 3 D3. Costs next to the title shows every upgrade cost.",
                   "Each board has its own temple. Auto uses that board’s Destiny heroes for the D cap and D+ on the star. Tick Set this temple manually on a board to override only that side.",
                 ]}
@@ -1169,15 +1160,6 @@ export default function UpgradeHero() {
               />
             </div>
 
-            <HaveResources
-              owned={upgrade.otherSources}
-              onChange={(key, value) =>
-                setUpgrade({
-                  otherSources: { ...upgrade.otherSources, [key]: value },
-                })
-              }
-            />
-
             <VoidBossesProgress
               stages={upgrade.voidBossStages}
               onChangeEntry={(boss, entry) => {
@@ -1215,6 +1197,12 @@ export default function UpgradeHero() {
                 need={need}
                 full={full}
                 voidBoss={voidOwned}
+                owned={upgrade.otherSources}
+                onOwnedChange={(key, value) =>
+                  setUpgrade({
+                    otherSources: { ...upgrade.otherSources, [key]: value },
+                  })
+                }
               />
             </div>
           </section>
