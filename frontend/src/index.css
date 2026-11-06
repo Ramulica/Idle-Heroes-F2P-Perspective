@@ -2594,13 +2594,18 @@ input[type="range"] {
   padding: 8px 6px;
 }
 
-.hero-void-stage-btn.soon {
+.hero-void-stage-btn.soon,
+.hero-void-stage-btn.soon.selected {
   background: linear-gradient(180deg, #dcecff, #9fc4f0);
   border-color: #3a6ea5;
+  box-shadow: 0 0 0 3px rgba(58, 110, 165, 0.35);
 }
 
-.hero-void-stage-btn.cleared {
+.hero-void-stage-btn.cleared,
+.hero-void-stage-btn.cleared.selected {
   background: linear-gradient(180deg, #ffe27a, #f4c430);
+  border-color: #8a5a2a;
+  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.4);
 }
 
 .hero-void-stage-id {
