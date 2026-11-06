@@ -126,7 +126,7 @@ export const DEFAULT_STATE = {
       dtMats: 0,
       spiritVein: 0,
     },
-    voidBossStages: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    voidBossStages: Array.from({ length: 9 }, () => ({ cleared: 0, soon: 0 })),
   },
 };
 

@@ -72,8 +72,13 @@ import {
   VOID_BOSS_LOCKED,
   VOID_BOSS_STAGES,
   auroraFromShards,
+  emptyVoidBossEntry,
+  normalizeVoidBossEntry,
+  toggleVoidBossStage,
+  voidBossOwnedFromStages,
   voidBossProgressTotals,
   voidBossStageLabel,
+  voidBossStageReward,
 } from "../voidBosses";
 
 const VOID_BOSS_ICONS = [
@@ -453,9 +458,9 @@ function HaveResources({ owned, onChange }) {
   );
 }
 
-function VoidRewardBits({ rewards }) {
+function VoidRewardBits({ rewards, size = "md" }) {
   return (
-    <span className="hero-void-reward-bits">
+    <span className={`hero-void-reward-bits size-${size}`}>
       {VOID_REWARD_ROWS.map((row) => (
         <ResourceAmount
           key={row.key}
@@ -464,18 +469,38 @@ function VoidRewardBits({ rewards }) {
           value={rewards[row.key]}
         />
       ))}
-      <span className="hero-void-aurora-eq" title={`${AURORA_SHARDS_PER_AURORA} shards = 1 Divine Aurora`}>
-        <img src={auroraIcon} alt="Divine Aurora" className="csg-icon hero-res-icon" />
-        <strong>{formatResourceAmount(auroraFromShards(rewards.auroraShards))}</strong>
+      <span
+        className="hero-void-aurora-eq"
+        title={`${AURORA_SHARDS_PER_AURORA} shards = 1 Divine Aurora`}
+      >
+        <img
+          src={auroraIcon}
+          alt="Divine Aurora"
+          className="csg-icon hero-res-icon"
+        />
+        <strong>
+          {formatResourceAmount(auroraFromShards(rewards.auroraShards))}
+        </strong>
       </span>
     </span>
   );
 }
 
-function VoidBossesProgress({ stages, onChangeStage }) {
+function VoidBossesProgress({ stages, onChangeEntry }) {
   const [open, setOpen] = useState(false);
   const [pickerBoss, setPickerBoss] = useState(null);
   const totals = useMemo(() => voidBossProgressTotals(stages), [stages]);
+  const pickerEntry = pickerBoss
+    ? normalizeVoidBossEntry(stages[pickerBoss - 1])
+    : null;
+  const pickerRewards =
+    pickerBoss && pickerEntry
+      ? totals.perBoss[pickerBoss - 1]
+      : null;
+
+  function setBossEntry(boss, entry) {
+    onChangeEntry(boss, normalizeVoidBossEntry(entry));
+  }
 
   return (
     <article className={`hero-have-res hero-void-bosses${open ? " open" : ""}`}>
@@ -495,7 +520,7 @@ function VoidBossesProgress({ stages, onChangeStage }) {
         </button>
         <HelpTip
           title="Void Bosses Progress"
-          message="Tap a Void Boss and set Not unlocked, Not cleared, or the highest stage you cleared (1-1 through 9-10). Not unlocked bosses are left out of full-clear totals. Rewards rise on the diagonal: 1-2 matches 2-1, and so on. 5000 Divine Aurora Shards = 1 Divine Aurora."
+          message="Tap a stage once for Soon (near future), tap again to mark Cleared. Got + Soon lower Still need in the table below. Not unlocked bosses are left out of full-clear totals. 5000 Divine Aurora Shards = 1 Divine Aurora."
         />
       </div>
       {!open ? (
@@ -505,9 +530,19 @@ function VoidBossesProgress({ stages, onChangeStage }) {
           aria-expanded={false}
           onClick={() => setOpen(true)}
         >
-          <div className="hero-void-summary">
-            <span className="muted">Got so far</span>
-            <VoidRewardBits rewards={totals.got} />
+          <div className="hero-void-summary stacked">
+            <div className="hero-void-summary-row">
+              <span className="muted">Got</span>
+              <VoidRewardBits rewards={totals.got} size="lg" />
+            </div>
+            <div className="hero-void-summary-row">
+              <span className="muted">Soon</span>
+              <VoidRewardBits rewards={totals.soon} size="lg" />
+            </div>
+            <div className="hero-void-summary-row">
+              <span className="muted">Left</span>
+              <VoidRewardBits rewards={totals.left} size="lg" />
+            </div>
           </div>
         </button>
       ) : null}
@@ -515,12 +550,12 @@ function VoidBossesProgress({ stages, onChangeStage }) {
       {open ? (
         <div className="hero-void-bosses-body">
           <p className="muted">
-            Click a boss to set your stage. Not unlocked bosses are excluded from
-            full-clear totals.
+            Tap a boss, then tap a stage once for Soon or twice for Cleared. Got
+            and Soon both lower Still need.
           </p>
           <div className="hero-void-boss-grid">
             {totals.perBoss.map((row) => {
-              const label = voidBossStageLabel(row.boss, row.stage);
+              const label = voidBossStageLabel(row.boss, row.entry);
               return (
                 <button
                   key={row.boss}
@@ -544,8 +579,10 @@ function VoidBossesProgress({ stages, onChangeStage }) {
                   <span className="hero-void-boss-mini">
                     <span className="muted">Got</span>
                     <VoidRewardBits rewards={row.got} />
-                    <span className="muted">Full</span>
-                    <VoidRewardBits rewards={row.full} />
+                    <span className="muted">Soon</span>
+                    <VoidRewardBits rewards={row.soon} />
+                    <span className="muted">Left</span>
+                    <VoidRewardBits rewards={row.left} />
                   </span>
                 </button>
               );
@@ -554,52 +591,77 @@ function VoidBossesProgress({ stages, onChangeStage }) {
 
           <div className="hero-void-totals">
             <div className="hero-void-total-row">
-              <strong>Sum · got so far</strong>
-              <VoidRewardBits rewards={totals.got} />
+              <strong>Sum · got</strong>
+              <VoidRewardBits rewards={totals.got} size="lg" />
+            </div>
+            <div className="hero-void-total-row">
+              <strong>Sum · soon</strong>
+              <VoidRewardBits rewards={totals.soon} size="lg" />
+            </div>
+            <div className="hero-void-total-row">
+              <strong>Sum · left</strong>
+              <VoidRewardBits rewards={totals.left} size="lg" />
             </div>
             <div className="hero-void-total-row">
               <strong>
                 Sum · full clear ({totals.unlockedCount} unlocked)
               </strong>
-              <VoidRewardBits rewards={totals.full} />
+              <VoidRewardBits rewards={totals.full} size="lg" />
             </div>
           </div>
         </div>
       ) : null}
 
-      {pickerBoss ? (
+      {pickerBoss && pickerEntry && pickerRewards ? (
         <div className="modal-back" onClick={() => setPickerBoss(null)}>
           <div
-            className="modal"
+            className="modal wide"
             onClick={(event) => event.stopPropagation()}
           >
             <h3>Void Boss {pickerBoss}</h3>
-            <p className="muted">
-              Not unlocked leaves this boss out of full-clear totals. Otherwise
-              pick the highest stage cleared; rewards include every stage up to
-              that point.
+            <p className="hero-void-picker-help">
+              Tap a stage once for <strong>Soon</strong> (near future). Tap it
+              again to mark <strong>Cleared</strong>. Got + Soon lower Still
+              need below.
             </p>
+            <div className="hero-void-picker-preview">
+              <div className="hero-void-summary-row">
+                <span className="muted">Got</span>
+                <VoidRewardBits rewards={pickerRewards.got} size="lg" />
+              </div>
+              <div className="hero-void-summary-row">
+                <span className="muted">Soon</span>
+                <VoidRewardBits rewards={pickerRewards.soon} size="lg" />
+              </div>
+              <div className="hero-void-summary-row">
+                <span className="muted">Left</span>
+                <VoidRewardBits rewards={pickerRewards.left} size="lg" />
+              </div>
+            </div>
             <div className="hero-void-stage-status">
               <button
                 className={`hero-stage-pick${
-                  stages[pickerBoss - 1] === 0 ? " selected" : ""
+                  pickerEntry.cleared === 0 && pickerEntry.soon === 0
+                    ? " selected"
+                    : ""
                 }`}
                 type="button"
                 onClick={() => {
-                  onChangeStage(pickerBoss, 0);
-                  setPickerBoss(null);
+                  setBossEntry(pickerBoss, emptyVoidBossEntry());
                 }}
               >
                 <span>Not cleared</span>
               </button>
               <button
                 className={`hero-stage-pick${
-                  stages[pickerBoss - 1] === VOID_BOSS_LOCKED ? " selected" : ""
+                  pickerEntry.cleared === VOID_BOSS_LOCKED ? " selected" : ""
                 }`}
                 type="button"
                 onClick={() => {
-                  onChangeStage(pickerBoss, VOID_BOSS_LOCKED);
-                  setPickerBoss(null);
+                  setBossEntry(pickerBoss, {
+                    cleared: VOID_BOSS_LOCKED,
+                    soon: 0,
+                  });
                 }}
               >
                 <span>Not unlocked</span>
@@ -608,19 +670,58 @@ function VoidBossesProgress({ stages, onChangeStage }) {
             <div className="hero-void-stage-picks">
               {Array.from({ length: VOID_BOSS_STAGES }, (_, index) => {
                 const stage = index + 1;
-                const selected = stages[pickerBoss - 1] === stage;
+                const cleared =
+                  pickerEntry.cleared >= stage && pickerEntry.cleared > 0;
+                const soon =
+                  !cleared &&
+                  pickerEntry.soon >= stage &&
+                  pickerEntry.soon > pickerEntry.cleared;
+                const peakCleared = pickerEntry.cleared === stage;
+                const peakSoon =
+                  pickerEntry.soon === stage &&
+                  pickerEntry.soon > pickerEntry.cleared;
+                const reward = voidBossStageReward(pickerBoss, stage);
                 return (
                   <button
                     key={stage}
-                    className={`hero-stage-pick${selected ? " selected" : ""}`}
+                    className={`hero-stage-pick hero-void-stage-btn${
+                      cleared ? " cleared" : ""
+                    }${soon ? " soon" : ""}${
+                      peakCleared || peakSoon ? " selected" : ""
+                    }`}
                     type="button"
                     onClick={() => {
-                      onChangeStage(pickerBoss, stage);
-                      setPickerBoss(null);
+                      setBossEntry(
+                        pickerBoss,
+                        toggleVoidBossStage(pickerEntry, stage)
+                      );
                     }}
                   >
-                    <span>
+                    <span className="hero-void-stage-id">
                       {pickerBoss}-{stage}
+                    </span>
+                    <span className="hero-void-stage-loot">
+                      <ResourceAmount
+                        icon={spiritVeinIcon}
+                        alt="Spirit Vein"
+                        value={reward.spiritVein}
+                      />
+                      <ResourceAmount
+                        icon={cotIcon}
+                        alt="Stellar"
+                        value={reward.stellar}
+                      />
+                    </span>
+                    <span className="hero-void-stage-tag">
+                      {peakCleared
+                        ? "Cleared"
+                        : peakSoon
+                          ? "Soon"
+                          : cleared
+                            ? "Done"
+                            : soon
+                              ? "Soon"
+                              : "Tap"}
                     </span>
                   </button>
                 );
@@ -902,9 +1003,20 @@ export default function UpgradeHero() {
   const wantAuto = autoTempleLevel(upgrade.want);
   const used = useMemo(() => rosterCost(upgrade.have), [upgrade.have]);
   const full = useMemo(() => rosterCost(upgrade.want), [upgrade.want]);
+  const voidOwned = useMemo(
+    () => voidBossOwnedFromStages(upgrade.voidBossStages),
+    [upgrade.voidBossStages]
+  );
   const need = useMemo(
-    () => subCosts(full, addCosts(used, ownedAsCostUnits(upgrade.otherSources))),
-    [full, used, upgrade.otherSources]
+    () =>
+      subCosts(
+        full,
+        addCosts(
+          used,
+          addCosts(ownedAsCostUnits(upgrade.otherSources), voidOwned)
+        )
+      ),
+    [full, used, upgrade.otherSources, voidOwned]
   );
 
   const yearLoot = useMemo(() => {
@@ -1072,9 +1184,9 @@ export default function UpgradeHero() {
 
             <VoidBossesProgress
               stages={upgrade.voidBossStages}
-              onChangeStage={(boss, stage) => {
+              onChangeEntry={(boss, entry) => {
                 const next = [...upgrade.voidBossStages];
-                next[boss - 1] = stage;
+                next[boss - 1] = entry;
                 setUpgrade({ voidBossStages: next });
               }}
             />

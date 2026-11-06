@@ -141,7 +141,7 @@ export const DEFAULT_HERO_UPGRADE = {
     dtMats: 0,
     spiritVein: 0,
   },
-  voidBossStages: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  voidBossStages: Array.from({ length: 9 }, () => ({ cleared: 0, soon: 0 })),
 };
 
 export function emptyCost() {
@@ -423,7 +423,13 @@ function readTempleManual(value, fallback = null) {
 export function hasHeroUpgradeProgress(raw) {
   const upgrade = normalizeHeroUpgrade(raw);
   if (upgrade.have.length || upgrade.want.length) return true;
-  if (upgrade.voidBossStages.some((stage) => Number(stage) !== 0)) return true;
+  if (
+    upgrade.voidBossStages.some(
+      (entry) => Number(entry?.cleared) !== 0 || Number(entry?.soon) !== 0
+    )
+  ) {
+    return true;
+  }
   return Object.values(upgrade.otherSources).some((value) => Number(value) > 0);
 }
 
