@@ -14,7 +14,9 @@ import {
   emptyBoard,
   enableOf,
   enableOptionsForSlot,
+  SOUL_STONE_CATEGORIES,
   formatGearStats,
+  formatStoneStat,
   gearOf,
   gearOptionsForSlot,
   gearSlotDef,
@@ -26,8 +28,25 @@ import {
   readStatCalculator,
   setSlotListValue,
   slotTitle,
+  stoneStatTone,
   writeStatCalculator,
 } from "../statCalculator";
+
+function StoneStats({ stats, compact = false }) {
+  if (!stats?.length) return <span className="muted">No stats</span>;
+  return (
+    <span className="sc-stone-stats">
+      {stats.map((row, index) => (
+        <span key={`${row.stat}-${row.value}-${index}`}>
+          {index > 0 ? <span className="sc-stone-sep"> · </span> : null}
+          <span className={`sc-stat-${stoneStatTone(row)}`}>
+            {formatStoneStat(row, compact)}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 function Modal({ title, children, onClose }) {
   return (
@@ -127,28 +146,32 @@ function HeroCard({
           const def = gearSlotDef(gearIndex);
           const option = gearOf(slot.gear[gearIndex]);
           const locked = Boolean(def?.locked);
+          const isStone = def?.id === "stone";
+          const tip = locked
+            ? `${def.name} · coming later`
+            : option
+              ? `${option.name} · ${
+                  isStone
+                    ? option.stats.map((row) => formatStoneStat(row, true)).join(" · ")
+                    : formatGearStats(option.stats)
+                }`
+              : def?.name || `Gear ${gearIndex + 1}`;
           return (
             <button
               key={gearIndex}
               type="button"
               className={`sc-gear-slot${option ? " filled" : ""}${
                 locked ? " locked" : ""
-              }`}
+              }${isStone ? " stone-slot" : ""}`}
               onClick={() => onPickGear(gearIndex)}
-              title={
-                locked
-                  ? `${def.name} · coming later`
-                  : option
-                    ? `${option.name} · ${formatGearStats(option.stats)}`
-                    : def?.name || `Gear ${gearIndex + 1}`
-              }
+              title={tip}
             >
               {option ? (
                 <img src={option.icon} alt="" />
               ) : locked ? (
                 <span className="sc-gear-lock">{def.name[0]}</span>
               ) : (
-                <span>+</span>
+                <span>{isStone ? "S" : "+"}</span>
               )}
             </button>
           );
@@ -318,6 +341,83 @@ export default function StatCalculator() {
           </Modal>
         );
       }
+
+      if (def?.id === "stone") {
+        const selected = board.slots[picker.slotIndex].gear[picker.listIndex];
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · Soul Stone 6`}
+            onClose={() => setPicker(null)}
+          >
+            <p className="muted sc-modal-lead">
+              Grey = fixed stone stats (HP% / Attack% stay muted). Yellow = the
+              special roll you pick. Tap a combo to equip.
+            </p>
+            <div className="sc-pick-panel">
+              <div className="sc-stone-groups">
+                {SOUL_STONE_CATEGORIES.map((group) => (
+                  <section key={group.id} className="sc-stone-group">
+                    <h4>{group.name}</h4>
+                    <div className="sc-pick-grid sc-pick-grid-stone">
+                      {group.options.map((item) => {
+                        const on = item.id === selected;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`sc-pick sc-pick-stone${on ? " selected" : ""}`}
+                            onClick={() => {
+                              updateBoard(
+                                setSlotListValue(
+                                  board,
+                                  picker.slotIndex,
+                                  "gear",
+                                  picker.listIndex,
+                                  item.id
+                                )
+                              );
+                              setPicker(null);
+                            }}
+                          >
+                            <img
+                              src={item.icon}
+                              alt=""
+                              className="sc-pick-stone-icon"
+                            />
+                            <span className="sc-pick-title">{item.label}</span>
+                            <StoneStats stats={item.stats} compact />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <div className="sc-pick-actions">
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={() => {
+                    updateBoard(
+                      setSlotListValue(
+                        board,
+                        picker.slotIndex,
+                        "gear",
+                        picker.listIndex,
+                        null
+                      )
+                    );
+                    setPicker(null);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </Modal>
+        );
+      }
+
       const hero = heroOf(board.slots[picker.slotIndex].heroId);
       if (!hero) {
         return (

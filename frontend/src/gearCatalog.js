@@ -2,6 +2,21 @@ import g01w from "./assets/stats/gear/gear-01-weapon.png";
 import g01a from "./assets/stats/gear/gear-01-armor.png";
 import g01c from "./assets/stats/gear/gear-01-accessory.png";
 import g01b from "./assets/stats/gear/gear-01-boots.png";
+import {
+  SOUL_STONE_BY_ID,
+  SOUL_STONE_CATEGORIES,
+  SOUL_STONE_OPTIONS,
+  formatStoneStat,
+  stoneStatTone,
+} from "./soulStones";
+
+export {
+  SOUL_STONE_BY_ID,
+  SOUL_STONE_CATEGORIES,
+  SOUL_STONE_OPTIONS,
+  formatStoneStat,
+  stoneStatTone,
+};
 import g02w from "./assets/stats/gear/gear-02-weapon.png";
 import g02a from "./assets/stats/gear/gear-02-armor.png";
 import g02c from "./assets/stats/gear/gear-02-accessory.png";
@@ -89,7 +104,7 @@ export const GEAR_SLOTS = [
   { id: "accessory", name: "Accessory", locked: false },
   { id: "boots", name: "Boots", locked: false },
   { id: "artifact", name: "Artifact", locked: true },
-  { id: "stone", name: "Stone", locked: true },
+  { id: "stone", name: "Soul Stone", locked: false },
 ];
 
 export const GEAR_SLOT_IDS = GEAR_SLOTS.map((row) => row.id);
@@ -384,7 +399,10 @@ const SETS = [
   },
 ];
 
-export const GEAR_OPTIONS = SETS.flatMap(makeSet);
+export const GEAR_OPTIONS = [
+  ...SETS.flatMap(makeSet),
+  ...SOUL_STONE_OPTIONS,
+];
 
 export const GEAR_BY_ID = Object.fromEntries(
   GEAR_OPTIONS.map((row) => [row.id, row])
@@ -402,6 +420,7 @@ export function gearSlotDef(index) {
 export function gearOptionsForSlot(slotIndex, heroClass) {
   const slot = GEAR_SLOTS[slotIndex];
   if (!slot || slot.locked) return [];
+  if (slot.id === "stone") return SOUL_STONE_OPTIONS;
   return GEAR_OPTIONS.filter((row) => {
     if (row.slot !== slot.id) return false;
     if (!row.heroClass) return true;

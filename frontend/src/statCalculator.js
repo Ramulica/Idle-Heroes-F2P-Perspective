@@ -114,22 +114,30 @@ import {
   GEAR_BY_ID,
   GEAR_OPTIONS,
   GEAR_SLOTS,
+  SOUL_STONE_CATEGORIES,
+  SOUL_STONE_OPTIONS,
   formatGearStats,
+  formatStoneStat,
   gearOf,
   gearOptionsForSlot,
   gearSlotDef,
   gearStageLabel,
+  stoneStatTone,
 } from "./gearCatalog";
 
 export {
   GEAR_BY_ID,
   GEAR_OPTIONS,
   GEAR_SLOTS,
+  SOUL_STONE_CATEGORIES,
+  SOUL_STONE_OPTIONS,
   formatGearStats,
+  formatStoneStat,
   gearOf,
   gearOptionsForSlot,
   gearSlotDef,
   gearStageLabel,
+  stoneStatTone,
 };
 
 /**
