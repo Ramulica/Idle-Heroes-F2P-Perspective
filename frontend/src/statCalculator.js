@@ -110,15 +110,27 @@ export const STAT_HERO_BY_ID = Object.fromEntries(
   STAT_HEROES.map((hero) => [hero.id, hero])
 );
 
-/** Placeholder gear picks until real gear icons/stats are added. */
-export const GEAR_OPTIONS = [
-  { id: "gear-1", label: "Gear A" },
-  { id: "gear-2", label: "Gear B" },
-  { id: "gear-3", label: "Gear C" },
-  { id: "gear-4", label: "Gear D" },
-  { id: "gear-5", label: "Gear E" },
-  { id: "gear-6", label: "Gear F" },
-];
+import {
+  GEAR_BY_ID,
+  GEAR_OPTIONS,
+  GEAR_SLOTS,
+  formatGearStats,
+  gearOf,
+  gearOptionsForSlot,
+  gearSlotDef,
+  gearStageLabel,
+} from "./gearCatalog";
+
+export {
+  GEAR_BY_ID,
+  GEAR_OPTIONS,
+  GEAR_SLOTS,
+  formatGearStats,
+  gearOf,
+  gearOptionsForSlot,
+  gearSlotDef,
+  gearStageLabel,
+};
 
 /**
  * Enable icons in attachment order after the imprint list.
@@ -222,10 +234,10 @@ export function cloneBoard(board) {
       const slot = src.slots?.[index] || emptySlot();
       return {
         heroId: STAT_HERO_BY_ID[slot.heroId] ? slot.heroId : null,
-        gear: Array.from(
-          { length: GEAR_COUNT },
-          (_, i) => slot.gear?.[i] || null
-        ),
+        gear: Array.from({ length: GEAR_COUNT }, (_, i) => {
+          const id = slot.gear?.[i] || null;
+          return gearOf(id) ? id : null;
+        }),
         enables: Array.from({ length: ENABLE_COUNT }, (_, i) => {
           const id = slot.enables?.[i] || null;
           return enableOf(id) ? id : null;

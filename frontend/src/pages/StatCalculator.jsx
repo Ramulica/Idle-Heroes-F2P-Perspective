@@ -4,7 +4,6 @@ import HelpTip from "../components/HelpTip.jsx";
 import {
   ENABLE_COUNT,
   GEAR_COUNT,
-  GEAR_OPTIONS,
   IMPRINT_COUNT,
   IMPRINT_OPTIONS,
   MONSTER_OPTIONS,
@@ -15,6 +14,10 @@ import {
   emptyBoard,
   enableOf,
   enableOptionsForSlot,
+  formatGearStats,
+  gearOf,
+  gearOptionsForSlot,
+  gearSlotDef,
   heroOf,
   imprintOf,
   newLineupId,
@@ -112,16 +115,32 @@ function HeroCard({
 
       <div className="sc-gear-grid">
         {Array.from({ length: GEAR_COUNT }, (_, gearIndex) => {
-          const option = optionById(GEAR_OPTIONS, slot.gear[gearIndex]);
+          const def = gearSlotDef(gearIndex);
+          const option = gearOf(slot.gear[gearIndex]);
+          const locked = Boolean(def?.locked);
           return (
             <button
               key={gearIndex}
               type="button"
-              className={`sc-gear-slot${option ? " filled" : ""}`}
+              className={`sc-gear-slot${option ? " filled" : ""}${
+                locked ? " locked" : ""
+              }`}
               onClick={() => onPickGear(gearIndex)}
-              title={option ? option.label : `Gear ${gearIndex + 1}`}
+              title={
+                locked
+                  ? `${def.name} · coming later`
+                  : option
+                    ? `${option.name} · ${formatGearStats(option.stats)}`
+                    : def?.name || `Gear ${gearIndex + 1}`
+              }
             >
-              {option ? option.label.replace("Gear ", "") : "+"}
+              {option ? (
+                <img src={option.icon} alt="" />
+              ) : locked ? (
+                <span className="sc-gear-lock">{def.name[0]}</span>
+              ) : (
+                <span>+</span>
+              )}
             </button>
           );
         })}
@@ -277,29 +296,136 @@ export default function StatCalculator() {
     }
 
     if (picker.type === "gear") {
+      const def = gearSlotDef(picker.listIndex);
+      if (def?.locked) {
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · ${def.name}`}
+            onClose={() => setPicker(null)}
+          >
+            <p className="muted">
+              {def.name} options will be added in a later step.
+            </p>
+          </Modal>
+        );
+      }
+      const hero = heroOf(board.slots[picker.slotIndex].heroId);
+      if (!hero) {
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · ${def.name}`}
+            onClose={() => setPicker(null)}
+          >
+            <p className="muted">
+              Pick a hero on this card first. Gear shows Normal plus that hero’s
+              class sets.
+            </p>
+          </Modal>
+        );
+      }
       const selected = board.slots[picker.slotIndex].gear[picker.listIndex];
+      const choices = gearOptionsForSlot(picker.listIndex, hero.heroClass);
+      const preview = picker.gearId ? gearOf(picker.gearId) : null;
+      if (preview) {
+        return (
+          <Modal title={preview.name} onClose={() => setPicker(null)}>
+            <div className="sc-gear-detail">
+              <img src={preview.icon} alt="" className="sc-gear-detail-icon" />
+              <div>
+                <p className="sc-gear-detail-label">{preview.label}</p>
+                <p className="sc-gear-detail-slot">{def.name}</p>
+                <ul className="sc-gear-stat-list">
+                  {preview.stats.length ? (
+                    preview.stats.map((row) => (
+                      <li key={`${row.stat}-${row.value}`}>
+                        {row.unit === "%"
+                          ? `${row.stat} +${row.value}%`
+                          : `${row.stat} +${row.value}`}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="muted">No stats on this piece</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+            <div className="row-actions">
+              <button
+                className="gold-btn"
+                type="button"
+                onClick={() => {
+                  updateBoard(
+                    setSlotListValue(
+                      board,
+                      picker.slotIndex,
+                      "gear",
+                      picker.listIndex,
+                      preview.id
+                    )
+                  );
+                  setPicker(null);
+                }}
+              >
+                Equip
+              </button>
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() =>
+                  setPicker({
+                    type: "gear",
+                    slotIndex: picker.slotIndex,
+                    listIndex: picker.listIndex,
+                  })
+                }
+              >
+                Back
+              </button>
+            </div>
+          </Modal>
+        );
+      }
       return (
         <Modal
-          title={`${slotTitle(picker.slotIndex)} · Gear ${picker.listIndex + 1}`}
+          title={`${slotTitle(picker.slotIndex)} · ${def.name}`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted">Placeholder gear options — icons and stats later.</p>
+          <p className="muted">
+            {hero.name} · {hero.heroClass}. Normal gear plus this class’s sets.
+            Tap a piece to see stats, then Equip.
+          </p>
           <PickGrid
-            items={GEAR_OPTIONS}
+            items={choices}
             selectedId={selected}
-            onPick={(id) => {
-              updateBoard(
-                setSlotListValue(board, picker.slotIndex, "gear", picker.listIndex, id)
-              );
-              setPicker(null);
-            }}
+            onPick={(id) =>
+              setPicker({
+                type: "gear",
+                slotIndex: picker.slotIndex,
+                listIndex: picker.listIndex,
+                gearId: id,
+              })
+            }
             onClear={() => {
               updateBoard(
-                setSlotListValue(board, picker.slotIndex, "gear", picker.listIndex, null)
+                setSlotListValue(
+                  board,
+                  picker.slotIndex,
+                  "gear",
+                  picker.listIndex,
+                  null
+                )
               );
               setPicker(null);
             }}
-            renderItem={(item) => <span>{item.label}</span>}
+            renderItem={(item) => (
+              <>
+                <img src={item.icon} alt="" className="sc-pick-gear" />
+                <span>{item.label}</span>
+                <span className="sc-pick-meta">
+                  {formatGearStats(item.stats)}
+                </span>
+              </>
+            )}
           />
         </Modal>
       );
@@ -538,6 +664,7 @@ export default function StatCalculator() {
                   "Save stores the current 6-hero setup as a lineup. Lineups lets you load a saved setup.",
                   "Select monster opens a popup for the team monster (icons come next).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Every choice opens a popup.",
+                  "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",
                   "Imprints are 3 of 10 on that hero — no duplicates. Each enable circle opens its own icon choices (Enable 3 has 6).",
                 ]}
               />
