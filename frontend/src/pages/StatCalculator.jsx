@@ -38,7 +38,7 @@ function Modal({ title, children, onClose }) {
       >
         <h3>{title}</h3>
         {children}
-        <div className="row-actions">
+        <div className="row-actions sc-pick-actions">
           <button className="gold-btn" type="button" onClick={onClose}>
             Close
           </button>
@@ -48,10 +48,17 @@ function Modal({ title, children, onClose }) {
   );
 }
 
-function PickGrid({ items, selectedId, onPick, onClear, renderItem }) {
+function PickGrid({
+  items,
+  selectedId,
+  onPick,
+  onClear,
+  renderItem,
+  gridClassName = "",
+}) {
   return (
     <div className="sc-pick-panel">
-      <div className="sc-pick-grid">
+      <div className={`sc-pick-grid${gridClassName ? ` ${gridClassName}` : ""}`}>
         {items.map((item) => {
           const selected = item.id === selectedId;
           return (
@@ -67,9 +74,11 @@ function PickGrid({ items, selectedId, onPick, onClear, renderItem }) {
         })}
       </div>
       {onClear ? (
-        <button className="tan-btn" type="button" onClick={onClear}>
-          Clear
-        </button>
+        <div className="sc-pick-actions">
+          <button className="tan-btn" type="button" onClick={onClear}>
+            Clear
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -331,25 +340,13 @@ export default function StatCalculator() {
           <Modal title={preview.name} onClose={() => setPicker(null)}>
             <div className="sc-gear-detail">
               <img src={preview.icon} alt="" className="sc-gear-detail-icon" />
-              <div>
-                <p className="sc-gear-detail-label">{preview.label}</p>
-                <p className="sc-gear-detail-slot">{def.name}</p>
-                <ul className="sc-gear-stat-list">
-                  {preview.stats.length ? (
-                    preview.stats.map((row) => (
-                      <li key={`${row.stat}-${row.value}`}>
-                        {row.unit === "%"
-                          ? `${row.stat} +${row.value}%`
-                          : `${row.stat} +${row.value}`}
-                      </li>
-                    ))
-                  ) : (
-                    <li className="muted">No stats on this piece</li>
-                  )}
-                </ul>
-              </div>
+              <p className="sc-gear-detail-label">{preview.label}</p>
+              <p className="sc-gear-detail-slot">{def.name}</p>
+              <p className="sc-gear-detail-stats">
+                {formatGearStats(preview.stats)}
+              </p>
             </div>
-            <div className="row-actions">
+            <div className="row-actions sc-pick-actions">
               <button
                 className="gold-btn"
                 type="button"
@@ -390,13 +387,14 @@ export default function StatCalculator() {
           title={`${slotTitle(picker.slotIndex)} · ${def.name}`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted">
+          <p className="muted sc-modal-lead">
             {hero.name} · {hero.heroClass}. Normal gear plus this class’s sets.
             Tap a piece to see stats, then Equip.
           </p>
           <PickGrid
             items={choices}
             selectedId={selected}
+            gridClassName="sc-pick-grid-gear"
             onPick={(id) =>
               setPicker({
                 type: "gear",
@@ -420,9 +418,9 @@ export default function StatCalculator() {
             renderItem={(item) => (
               <>
                 <img src={item.icon} alt="" className="sc-pick-gear" />
-                <span>{item.label}</span>
-                <span className="sc-pick-meta">
-                  {formatGearStats(item.stats)}
+                <span className="sc-pick-title">{item.label}</span>
+                <span className="sc-pick-meta sc-pick-meta-row">
+                  {formatGearStats(item.stats, true)}
                 </span>
               </>
             )}
@@ -439,12 +437,13 @@ export default function StatCalculator() {
           title={`${slotTitle(picker.slotIndex)} · Enable ${picker.listIndex + 1}`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted">
+          <p className="muted sc-modal-lead">
             Pick one icon for this enable. Stats for each choice come later.
           </p>
           <PickGrid
             items={choices}
             selectedId={selected}
+            gridClassName="sc-pick-grid-circle"
             onPick={(id) => {
               updateBoard(
                 setSlotListValue(
@@ -472,7 +471,7 @@ export default function StatCalculator() {
             renderItem={(item) => (
               <>
                 <img src={item.icon} alt="" className="sc-pick-circle" />
-                <span>{item.label}</span>
+                <span className="sc-pick-title">{item.label}</span>
               </>
             )}
           />
@@ -493,7 +492,7 @@ export default function StatCalculator() {
           title={`${slotTitle(picker.slotIndex)} · Imprint ${picker.listIndex + 1}`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted">
+          <p className="muted sc-modal-lead">
             Choose 3 of 10. You cannot pick the same imprint twice on one hero.
           </p>
           <div className="sc-pick-panel">
@@ -521,30 +520,32 @@ export default function StatCalculator() {
                     }}
                   >
                     <img src={item.icon} alt="" className="sc-pick-circle" />
-                    <span>{item.name}</span>
+                    <span className="sc-pick-title">{item.name}</span>
                     <span className="sc-pick-meta">+{item.percent}%</span>
                   </button>
                 );
               })}
             </div>
-            <button
-              className="tan-btn"
-              type="button"
-              onClick={() => {
-                updateBoard(
-                  setSlotListValue(
-                    board,
-                    picker.slotIndex,
-                    "imprints",
-                    picker.listIndex,
-                    null
-                  )
-                );
-                setPicker(null);
-              }}
-            >
-              Clear
-            </button>
+            <div className="sc-pick-actions">
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => {
+                  updateBoard(
+                    setSlotListValue(
+                      board,
+                      picker.slotIndex,
+                      "imprints",
+                      picker.listIndex,
+                      null
+                    )
+                  );
+                  setPicker(null);
+                }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </Modal>
       );

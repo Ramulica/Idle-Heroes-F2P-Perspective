@@ -141,15 +141,27 @@ function buildStats(slot, classDefs, stage) {
   return stats;
 }
 
-function formatStat(row) {
+const STAT_SHORT = {
+  "All Damage Dealt": "All DMG",
+  "All Damage Reduction": "All DR",
+  "Damage Reduction": "DR",
+  "Crit Damage": "Crit DMG",
+  "Skill Damage": "Skill DMG",
+  "Armor Break": "Armor Brk",
+  "Control Immunity": "Ctrl Imm",
+  Precision: "Prec",
+};
+
+function formatStat(row, compact = false) {
   if (!row) return "";
-  if (row.unit === "%") return `${row.stat} +${row.value}%`;
-  return `${row.stat} +${row.value}`;
+  const name = compact ? STAT_SHORT[row.stat] || row.stat : row.stat;
+  if (row.unit === "%") return `${name} +${row.value}%`;
+  return `${name} +${row.value}`;
 }
 
-export function formatGearStats(stats) {
+export function formatGearStats(stats, compact = false) {
   if (!stats?.length) return "No stats";
-  return stats.map(formatStat).join(" · ");
+  return stats.map((row) => formatStat(row, compact)).join(" · ");
 }
 
 const NORMAL_STATS = {

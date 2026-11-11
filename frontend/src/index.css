@@ -3963,48 +3963,49 @@ input[type="range"] {
 }
 
 .sc-pick-gear {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 10px;
   border: 2px solid #8a5a2a;
-  object-fit: cover;
-  background: #1a1008;
-}
-
-.sc-gear-detail {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.sc-gear-detail-icon {
-  width: 96px;
-  height: 96px;
-  border-radius: 12px;
-  border: 3px solid #8a5a2a;
   object-fit: cover;
   background: #1a1008;
   flex-shrink: 0;
 }
 
+.sc-gear-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.sc-gear-detail-icon {
+  width: 112px;
+  height: 112px;
+  border-radius: 14px;
+  border: 3px solid #8a5a2a;
+  object-fit: cover;
+  background: #1a1008;
+}
+
 .sc-gear-detail-label {
-  margin: 0 0 2px;
+  margin: 4px 0 0;
   font-family: Cinzel, serif;
   font-weight: 800;
 }
 
 .sc-gear-detail-slot {
-  margin: 0 0 8px;
+  margin: 0;
   font-weight: 700;
   color: #8a6a3a;
 }
 
-.sc-gear-stat-list {
+.sc-gear-detail-stats {
   margin: 0;
-  padding-left: 18px;
   font-weight: 800;
-  line-height: 1.45;
+  white-space: nowrap;
 }
 
 .sc-enable-row,
@@ -4053,34 +4054,67 @@ input[type="range"] {
   background: #1a1008;
 }
 
+.sc-modal h3 {
+  text-align: center;
+}
+
 .sc-modal .muted {
   margin-top: 0;
+}
+
+.sc-modal-lead {
+  text-align: center;
 }
 
 .sc-pick-panel {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
 }
 
+.sc-pick-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
 .sc-pick-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   max-height: 52vh;
   overflow: auto;
   padding: 2px;
+  width: 100%;
 }
 
-.sc-pick-grid-imprints {
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+.sc-pick-grid-imprints .sc-pick,
+.sc-pick-grid-circle .sc-pick {
+  width: 112px;
+}
+
+.sc-pick-grid-gear .sc-pick {
+  width: 168px;
+  min-height: 152px;
+}
+
+.sc-hero-card .sc-enable-row,
+.sc-hero-card .sc-imprint-row {
+  width: 100%;
+  justify-content: center;
 }
 
 .sc-pick {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 4px;
+  width: 96px;
   padding: 8px 6px;
   border: 2px solid #8a5a2a;
   border-radius: 12px;
@@ -4089,6 +4123,7 @@ input[type="range"] {
   font-weight: 800;
   font-size: 0.78rem;
   cursor: pointer;
+  text-align: center;
 }
 
 .sc-pick:disabled {
@@ -4109,12 +4144,28 @@ input[type="range"] {
   object-fit: cover;
 }
 
+.sc-pick-title {
+  line-height: 1.15;
+}
+
 .sc-pick-meta {
   font-size: 0.68rem;
   font-weight: 700;
   color: #8a6a3a;
   text-align: center;
   line-height: 1.2;
+}
+
+.sc-pick-meta-row {
+  white-space: nowrap;
+  font-size: 0.64rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sc-modal .row-actions.sc-pick-actions {
+  justify-content: center;
 }
 
 .sc-pick-mark {
