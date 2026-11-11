@@ -339,7 +339,9 @@ export default function StatCalculator() {
         return (
           <Modal title={preview.name} onClose={() => setPicker(null)}>
             <div className="sc-gear-detail">
-              <img src={preview.icon} alt="" className="sc-gear-detail-icon" />
+              <div className="sc-gear-detail-icon-wrap">
+                <img src={preview.icon} alt="" className="sc-gear-detail-icon" />
+              </div>
               <p className="sc-gear-detail-label">{preview.label}</p>
               <p className="sc-gear-detail-slot">{def.name}</p>
               <p className="sc-gear-detail-stats">
@@ -417,7 +419,9 @@ export default function StatCalculator() {
             }}
             renderItem={(item) => (
               <>
-                <img src={item.icon} alt="" className="sc-pick-gear" />
+                <span className="sc-pick-gear-wrap">
+                  <img src={item.icon} alt="" className="sc-pick-gear" />
+                </span>
                 <span className="sc-pick-title">{item.label}</span>
                 <span className="sc-pick-meta sc-pick-meta-row">
                   {formatGearStats(item.stats, true)}
