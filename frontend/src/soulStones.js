@@ -220,10 +220,11 @@ export function isBasicStoneStat(stat) {
   return BASIC_STONE_STATS.has(stat);
 }
 
+/** HP / Attack stay muted; Speed and other specials count as calculated. */
 export function stoneStatTone(row) {
   if (!row) return "fixed";
   if (isBasicStoneStat(row.stat)) return "fixed";
-  return row.tone === "roll" ? "roll" : "fixed";
+  return "roll";
 }
 
 export function formatStoneStat(row, compact = false) {

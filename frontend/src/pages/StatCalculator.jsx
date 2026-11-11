@@ -32,18 +32,24 @@ import {
   writeStatCalculator,
 } from "../statCalculator";
 
-function StoneStats({ stats, compact = false }) {
+function StatLines({ stats, compact = false, colored = false }) {
   if (!stats?.length) return <span className="muted">No stats</span>;
   return (
-    <span className="sc-stone-stats">
-      {stats.map((row, index) => (
-        <span key={`${row.stat}-${row.value}-${index}`}>
-          {index > 0 ? <span className="sc-stone-sep"> · </span> : null}
-          <span className={`sc-stat-${stoneStatTone(row)}`}>
-            {formatStoneStat(row, compact)}
+    <span className="sc-stat-lines">
+      {stats.map((row, index) => {
+        const text = colored
+          ? formatStoneStat(row, compact)
+          : formatGearStats([row], compact);
+        const tone = colored ? stoneStatTone(row) : null;
+        return (
+          <span
+            key={`${row.stat}-${row.value}-${index}`}
+            className={`sc-stat-line${tone ? ` sc-stat-${tone}` : ""}`}
+          >
+            {text}
           </span>
-        </span>
-      ))}
+        );
+      })}
     </span>
   );
 }
@@ -350,8 +356,8 @@ export default function StatCalculator() {
             onClose={() => setPicker(null)}
           >
             <p className="muted sc-modal-lead">
-              Grey = fixed stone stats (HP% / Attack% stay muted). Yellow = the
-              special roll you pick. Tap a combo to equip.
+              Grey = HP / Attack. Yellow = calculated specials (Speed, Crit,
+              Precision, …). Tap a combo to equip.
             </p>
             <div className="sc-pick-panel">
               <div className="sc-stone-groups">
@@ -385,7 +391,7 @@ export default function StatCalculator() {
                               className="sc-pick-stone-icon"
                             />
                             <span className="sc-pick-title">{item.label}</span>
-                            <StoneStats stats={item.stats} compact />
+                            <StatLines stats={item.stats} compact colored />
                           </button>
                         );
                       })}
@@ -444,9 +450,9 @@ export default function StatCalculator() {
               </div>
               <p className="sc-gear-detail-label">{preview.label}</p>
               <p className="sc-gear-detail-slot">{def.name}</p>
-              <p className="sc-gear-detail-stats">
-                {formatGearStats(preview.stats)}
-              </p>
+              <div className="sc-gear-detail-stats">
+                <StatLines stats={preview.stats} />
+              </div>
             </div>
             <div className="row-actions sc-pick-actions">
               <button
@@ -523,8 +529,8 @@ export default function StatCalculator() {
                   <img src={item.icon} alt="" className="sc-pick-gear" />
                 </span>
                 <span className="sc-pick-title">{item.label}</span>
-                <span className="sc-pick-meta sc-pick-meta-row">
-                  {formatGearStats(item.stats, true)}
+                <span className="sc-pick-meta">
+                  <StatLines stats={item.stats} compact />
                 </span>
               </>
             )}

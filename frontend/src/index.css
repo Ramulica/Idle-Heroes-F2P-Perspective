@@ -4041,7 +4041,20 @@ input[type="range"] {
 .sc-gear-detail-stats {
   margin: 0;
   font-weight: 800;
+}
+
+.sc-stat-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.sc-stat-line {
+  display: block;
   white-space: nowrap;
+  line-height: 1.25;
 }
 
 .sc-stone-groups {
@@ -4079,17 +4092,9 @@ input[type="range"] {
   flex-shrink: 0;
 }
 
-.sc-stone-stats {
-  display: block;
+.sc-pick-stone .sc-stat-lines {
   font-size: 0.64rem;
   font-weight: 700;
-  text-align: center;
-  line-height: 1.25;
-  white-space: normal;
-}
-
-.sc-stone-sep {
-  color: #8a6a3a;
 }
 
 .sc-stat-fixed {
@@ -4198,7 +4203,13 @@ input[type="range"] {
 
 .sc-pick-grid-gear .sc-pick {
   width: 168px;
-  min-height: 152px;
+  min-height: 158px;
+}
+
+.sc-pick-grid-gear .sc-stat-lines {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #8a6a3a;
 }
 
 .sc-hero-card .sc-enable-row,
