@@ -9,12 +9,14 @@ import {
   MONSTER_OPTIONS,
   SLOT_COUNT,
   STAT_HEROES,
+  SOUL_STONE_CATEGORIES,
   clearSlot,
   cloneBoard,
+  defaultEnables,
+  defaultImprints,
   emptyBoard,
   enableOf,
   enableOptionsForSlot,
-  SOUL_STONE_CATEGORIES,
   formatGearStats,
   formatStoneStat,
   gearOf,
@@ -311,7 +313,11 @@ export default function StatCalculator() {
             selectedId={board.slots[picker.slotIndex].heroId}
             onPick={(heroId) => {
               updateBoard(
-                patchSlot(board, picker.slotIndex, { heroId })
+                patchSlot(board, picker.slotIndex, {
+                  heroId,
+                  enables: defaultEnables(),
+                  imprints: defaultImprints(),
+                })
               );
               setPicker(null);
             }}

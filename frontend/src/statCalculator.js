@@ -143,15 +143,15 @@ export {
 /**
  * Enable icons in attachment order after the imprint list.
  * Slot option lists below point into this pool. Stats come later.
- * Option 2 and Option 4 share the same three choices.
+ * Enable 4 uses the same choices as Enable 1.
  */
 export const ENABLE_OPTIONS = [
-  { id: "en-1a", label: "Enable 1 · A", icon: enable01 },
-  { id: "en-1b", label: "Enable 1 · B", icon: enable02 },
-  { id: "en-1c", label: "Enable 1 · C", icon: enable03 },
-  { id: "en-2a", label: "Enable 2/4 · A", icon: enable04 },
-  { id: "en-2b", label: "Enable 2/4 · B", icon: enable05 },
-  { id: "en-2c", label: "Enable 2/4 · C", icon: enable06 },
+  { id: "en-1a", label: "Enable 1/4 · A", icon: enable01 },
+  { id: "en-1b", label: "Enable 1/4 · B", icon: enable02 },
+  { id: "en-1c", label: "Enable 1/4 · C", icon: enable03 },
+  { id: "en-2a", label: "Enable 2 · A", icon: enable04 },
+  { id: "en-2b", label: "Enable 2 · B", icon: enable05 },
+  { id: "en-2c", label: "Enable 2 · C", icon: enable06 },
   { id: "en-3a", label: "Enable 3 · A", icon: enable07 },
   { id: "en-3b", label: "Enable 3 · B", icon: enable08 },
   { id: "en-3c", label: "Enable 3 · C", icon: enable09 },
@@ -172,7 +172,7 @@ export const ENABLE_SLOT_OPTION_IDS = [
   ["en-1a", "en-1b", "en-1c"],
   ["en-2a", "en-2b", "en-2c"],
   ["en-3a", "en-3b", "en-3c", "en-3d", "en-3e", "en-3f"],
-  ["en-2a", "en-2b", "en-2c"],
+  ["en-1a", "en-1b", "en-1c"],
   ["en-5a", "en-5b", "en-5c"],
 ];
 
@@ -205,6 +205,14 @@ export const IMPRINT_BY_ID = Object.fromEntries(
 
 export function imprintOf(id) {
   return IMPRINT_BY_ID[id] || null;
+}
+
+export function defaultEnables() {
+  return ENABLE_SLOT_OPTION_IDS.map((ids) => ids[0] || null);
+}
+
+export function defaultImprints() {
+  return IMPRINT_OPTIONS.slice(0, IMPRINT_COUNT).map((row) => row.id);
 }
 
 /** Monster icons/stats come next — keep the slot ready. */
