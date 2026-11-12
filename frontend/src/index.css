@@ -4072,7 +4072,8 @@ button.sc-aura-badge:hover .sc-aura-core {
 .sc-pick-monster {
   width: 76px;
   height: 76px;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   border-radius: 999px;
   display: block;
   margin: 0 auto 6px;
@@ -4105,9 +4106,15 @@ button.sc-aura-badge:hover .sc-aura-core {
   width: 120px;
   height: 120px;
   border-radius: 999px;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   border: 3px solid #b8860b;
   background: #1a1020;
+}
+
+.sc-monster-badge img {
+  object-fit: cover;
+  object-position: center;
 }
 
 .sc-monster-detail-info {
