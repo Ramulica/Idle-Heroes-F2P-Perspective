@@ -27,7 +27,6 @@ const IGNORED_STATS = new Set(["HP", "Attack"]);
 
 const STAT_SHORT = {
   Speed: "Spd",
-  "Speed (Runes)": "Rune Spd",
   Crit: "Crit",
   "Crit Damage": "Crit DMG",
   "Crit Damage Reduction": "Crit DR",
@@ -45,19 +44,11 @@ const STAT_SHORT = {
   "Control Immunity": "Ctrl Imm",
 };
 
-function isSpeedStat(stat) {
-  return stat === "Speed" || stat.startsWith("Speed ");
-}
-
 /** Speed first, then alphabetical by label (stat + unit). */
 function compareStatRows(a, b) {
-  const aSpeed = isSpeedStat(a.stat);
-  const bSpeed = isSpeedStat(b.stat);
+  const aSpeed = a.stat === "Speed";
+  const bSpeed = b.stat === "Speed";
   if (aSpeed !== bSpeed) return aSpeed ? -1 : 1;
-  if (aSpeed && bSpeed) {
-    if (a.stat !== b.stat) return a.stat.localeCompare(b.stat);
-    return (a.unit || "").localeCompare(b.unit || "");
-  }
   const aLabel = `${a.stat}${a.unit === "%" ? "%" : ""}`;
   const bLabel = `${b.stat}${b.unit === "%" ? "%" : ""}`;
   return aLabel.localeCompare(bLabel);

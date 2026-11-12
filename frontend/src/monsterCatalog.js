@@ -204,15 +204,21 @@ export function normalizeMonster(raw, legacyMonsterId = null) {
   };
 }
 
-/** Base monster stats + rune speed (higher animal tiers come later). */
+/**
+ * Monster stats for the calculator.
+ * Rune speed is folded into Speed (base + runes), not listed separately.
+ */
 export function monsterStatLines(monster) {
   if (!monster?.id) return [];
   const def = monsterOf(monster.id);
   if (!def) return [];
-  return [
-    ...def.stats,
-    { stat: "Speed (Runes)", value: MONSTER_RUNE_SPEED, unit: "" },
-  ];
+  return def.stats.map((row) => {
+    if (row.stat !== "Speed") return { ...row };
+    return {
+      ...row,
+      value: Number(row.value) + MONSTER_RUNE_SPEED,
+    };
+  });
 }
 
 export function formatMonsterStat(row) {
