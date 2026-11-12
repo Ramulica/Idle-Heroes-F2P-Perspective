@@ -14,6 +14,7 @@ import {
   cloneBoard,
   defaultEnables,
   defaultImprints,
+  defaultMonsterSetup,
   emptyBoard,
   enableOf,
   enableOptionsForSlot,
@@ -25,8 +26,8 @@ import {
   gearSlotDef,
   heroOf,
   imprintOf,
+  monsterOf,
   newLineupId,
-  optionById,
   patchSlot,
   readStatCalculator,
   setSlotListValue,
@@ -42,6 +43,15 @@ import {
   computeFactionAura,
   formatAuraPct,
 } from "../factionAura";
+import {
+  MONSTER_LEVELS,
+  MONSTER_PASSIVE_LEVELS,
+  MONSTER_RUNE_LEVELS,
+  MONSTER_RUNES,
+  formatMonsterStat,
+  isUpgradeableMonster,
+  monsterStatLines,
+} from "../monsterCatalog";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -73,6 +83,27 @@ function AuraBadge({ aura, onClick, interactive = true }) {
       title="Faction Aura — tap for breakdown"
     >
       {body}
+    </button>
+  );
+}
+
+function MonsterBadge({ monster, onClick }) {
+  const def = monster?.id ? monsterOf(monster.id) : null;
+  return (
+    <button
+      type="button"
+      className={`sc-monster-badge${def ? " filled" : ""}`}
+      onClick={onClick}
+      title={def ? `${def.name} · Lv ${monster.level}` : "Select monster"}
+    >
+      {def ? (
+        <>
+          <img src={def.icon} alt={def.name} />
+          <span className="sc-monster-badge-lv">{monster.level}</span>
+        </>
+      ) : (
+        <span className="sc-monster-badge-empty">?</span>
+      )}
     </button>
   );
 }
@@ -289,7 +320,7 @@ export default function StatCalculator() {
   }, [state]);
 
   const board = state.board;
-  const monster = optionById(MONSTER_OPTIONS, board.monsterId);
+  const monster = board.monster;
 
   const summarySlots = useMemo(
     () =>
@@ -741,41 +772,237 @@ export default function StatCalculator() {
     if (picker.type === "monster") {
       return (
         <Modal title="Select monster" onClose={() => setPicker(null)}>
-          <p className="muted">
-            Monster icons come next. The circle above the cards will show the
-            chosen monster.
+          <p className="muted sc-modal-lead">
+            Tap a monster to open its detail tab (level, passives, runes), then
+            Equip.
           </p>
-          {MONSTER_OPTIONS.length ? (
-            <PickGrid
-              items={MONSTER_OPTIONS}
-              selectedId={board.monsterId}
-              onPick={(id) => {
-                updateBoard({ ...board, monsterId: id });
-                setPicker(null);
-              }}
-              onClear={() => {
-                updateBoard({ ...board, monsterId: null });
-                setPicker(null);
-              }}
-              renderItem={(item) => (
-                <>
-                  <img src={item.icon} alt="" className="sc-pick-hero" />
-                  <span>{item.name}</span>
-                </>
-              )}
-            />
-          ) : (
+          <PickGrid
+            items={MONSTER_OPTIONS}
+            selectedId={board.monster?.id || null}
+            gridClassName="sc-pick-grid-monster"
+            onPick={(id) => {
+              const keep =
+                board.monster?.id === id
+                  ? {
+                      ...board.monster,
+                      passives: [...board.monster.passives],
+                      runes: [...board.monster.runes],
+                    }
+                  : defaultMonsterSetup(id);
+              setPicker({ type: "monster-detail", draft: keep });
+            }}
+            onClear={() => {
+              updateBoard({ ...board, monster: null });
+              setPicker(null);
+            }}
+            renderItem={(item) => (
+              <>
+                <img src={item.icon} alt="" className="sc-pick-monster" />
+                <span>{item.name}</span>
+              </>
+            )}
+          />
+        </Modal>
+      );
+    }
+
+    if (picker.type === "monster-detail") {
+      const draft = picker.draft || defaultMonsterSetup();
+      const def = monsterOf(draft.id);
+      if (!def) {
+        return (
+          <Modal title="Monster" onClose={() => setPicker(null)}>
+            <p className="muted">Pick a monster first.</p>
+            <div className="row-actions sc-pick-actions">
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => setPicker({ type: "monster" })}
+              >
+                Back
+              </button>
+            </div>
+          </Modal>
+        );
+      }
+      const upgradeable = isUpgradeableMonster(def.id);
+      const lines = monsterStatLines(draft);
+      return (
+        <Modal title={def.name} onClose={() => setPicker(null)}>
+          <div className="sc-monster-detail">
+            <div className="sc-monster-detail-top">
+              <img src={def.icon} alt="" className="sc-monster-detail-icon" />
+              <div className="sc-monster-detail-info">
+                <strong>{def.name}</strong>
+                <div className="sc-monster-detail-stats">
+                  {lines.map((row, index) => (
+                    <span key={`${row.stat}-${index}`}>{formatMonsterStat(row)}</span>
+                  ))}
+                </div>
+                {!upgradeable ? (
+                  <p className="muted sc-monster-locked">
+                    Levels stay at defaults for this monster.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="sc-monster-levels">
+              <button
+                type="button"
+                className="sc-monster-lv-btn"
+                disabled={!upgradeable}
+                onClick={() =>
+                  setPicker({
+                    type: "monster-level",
+                    kind: "animal",
+                    draft,
+                  })
+                }
+              >
+                Animal Lv <strong>{draft.level}</strong>
+              </button>
+
+              <div className="sc-monster-passives">
+                {draft.passives.map((lv, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="sc-monster-passive"
+                    disabled={!upgradeable}
+                    onClick={() =>
+                      setPicker({
+                        type: "monster-level",
+                        kind: "passive",
+                        index,
+                        draft,
+                      })
+                    }
+                    title={`Passive ${index + 1}`}
+                  >
+                    <span className="sc-monster-passive-label">P{index + 1}</span>
+                    <span className="sc-monster-passive-lv">{lv}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="sc-monster-runes">
+                {MONSTER_RUNES.map((rune, index) => (
+                  <button
+                    key={rune.id}
+                    type="button"
+                    className={`sc-monster-rune sc-monster-rune-${index}`}
+                    disabled={!upgradeable}
+                    onClick={() =>
+                      setPicker({
+                        type: "monster-level",
+                        kind: "rune",
+                        index,
+                        draft,
+                      })
+                    }
+                    title={rune.name}
+                  >
+                    <img src={rune.icon} alt="" />
+                    <span>Lv {draft.runes[index]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="row-actions sc-pick-actions">
             <button
-              className="tan-btn"
+              className="gold-btn"
               type="button"
               onClick={() => {
-                updateBoard({ ...board, monsterId: null });
+                updateBoard({ ...board, monster: { ...draft } });
                 setPicker(null);
               }}
             >
-              Clear monster
+              Equip
             </button>
-          )}
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() => setPicker({ type: "monster" })}
+            >
+              Back
+            </button>
+            {board.monster?.id === def.id ? (
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => {
+                  updateBoard({ ...board, monster: null });
+                  setPicker(null);
+                }}
+              >
+                Unequip
+              </button>
+            ) : null}
+          </div>
+        </Modal>
+      );
+    }
+
+    if (picker.type === "monster-level") {
+      const draft = picker.draft || defaultMonsterSetup();
+      const def = monsterOf(draft.id);
+      const kind = picker.kind;
+      const choices =
+        kind === "animal"
+          ? MONSTER_LEVELS
+          : kind === "passive"
+            ? MONSTER_PASSIVE_LEVELS
+            : MONSTER_RUNE_LEVELS;
+      const title =
+        kind === "animal"
+          ? `${def?.name || "Monster"} · Animal level`
+          : kind === "passive"
+            ? `${def?.name || "Monster"} · Passive ${picker.index + 1}`
+            : `${def?.name || "Monster"} · ${MONSTER_RUNES[picker.index]?.name || "Rune"}`;
+      const current =
+        kind === "animal"
+          ? draft.level
+          : kind === "passive"
+            ? draft.passives[picker.index]
+            : draft.runes[picker.index];
+
+      return (
+        <Modal title={title} onClose={() => setPicker({ type: "monster-detail", draft })}>
+          <p className="muted sc-modal-lead">Pick a level from the list.</p>
+          <div className="sc-level-grid">
+            {choices.map((lv) => (
+              <button
+                key={lv}
+                type="button"
+                className={`sc-level-chip${lv === current ? " selected" : ""}`}
+                onClick={() => {
+                  const next = {
+                    ...draft,
+                    passives: [...draft.passives],
+                    runes: [...draft.runes],
+                  };
+                  if (kind === "animal") next.level = lv;
+                  else if (kind === "passive") next.passives[picker.index] = lv;
+                  else next.runes[picker.index] = lv;
+                  setPicker({ type: "monster-detail", draft: next });
+                }}
+              >
+                {lv}
+              </button>
+            ))}
+          </div>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() => setPicker({ type: "monster-detail", draft })}
+            >
+              Back
+            </button>
+          </div>
         </Modal>
       );
     }
@@ -935,7 +1162,7 @@ export default function StatCalculator() {
                 steps={[
                   "Top summary shows each position and its hero. Stat totals will appear here later.",
                   "Save stores the current 6-hero setup as a lineup. Lineups lets you load a saved setup.",
-                  "Select monster opens a popup for the team monster (icons come next).",
+                  "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Every choice opens a popup.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",
                   "Imprints are 3 of 10 on that hero — no duplicates. Each enable circle opens its own icon choices (Enable 3 has 6).",
@@ -1000,7 +1227,7 @@ export default function StatCalculator() {
                   <h3>Hero lineup</h3>
                   <HelpTip
                     title="Hero lineup"
-                    message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup. Top-right Faction Aura uses each hero’s faction (special stats: DR and Control Immunity)."
+                    message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup. Monster and Faction Aura sit on the right (special stats: DR and Control Immunity)."
                   />
                 </div>
               </div>
@@ -1024,25 +1251,6 @@ export default function StatCalculator() {
                   Lineups
                 </button>
                 <button
-                  className="sc-monster-btn"
-                  type="button"
-                  title="Selected monster"
-                  onClick={() => setPicker({ type: "monster" })}
-                >
-                  {monster ? (
-                    <img src={monster.icon} alt={monster.name} />
-                  ) : (
-                    <span>?</span>
-                  )}
-                </button>
-                <button
-                  className="tan-btn"
-                  type="button"
-                  onClick={() => setPicker({ type: "monster" })}
-                >
-                  Select monster
-                </button>
-                <button
                   className="tan-btn"
                   type="button"
                   onClick={() => updateBoard(emptyBoard())}
@@ -1051,10 +1259,29 @@ export default function StatCalculator() {
                 </button>
               </div>
             </div>
-            <AuraBadge
-              aura={factionAura}
-              onClick={() => setPicker({ type: "aura" })}
-            />
+            <div className="sc-lineup-side">
+              <MonsterBadge
+                monster={monster}
+                onClick={() => {
+                  if (monster?.id) {
+                    setPicker({
+                      type: "monster-detail",
+                      draft: {
+                        ...monster,
+                        passives: [...monster.passives],
+                        runes: [...monster.runes],
+                      },
+                    });
+                  } else {
+                    setPicker({ type: "monster" });
+                  }
+                }}
+              />
+              <AuraBadge
+                aura={factionAura}
+                onClick={() => setPicker({ type: "aura" })}
+              />
+            </div>
           </div>
 
           <div className="sc-hero-row">

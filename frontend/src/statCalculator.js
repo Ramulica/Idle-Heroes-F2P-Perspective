@@ -217,8 +217,19 @@ export function defaultImprints() {
   return IMPRINT_OPTIONS.slice(0, IMPRINT_COUNT).map((row) => row.id);
 }
 
-/** Monster icons/stats come next — keep the slot ready. */
-export const MONSTER_OPTIONS = [];
+import {
+  MONSTER_OPTIONS,
+  monsterOf,
+  normalizeMonster,
+  defaultMonsterSetup,
+} from "./monsterCatalog";
+
+export {
+  MONSTER_OPTIONS,
+  monsterOf,
+  normalizeMonster,
+  defaultMonsterSetup,
+};
 
 export const STORAGE_KEY = "ih-stat-calculator";
 
@@ -233,7 +244,7 @@ export function emptySlot() {
 
 export function emptyBoard() {
   return {
-    monsterId: null,
+    monster: null,
     slots: Array.from({ length: SLOT_COUNT }, emptySlot),
   };
 }
@@ -247,7 +258,7 @@ export function newLineupId() {
 export function cloneBoard(board) {
   const src = board && typeof board === "object" ? board : emptyBoard();
   return {
-    monsterId: src.monsterId || null,
+    monster: normalizeMonster(src.monster, src.monsterId),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
       return {

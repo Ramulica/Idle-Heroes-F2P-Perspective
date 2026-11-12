@@ -412,7 +412,7 @@ export default function Home() {
                       title="Stat Calculator Tool"
                       steps={[
                         "Build a 6-hero lineup: portrait, 6 gear, 5 enables, 3 imprints.",
-                        "Save and Lineups store setups. Select monster is ready for icons next.",
+                        "Save and Lineups store setups. Monster sits beside Faction Aura.",
                         "Stats and caps will be added in later blocks.",
                       ]}
                     />

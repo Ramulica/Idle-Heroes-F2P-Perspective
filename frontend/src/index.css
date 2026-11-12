@@ -3997,24 +3997,267 @@ button.sc-aura-badge:hover .sc-aura-core {
   flex-shrink: 0;
 }
 
-.sc-monster-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  border: 3px solid #8a5a2a;
-  background: #fff8e8;
-  padding: 0;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  color: #8a6a3a;
+.sc-lineup-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.sc-monster-btn img {
+.sc-monster-badge {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  border: 3px solid #8a5a2a;
+  background: #efe0c4;
+  padding: 0;
+  overflow: visible;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sc-monster-badge.filled {
+  border-color: #b8860b;
+  background: #1a1020;
+}
+
+.sc-monster-badge img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 999px;
+  display: block;
+}
+
+.sc-monster-badge-empty {
+  font-weight: 800;
+  color: #8a6a3a;
+  font-size: 1.4rem;
+}
+
+.sc-monster-badge-lv {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  min-width: 34px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #5a3a18;
+  border: 1px solid #c9a227;
+  color: #fff8e8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  z-index: 1;
+}
+
+.sc-pick-grid-monster {
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+}
+
+.sc-pick-monster {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 999px;
+  display: block;
+  margin: 0 auto 4px;
+}
+
+.sc-monster-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sc-monster-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sc-monster-detail-icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid #b8860b;
+  background: #1a1020;
+}
+
+.sc-monster-detail-info {
+  min-width: min(100%, 220px);
+}
+
+.sc-monster-detail-info strong {
+  display: block;
+  font-family: Cinzel, serif;
+  font-size: 1.15rem;
+  margin-bottom: 6px;
+}
+
+.sc-monster-detail-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 700;
+  color: #f4c430;
+}
+
+.sc-monster-locked {
+  margin: 6px 0 0;
+}
+
+.sc-monster-levels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.sc-monster-lv-btn {
+  min-width: 160px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 2px solid #7a4a22;
+  background: #3a2818;
+  color: #fff8e8;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sc-monster-lv-btn:disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.sc-monster-lv-btn strong {
+  color: #f4c430;
+  margin-left: 4px;
+}
+
+.sc-monster-passives {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sc-monster-passive {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 2px solid #b8860b;
+  background: radial-gradient(circle at 35% 30%, #6a4424, #2a1a10);
+  color: #fff8e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sc-monster-passive:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.sc-monster-passive-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #d2b48c;
+}
+
+.sc-monster-passive-lv {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #f4c430;
+}
+
+.sc-monster-runes {
+  position: relative;
+  width: 180px;
+  height: 150px;
+  margin: 4px auto 0;
+}
+
+.sc-monster-rune {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sc-monster-rune:disabled {
+  cursor: default;
+  opacity: 0.9;
+}
+
+.sc-monster-rune img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  display: block;
+}
+
+.sc-monster-rune span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #5a3a18;
+}
+
+.sc-monster-rune-0 {
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.sc-monster-rune-1 {
+  left: 8px;
+  bottom: 0;
+}
+
+.sc-monster-rune-2 {
+  right: 8px;
+  bottom: 0;
+}
+
+.sc-level-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.sc-level-chip {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 2px solid #7a4a22;
+  background: #fff8e8;
+  color: #5a3a18;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sc-level-chip.selected {
+  background: #3a2818;
+  color: #f4c430;
+  border-color: #c9a227;
 }
 
 .sc-hero-row {
@@ -4523,5 +4766,23 @@ button.sc-aura-badge:hover .sc-aura-core {
   .sc-summary-grid,
   .sc-hero-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-lineup-top {
+    flex-wrap: wrap;
+  }
+
+  .sc-lineup-side {
+    margin-left: auto;
+  }
+
+  .sc-monster-badge {
+    width: 64px;
+    height: 64px;
+  }
+
+  .sc-aura-badge {
+    width: 96px;
+    height: 96px;
   }
 }
