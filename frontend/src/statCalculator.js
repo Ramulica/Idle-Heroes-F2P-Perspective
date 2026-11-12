@@ -223,6 +223,10 @@ import {
   normalizeMonster,
   defaultMonsterSetup,
 } from "./monsterCatalog";
+import {
+  defaultHeroProgress,
+  normalizeHeroProgress,
+} from "./heroProgress";
 
 export {
   MONSTER_OPTIONS,
@@ -239,6 +243,7 @@ export function emptySlot() {
     gear: Array(GEAR_COUNT).fill(null),
     enables: Array(ENABLE_COUNT).fill(null),
     imprints: Array(IMPRINT_COUNT).fill(null),
+    progress: defaultHeroProgress(),
   };
 }
 
@@ -275,6 +280,7 @@ export function cloneBoard(board) {
           const id = slot.imprints?.[i] || null;
           return imprintOf(id) ? id : null;
         }),
+        progress: normalizeHeroProgress(slot.progress),
       };
     }),
   };
