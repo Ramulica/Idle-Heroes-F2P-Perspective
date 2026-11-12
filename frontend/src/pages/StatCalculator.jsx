@@ -19,6 +19,7 @@ import {
   enableOptionsForSlot,
   formatGearStats,
   formatStoneStat,
+  gearIdsForSameLevel,
   gearOf,
   gearOptionsForSlot,
   gearSlotDef,
@@ -448,6 +449,7 @@ export default function StatCalculator() {
       const choices = gearOptionsForSlot(picker.listIndex, hero.heroClass);
       const preview = picker.gearId ? gearOf(picker.gearId) : null;
       if (preview) {
+        const sameLevel = gearIdsForSameLevel(preview, hero.heroClass);
         return (
           <Modal title={preview.name} onClose={() => setPicker(null)}>
             <div className="sc-gear-detail">
@@ -479,6 +481,28 @@ export default function StatCalculator() {
               >
                 Equip
               </button>
+              {sameLevel.length ? (
+                <button
+                  className="gold-btn"
+                  type="button"
+                  onClick={() => {
+                    let next = board;
+                    for (const row of sameLevel) {
+                      next = setSlotListValue(
+                        next,
+                        picker.slotIndex,
+                        "gear",
+                        row.index,
+                        row.id
+                      );
+                    }
+                    updateBoard(next);
+                    setPicker(null);
+                  }}
+                >
+                  Equip all same level
+                </button>
+              ) : null}
               <button
                 className="tan-btn"
                 type="button"

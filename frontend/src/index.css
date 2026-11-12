@@ -3973,7 +3973,7 @@ input[type="range"] {
   object-fit: cover;
   object-position: center;
   transform: scale(1.04);
-  background: #1a1008;
+  background: #fffaf0;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -3983,7 +3983,7 @@ input[type="range"] {
   height: 72px;
   border-radius: 10px;
   border: 2px solid #8a5a2a;
-  background: #1a1008;
+  background: #fffaf0;
   overflow: hidden;
   flex-shrink: 0;
   display: grid;
@@ -4012,7 +4012,7 @@ input[type="range"] {
   height: 112px;
   border-radius: 14px;
   border: 3px solid #8a5a2a;
-  background: #1a1008;
+  background: #fffaf0;
   overflow: hidden;
   display: grid;
   place-items: center;

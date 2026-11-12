@@ -431,3 +431,17 @@ export function gearOptionsForSlot(slotIndex, heroClass) {
 export function gearStageLabel(stage) {
   return STAGE_LABEL[stage] || stage;
 }
+
+/** Weapon/armor/accessory/boots matching this piece’s stage (and class). */
+export function gearIdsForSameLevel(piece, heroClass) {
+  if (!piece || piece.slot === "stone" || piece.slot === "artifact") return [];
+  return GEAR_SLOTS.flatMap((slot, index) => {
+    if (slot.locked || slot.id === "stone" || slot.id === "artifact") return [];
+    const match = GEAR_OPTIONS.find((row) => {
+      if (row.slot !== slot.id || row.stage !== piece.stage) return false;
+      if (piece.stage === "normal") return !row.heroClass;
+      return row.heroClass === (heroClass || piece.heroClass);
+    });
+    return match ? [{ index, id: match.id }] : [];
+  });
+}
