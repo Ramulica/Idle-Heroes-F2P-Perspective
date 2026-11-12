@@ -22,34 +22,10 @@ export const STAT_SOURCES = [
 
 const GEAR_BODY_SLOTS = new Set(["weapon", "armor", "accessory", "boots"]);
 
-/** Preferred column order for the breakdown table. */
-const STAT_ORDER = [
-  ["HP", "%"],
-  ["HP", ""],
-  ["Attack", "%"],
-  ["Attack", ""],
-  ["Speed", ""],
-  ["Speed (Runes)", ""],
-  ["Crit", "%"],
-  ["Crit Damage", "%"],
-  ["Crit Damage Reduction", "%"],
-  ["Block", "%"],
-  ["Armor", "%"],
-  ["Armor Break", "%"],
-  ["Precision", "%"],
-  ["Skill Damage", "%"],
-  ["Holy Damage", "%"],
-  ["Heal Effect", "%"],
-  ["Effect of Being Healed", "%"],
-  ["Damage Reduction", "%"],
-  ["All Damage Dealt", "%"],
-  ["All Damage Reduction", "%"],
-  ["Control Immunity", "%"],
-];
+/** Stats ignored in calculator totals / breakdown (tracked elsewhere). */
+const IGNORED_STATS = new Set(["HP", "Attack"]);
 
 const STAT_SHORT = {
-  HP: "HP",
-  Attack: "Atk",
   Speed: "Spd",
   "Speed (Runes)": "Rune Spd",
   Crit: "Crit",
@@ -68,6 +44,24 @@ const STAT_SHORT = {
   "All Damage Reduction": "All DR",
   "Control Immunity": "Ctrl Imm",
 };
+
+function isSpeedStat(stat) {
+  return stat === "Speed" || stat.startsWith("Speed ");
+}
+
+/** Speed first, then alphabetical by label (stat + unit). */
+function compareStatRows(a, b) {
+  const aSpeed = isSpeedStat(a.stat);
+  const bSpeed = isSpeedStat(b.stat);
+  if (aSpeed !== bSpeed) return aSpeed ? -1 : 1;
+  if (aSpeed && bSpeed) {
+    if (a.stat !== b.stat) return a.stat.localeCompare(b.stat);
+    return (a.unit || "").localeCompare(b.unit || "");
+  }
+  const aLabel = `${a.stat}${a.unit === "%" ? "%" : ""}`;
+  const bLabel = `${b.stat}${b.unit === "%" ? "%" : ""}`;
+  return aLabel.localeCompare(bLabel);
+}
 
 function round1(n) {
   return Math.round(Number(n) * 10) / 10;
@@ -100,7 +94,7 @@ function emptyMap() {
 }
 
 function addRow(map, row) {
-  if (!row?.stat) return;
+  if (!row?.stat || IGNORED_STATS.has(row.stat)) return;
   const value = Number(row.value);
   if (!Number.isFinite(value) || value === 0) return;
   const key = statKey(row.stat, row.unit || "");
@@ -124,15 +118,7 @@ function mapToRows(map) {
       const { stat, unit } = parseStatKey(key);
       return { key, stat, unit, value };
     })
-    .sort((a, b) => {
-      const ai = STAT_ORDER.findIndex(([s, u]) => s === a.stat && u === a.unit);
-      const bi = STAT_ORDER.findIndex(([s, u]) => s === b.stat && u === b.unit);
-      const ao = ai < 0 ? 999 : ai;
-      const bo = bi < 0 ? 999 : bi;
-      if (ao !== bo) return ao - bo;
-      if (a.stat !== b.stat) return a.stat.localeCompare(b.stat);
-      return (a.unit || "").localeCompare(b.unit || "");
-    });
+    .sort(compareStatRows);
 }
 
 function collectGear(slot) {
@@ -185,10 +171,6 @@ function collectImprints(slot) {
 function collectTeamAura(aura, slotIndex) {
   const map = emptyMap();
   if (!aura) return map;
-  if (aura.totals?.hp) addRow(map, { stat: "HP", value: aura.totals.hp, unit: "%" });
-  if (aura.totals?.attack) {
-    addRow(map, { stat: "Attack", value: aura.totals.attack, unit: "%" });
-  }
   const faction = aura.slotFactions?.[slotIndex];
   if (faction) {
     if (faction.damageReduction) {
@@ -280,9 +262,7 @@ export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
   };
 }
 
-/**
- * Full board: per-slot breakdowns + team-wide summed totals (one pass of shared sources).
- */
+/** Full board: per-slot hero breakdowns (no team aggregate). */
 export function computeBoardStatTotals(board) {
   const aura = computeFactionAura(board?.slots, heroOf);
   const monster = board?.monster || null;
@@ -290,20 +270,8 @@ export function computeBoardStatTotals(board) {
     computeHeroStatBreakdown(slot, index, { aura, monster })
   );
 
-  const teamTotals = emptyMap();
-  for (const heroBreakdown of slots) {
-    if (!heroBreakdown.hero) continue;
-    for (const row of heroBreakdown.totals) {
-      teamTotals.set(
-        row.key,
-        round1((teamTotals.get(row.key) || 0) + row.value)
-      );
-    }
-  }
-
   return {
     aura,
     slots,
-    teamTotals: mapToRows(teamTotals),
   };
 }

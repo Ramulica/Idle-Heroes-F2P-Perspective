@@ -380,6 +380,7 @@ export default function StatCalculator() {
   const { guest, state, setState, loaded } = useStatCalculator();
   const [picker, setPicker] = useState(null);
   const [saveName, setSaveName] = useState("");
+  const [summaryStatsOpen, setSummaryStatsOpen] = useState(false);
 
   const board = state.board;
   const monster = board.monster;
@@ -1275,27 +1276,21 @@ export default function StatCalculator() {
         ) : null}
 
         <section className="sc-summary">
-          <div className="calc-row-head">
-            <h3>Summary</h3>
-            <HelpTip
-              title="Summary"
-              message="Team totals sum every filled hero. Each card shows that hero’s calculated totals. Tap Info on a hero card for the source × stat breakdown table."
-            />
-          </div>
-          <div className="sc-team-totals">
-            <strong>Team totals</strong>
-            {boardStats.teamTotals.length ? (
-              <ul className="sc-team-totals-list">
-                {boardStats.teamTotals.map((row) => (
-                  <li key={row.key}>
-                    <span>{row.stat}{row.unit === "%" ? "%" : ""}</span>
-                    <span>{formatStatCell(row.value, row.unit)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <span className="muted">No stats yet</span>
-            )}
+          <div className="calc-row-head sc-summary-head">
+            <div className="sc-summary-head-left">
+              <h3>Summary</h3>
+              <HelpTip
+                title="Summary"
+                message="Each card shows that hero’s calculated totals (no HP / Attack). Use Stats to open or close every hero list together. Tap Info for the source × stat breakdown table."
+              />
+            </div>
+            <button
+              type="button"
+              className="sc-summary-stats-toggle"
+              onClick={() => setSummaryStatsOpen((open) => !open)}
+            >
+              {summaryStatsOpen ? "Hide stats" : "Show stats"}
+            </button>
           </div>
           <div className="sc-summary-grid">
             {summarySlots.map((row) => {
@@ -1319,9 +1314,8 @@ export default function StatCalculator() {
                     Gear {gearFilled}/{GEAR_COUNT} · En {enableFilled}/
                     {ENABLE_COUNT} · Imp {imprintFilled}/{IMPRINT_COUNT}
                   </span>
-                  {row.hero && breakdown?.totals?.length ? (
-                    <details className="sc-summary-stats-fold">
-                      <summary>Stats</summary>
+                  {summaryStatsOpen ? (
+                    row.hero && breakdown?.totals?.length ? (
                       <ul className="sc-summary-stats">
                         {breakdown.totals.map((stat) => (
                           <li key={stat.key}>
@@ -1331,10 +1325,10 @@ export default function StatCalculator() {
                           </li>
                         ))}
                       </ul>
-                    </details>
-                  ) : (
-                    <span className="muted">Stats: —</span>
-                  )}
+                    ) : (
+                      <span className="muted">Stats: —</span>
+                    )
+                  ) : null}
                   {row.hero ? (
                     <button
                       type="button"
