@@ -51,6 +51,10 @@ import {
   isUpgradeableMonster,
   monsterStatLines,
 } from "../monsterCatalog";
+import {
+  computeBoardStatTotals,
+  formatStatCell,
+} from "../statTotals";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -129,11 +133,11 @@ function StatLines({ stats, compact = false, colored = false }) {
   );
 }
 
-function Modal({ title, children, onClose }) {
+function Modal({ title, children, onClose, className = "" }) {
   return (
     <div className="modal-back" onClick={onClose}>
       <div
-        className="modal wide sc-modal"
+        className={`modal wide sc-modal${className ? ` ${className}` : ""}`}
         onClick={(event) => event.stopPropagation()}
       >
         <h3>{title}</h3>
@@ -144,6 +148,57 @@ function Modal({ title, children, onClose }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeroStatBreakdownTable({ breakdown }) {
+  if (!breakdown?.hero) {
+    return <p className="muted">Select a hero to see the stat breakdown.</p>;
+  }
+  const { columns, rows, totalValues } = breakdown;
+  if (!columns.length) {
+    return (
+      <p className="muted">
+        No calculated stats yet. Equip gear, soul stone, imprints, monster, or
+        build a faction aura.
+      </p>
+    );
+  }
+  return (
+    <div className="sc-stat-table-wrap">
+      <table className="sc-stat-table">
+        <thead>
+          <tr>
+            <th scope="col">Source</th>
+            {columns.map((col) => (
+              <th key={col.key} scope="col">
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <th scope="row">{row.label}</th>
+              {columns.map((col) => (
+                <td key={col.key}>
+                  {formatStatCell(row.values[col.key], col.unit)}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr className="sc-stat-table-total">
+            <th scope="row">Total</th>
+            {columns.map((col) => (
+              <td key={col.key}>
+                {formatStatCell(totalValues[col.key], col.unit)}
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -192,6 +247,7 @@ function HeroCard({
   onPickGear,
   onPickEnable,
   onPickImprint,
+  onInfo,
 }) {
   const hero = heroOf(slot.heroId);
   return (
@@ -199,14 +255,25 @@ function HeroCard({
       <div className="sc-hero-card-head">
         <h4>{slotTitle(index)}</h4>
         {hero ? (
-          <button
-            className="sc-clear-btn"
-            type="button"
-            aria-label={`Clear ${slotTitle(index)}`}
-            onClick={onClear}
-          >
-            ×
-          </button>
+          <div className="sc-hero-card-actions">
+            <button
+              className="sc-info-btn"
+              type="button"
+              aria-label={`Stat breakdown for ${hero.name}`}
+              onClick={onInfo}
+              title="Stat breakdown"
+            >
+              i
+            </button>
+            <button
+              className="sc-clear-btn"
+              type="button"
+              aria-label={`Clear ${slotTitle(index)}`}
+              onClick={onClear}
+            >
+              ×
+            </button>
+          </div>
         ) : null}
       </div>
       <button
@@ -327,10 +394,9 @@ export default function StatCalculator() {
     [board.slots]
   );
 
-  const factionAura = useMemo(
-    () => computeFactionAura(board.slots, heroOf),
-    [board.slots]
-  );
+  const boardStats = useMemo(() => computeBoardStatTotals(board), [board]);
+
+  const factionAura = boardStats.aura;
 
   function updateBoard(nextBoard) {
     setState((current) => ({
@@ -377,6 +443,28 @@ export default function StatCalculator() {
 
   function renderPicker() {
     if (!picker) return null;
+
+    if (picker.type === "hero-stats") {
+      const breakdown = boardStats.slots[picker.slotIndex];
+      const hero = breakdown?.hero;
+      return (
+        <Modal
+          title={
+            hero
+              ? `${hero.name} · ${slotTitle(picker.slotIndex)} stats`
+              : `${slotTitle(picker.slotIndex)} stats`
+          }
+          onClose={() => setPicker(null)}
+          className="sc-modal-stats"
+        >
+          <p className="muted sc-modal-lead">
+            Rows are sources. Columns are stats. Empty sources stay at — until
+            those systems are wired in.
+          </p>
+          <HeroStatBreakdownTable breakdown={breakdown} />
+        </Modal>
+      );
+    }
 
     if (picker.type === "hero") {
       return (
@@ -1191,8 +1279,23 @@ export default function StatCalculator() {
             <h3>Summary</h3>
             <HelpTip
               title="Summary"
-              message="One column per position. Hero and filled gear / enable / imprint counts for now. Detailed % stats come later."
+              message="Team totals sum every filled hero. Each card shows that hero’s calculated totals. Tap Info on a hero card for the source × stat breakdown table."
             />
+          </div>
+          <div className="sc-team-totals">
+            <strong>Team totals</strong>
+            {boardStats.teamTotals.length ? (
+              <ul className="sc-team-totals-list">
+                {boardStats.teamTotals.map((row) => (
+                  <li key={row.key}>
+                    <span>{row.stat}{row.unit === "%" ? "%" : ""}</span>
+                    <span>{formatStatCell(row.value, row.unit)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="muted">No stats yet</span>
+            )}
           </div>
           <div className="sc-summary-grid">
             {summarySlots.map((row) => {
@@ -1200,6 +1303,7 @@ export default function StatCalculator() {
               const gearFilled = slot.gear.filter(Boolean).length;
               const enableFilled = slot.enables.filter(Boolean).length;
               const imprintFilled = slot.imprints.filter(Boolean).length;
+              const breakdown = boardStats.slots[row.index];
               return (
                 <div key={row.index} className="sc-summary-card">
                   <strong>{row.title}</strong>
@@ -1215,7 +1319,33 @@ export default function StatCalculator() {
                     Gear {gearFilled}/{GEAR_COUNT} · En {enableFilled}/
                     {ENABLE_COUNT} · Imp {imprintFilled}/{IMPRINT_COUNT}
                   </span>
-                  <span className="muted">Stats: —</span>
+                  {row.hero && breakdown?.totals?.length ? (
+                    <details className="sc-summary-stats-fold">
+                      <summary>Stats</summary>
+                      <ul className="sc-summary-stats">
+                        {breakdown.totals.map((stat) => (
+                          <li key={stat.key}>
+                            {stat.stat}
+                            {stat.unit === "%" ? "%" : ""}{" "}
+                            {formatStatCell(stat.value, stat.unit)}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <span className="muted">Stats: —</span>
+                  )}
+                  {row.hero ? (
+                    <button
+                      type="button"
+                      className="sc-summary-info"
+                      onClick={() =>
+                        setPicker({ type: "hero-stats", slotIndex: row.index })
+                      }
+                    >
+                      Info
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
@@ -1303,6 +1433,9 @@ export default function StatCalculator() {
                 }
                 onPickImprint={(listIndex) =>
                   setPicker({ type: "imprint", slotIndex: index, listIndex })
+                }
+                onInfo={() =>
+                  setPicker({ type: "hero-stats", slotIndex: index })
                 }
               />
             ))}

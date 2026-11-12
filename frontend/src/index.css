@@ -3812,6 +3812,183 @@ input[type="range"] {
   line-height: 1.25;
 }
 
+.sc-team-totals {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 2px solid #c9a36a;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.sc-team-totals strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: Cinzel, serif;
+  color: #5a3210;
+}
+
+.sc-team-totals-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-team-totals-list li {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 3px 8px;
+  border: 1px solid #d4b88a;
+  border-radius: 8px;
+  background: #fff8e8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #5a3210;
+}
+
+.sc-summary-stats-fold {
+  width: 100%;
+  margin-top: 2px;
+  text-align: left;
+}
+
+.sc-summary-stats-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5a3210;
+  user-select: none;
+}
+
+.sc-summary-stats-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sc-summary-stats-fold > summary::after {
+  content: "▸";
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.sc-summary-stats-fold[open] > summary::after {
+  content: "▾";
+}
+
+.sc-summary-stats {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+  max-height: 7.5em;
+  overflow: auto;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: #5a3210;
+  text-align: left;
+}
+
+.sc-summary-stats li {
+  white-space: nowrap;
+}
+
+.sc-summary-info {
+  margin-top: 4px;
+  border: 1px solid #8a5a2a;
+  border-radius: 8px;
+  background: #f3e2c0;
+  color: #5a3210;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.sc-hero-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sc-info-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #8a5a2a;
+  border-radius: 999px;
+  background: #f3e2c0;
+  color: #5a3210;
+  font-family: Cinzel, serif;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sc-modal-stats {
+  max-width: min(1100px, 96vw);
+}
+
+.sc-stat-table-wrap {
+  overflow: auto;
+  max-height: min(70vh, 560px);
+  border: 2px solid #c9a36a;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.sc-stat-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.sc-stat-table th,
+.sc-stat-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2c896;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.sc-stat-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f3e2c0;
+  color: #5a3210;
+  font-weight: 800;
+}
+
+.sc-stat-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff8e8;
+  text-align: left;
+  font-weight: 800;
+  color: #5a3210;
+  border-right: 1px solid #e2c896;
+}
+
+.sc-stat-table-total th,
+.sc-stat-table-total td {
+  background: #efe0c4;
+  font-weight: 800;
+}
+
+.sc-stat-table-total th {
+  background: #e8d4a8;
+}
+
 .sc-toolbar {
   display: flex;
   flex-wrap: wrap;
