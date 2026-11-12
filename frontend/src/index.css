@@ -3950,7 +3950,8 @@ input[type="range"] {
 .sc-gear-slot.filled {
   border-color: #c4921a;
   box-shadow: 0 0 0 2px rgba(244, 196, 48, 0.35);
-  background: #1a1008;
+  /* Light fill so gear/stone alpha edges don't look punched out on black */
+  background: #fffaf0;
 }
 
 .sc-gear-slot.locked {
@@ -4109,7 +4110,11 @@ input[type="range"] {
 .sc-gear-slot.stone-slot img {
   object-fit: contain;
   transform: none;
-  background: transparent;
+  background: #fffaf0;
+}
+
+.sc-gear-slot.filled img {
+  background: #fffaf0;
 }
 
 .sc-enable-row,
