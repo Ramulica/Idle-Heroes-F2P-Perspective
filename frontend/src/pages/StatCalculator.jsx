@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
+import HeroStageBadge from "../components/HeroStageBadge.jsx";
 import {
   ENABLE_COUNT,
   GEAR_COUNT,
@@ -61,13 +62,14 @@ import {
   INFUSION_ICON,
   INFUSION_MAX,
   INFUSION_MIN,
-  awakeningSpeedChoices,
+  awakeningSpeedRange,
   awakeningStatCount,
   awakeningStatPool,
   defaultAwakening,
   defaultHeroProgress,
   optionalsForStage,
-  stageAllowsOptionals,
+  resolvedStageOptionals,
+  stageLocksOptionals,
 } from "../heroProgress";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
@@ -264,8 +266,7 @@ function StageStarButton({ stageId, onClick, disabled }) {
       disabled={disabled}
       title={disabled ? "Pick a hero first" : `Hero stage · ${stage.label}`}
     >
-      <span className="sc-stage-star-shape" aria-hidden="true" />
-      <span className="sc-stage-star-mark">{stage.mark}</span>
+      <HeroStageBadge stageId={stage.id} templeLevel={1} />
     </button>
   );
 }
@@ -301,6 +302,17 @@ function AwakeningButton({ awakening, onClick, disabled }) {
       <span>{tier || "Aw"}</span>
     </button>
   );
+}
+
+function awakenDraftFromProgress(awakening) {
+  return awakening ? { ...awakening, stats: [...(awakening.stats || [])] } : defaultAwakening();
+}
+
+function clampAwakenSpeed(tierId, value) {
+  const { min, max } = awakeningSpeedRange(tierId);
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
 }
 
 function HeroCard({
@@ -1333,6 +1345,17 @@ export default function StatCalculator() {
       const progress = slot?.progress || defaultHeroProgress();
       const stageId = picker.stageId || progress.stageId;
       const optionals = optionalsForStage(stageId);
+      const locked = stageLocksOptionals(stageId);
+      const currentOptionals = resolvedStageOptionals(
+        stageId,
+        picker.optionals || progress.optionals
+      );
+      const stageGroups = [
+        { id: "E", title: "E" },
+        { id: "V", title: "Void" },
+        { id: "T", title: "Transcendence" },
+        { id: "D", title: "Destiny" },
+      ];
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Hero stage`}
@@ -1341,49 +1364,66 @@ export default function StatCalculator() {
           <p className="muted sc-modal-lead">
             E5 → V1–V4 → T1–T5 → D1–D6. Temple +levels are not used here.
           </p>
-          <div className="sc-level-grid sc-stage-grid">
-            {HERO_STAGE_OPTIONS.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                className={`sc-level-chip${row.id === stageId ? " selected" : ""}`}
-                onClick={() =>
-                  setPicker({
-                    ...picker,
-                    stageId: row.id,
-                  })
-                }
-              >
-                {row.label}
-              </button>
-            ))}
-          </div>
+          {stageGroups.map((group) => (
+            <section key={group.id} className="sc-stage-group">
+              <h4>{group.title}</h4>
+              <div className="hero-stage-picks">
+                {HERO_STAGE_OPTIONS.filter((row) => row.group === group.id).map(
+                  (row) => {
+                    const selected = row.id === stageId;
+                    return (
+                      <button
+                        key={row.id}
+                        type="button"
+                        className={`hero-stage-pick${selected ? " selected" : ""}`}
+                        onClick={() =>
+                          setPicker({
+                            ...picker,
+                            stageId: row.id,
+                            optionals: resolvedStageOptionals(
+                              row.id,
+                              picker.optionals || progress.optionals
+                            ),
+                          })
+                        }
+                      >
+                        <HeroStageBadge stageId={row.id} templeLevel={1} />
+                        <span>{row.label}</span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </section>
+          ))}
           {optionals.length ? (
             <section className="sc-stage-optionals">
               <h4>Core &amp; skill subs</h4>
               <p className="muted">
-                Only for T / D stages. Shown here in the popup, not on the card.
+                {locked
+                  ? "Destiny needs the core and all skill subs — selected by default."
+                  : "Only for T / D stages. Shown here in the popup, not on the card."}
               </p>
               <div className="sc-optional-grid">
                 {optionals.map((item) => {
-                  const on = Boolean(
-                    (picker.optionals || progress.optionals)?.[item.id]
-                  );
+                  const on = Boolean(currentOptionals[item.id]);
                   return (
                     <button
                       key={item.id}
                       type="button"
                       className={`sc-optional-chip${on ? " selected" : ""}`}
-                      onClick={() =>
+                      disabled={locked}
+                      onClick={() => {
+                        if (locked) return;
                         setPicker({
                           ...picker,
                           stageId,
                           optionals: {
-                            ...(picker.optionals || progress.optionals),
+                            ...currentOptionals,
                             [item.id]: !on,
                           },
-                        })
-                      }
+                        });
+                      }}
                     >
                       {item.label}
                     </button>
@@ -1397,15 +1437,9 @@ export default function StatCalculator() {
               className="gold-btn"
               type="button"
               onClick={() => {
-                const nextOptionals = stageAllowsOptionals(stageId)
-                  ? {
-                      ...progress.optionals,
-                      ...(picker.optionals || {}),
-                    }
-                  : defaultHeroProgress().optionals;
                 patchProgress(picker.slotIndex, {
                   stageId,
-                  optionals: nextOptionals,
+                  optionals: resolvedStageOptionals(stageId, currentOptionals),
                 });
                 setPicker(null);
               }}
@@ -1453,23 +1487,30 @@ export default function StatCalculator() {
     if (picker.type === "hero-awakening") {
       const progress =
         board.slots[picker.slotIndex]?.progress || defaultHeroProgress();
-      const draft = picker.draft || progress.awakening || defaultAwakening();
-      const step = picker.step || "tier";
+      const draft = picker.draft || awakenDraftFromProgress(progress.awakening);
+      const panel = picker.panel || "summary";
       const tierId = draft.tierId;
-      const speedChoices = awakeningSpeedChoices(tierId);
+      const tierMeta = AWAKENING_TIERS.find((row) => row.id === tierId);
+      const speedSpan = awakeningSpeedRange(tierId);
       const needStats = awakeningStatCount(tierId);
       const pool = awakeningStatPool(tierId);
-      const picked = Array.from({ length: needStats }, (_, i) => draft.stats?.[i] || null);
+      const picked = Array.from(
+        { length: needStats },
+        (_, i) => draft.stats?.[i] || null
+      );
 
-      if (step === "tier") {
+      if (panel === "tier") {
         return (
           <Modal
-            title={`${slotTitle(picker.slotIndex)} · Awakening`}
-            onClose={() => setPicker(null)}
+            title={`${slotTitle(picker.slotIndex)} · Awakening tier`}
+            onClose={() =>
+              setPicker({
+                ...picker,
+                panel: "summary",
+              })
+            }
           >
-            <p className="muted sc-modal-lead">
-              Pick copy rank E−…X. Speed and % stats come next.
-            </p>
+            <p className="muted sc-modal-lead">Pick copy rank E−…X.</p>
             <div className="sc-level-grid sc-awaken-grid">
               {AWAKENING_TIERS.map((row) => (
                 <button
@@ -1484,75 +1525,12 @@ export default function StatCalculator() {
                     setPicker({
                       type: "hero-awakening",
                       slotIndex: picker.slotIndex,
-                      step: "speed",
+                      panel: "summary",
                       draft: next,
                     });
                   }}
                 >
                   {row.label}
-                </button>
-              ))}
-            </div>
-            {progress.awakening ? (
-              <div className="row-actions sc-pick-actions">
-                <button
-                  className="tan-btn"
-                  type="button"
-                  onClick={() => {
-                    patchProgress(picker.slotIndex, { awakening: null });
-                    setPicker(null);
-                  }}
-                >
-                  Clear awakening
-                </button>
-              </div>
-            ) : null}
-          </Modal>
-        );
-      }
-
-      if (step === "speed") {
-        return (
-          <Modal
-            title={`${slotTitle(picker.slotIndex)} · Awakening ${tierId} · Speed`}
-            onClose={() => setPicker(null)}
-          >
-            <p className="muted sc-modal-lead">
-              Speed window is ±3 tiers around {tierId} (exact values can be
-              tuned later).
-            </p>
-            <div className="sc-level-grid sc-infusion-grid">
-              {speedChoices.map((spd) => (
-                <button
-                  key={spd}
-                  type="button"
-                  className={`sc-level-chip${
-                    spd === draft.speed ? " selected" : ""
-                  }`}
-                  onClick={() => {
-                    const next = {
-                      ...draft,
-                      speed: spd,
-                      stats: Array.from(
-                        { length: needStats },
-                        (_, i) => draft.stats?.[i] || null
-                      ),
-                    };
-                    if (needStats <= 0) {
-                      patchProgress(picker.slotIndex, { awakening: next });
-                      setPicker(null);
-                      return;
-                    }
-                    setPicker({
-                      type: "hero-awakening",
-                      slotIndex: picker.slotIndex,
-                      step: "stats",
-                      draft: next,
-                      statIndex: 0,
-                    });
-                  }}
-                >
-                  {spd}
                 </button>
               ))}
             </div>
@@ -1562,10 +1540,8 @@ export default function StatCalculator() {
                 type="button"
                 onClick={() =>
                   setPicker({
-                    type: "hero-awakening",
-                    slotIndex: picker.slotIndex,
-                    step: "tier",
-                    draft,
+                    ...picker,
+                    panel: "summary",
                   })
                 }
               >
@@ -1576,76 +1552,174 @@ export default function StatCalculator() {
         );
       }
 
-      const statIndex = Math.min(
-        Math.max(0, Number(picker.statIndex) || 0),
-        Math.max(0, needStats - 1)
-      );
-      return (
-        <Modal
-          title={`${slotTitle(picker.slotIndex)} · Awakening ${tierId} · Stat ${
-            statIndex + 1
-          }/${needStats}`}
-          onClose={() => setPicker(null)}
-        >
-          <p className="muted sc-modal-lead">
-            Choose {needStats} special stat{needStats > 1 ? "s" : ""} for this
-            copy. Values come later — pick the labels for now.
-          </p>
-          <p className="sc-awaken-picked">
-            {picked.map((id, i) => (
-              <span key={i}>{id || `Stat ${i + 1}?`}</span>
-            ))}
-          </p>
-          <div className="sc-awaken-stat-list">
-            {pool.map((name) => {
-              const usedElsewhere = picked.some(
-                (id, i) => id === name && i !== statIndex
-              );
-              const on = picked[statIndex] === name;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  className={`sc-awaken-stat${on ? " selected" : ""}`}
-                  disabled={usedElsewhere}
-                  onClick={() => {
-                    const nextStats = [...picked];
-                    nextStats[statIndex] = name;
-                    const next = { ...draft, stats: nextStats };
-                    if (statIndex + 1 < needStats) {
+      if (panel === "stat") {
+        const statIndex = Math.min(
+          Math.max(0, Number(picker.statIndex) || 0),
+          Math.max(0, needStats - 1)
+        );
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · Skill ${statIndex + 1}`}
+            onClose={() =>
+              setPicker({
+                ...picker,
+                panel: "summary",
+                statIndex: undefined,
+              })
+            }
+          >
+            <p className="muted sc-modal-lead">
+              Choose skill {statIndex + 1} of {needStats} for {tierId}.
+            </p>
+            <div className="sc-awaken-stat-list">
+              {pool.map((name) => {
+                const usedElsewhere = picked.some(
+                  (id, i) => id === name && i !== statIndex
+                );
+                const on = picked[statIndex] === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`sc-awaken-stat${on ? " selected" : ""}`}
+                    disabled={usedElsewhere}
+                    onClick={() => {
+                      const nextStats = [...picked];
+                      nextStats[statIndex] = name;
                       setPicker({
                         type: "hero-awakening",
                         slotIndex: picker.slotIndex,
-                        step: "stats",
-                        draft: next,
-                        statIndex: statIndex + 1,
+                        panel: "summary",
+                        draft: { ...draft, stats: nextStats },
                       });
-                    } else {
-                      patchProgress(picker.slotIndex, { awakening: next });
-                      setPicker(null);
-                    }
-                  }}
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
-          <div className="row-actions sc-pick-actions">
+                    }}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="row-actions sc-pick-actions">
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() =>
+                  setPicker({
+                    ...picker,
+                    panel: "summary",
+                    statIndex: undefined,
+                  })
+                }
+              >
+                Back
+              </button>
+            </div>
+          </Modal>
+        );
+      }
+
+      return (
+        <Modal
+          title={`${slotTitle(picker.slotIndex)} · Awakening`}
+          onClose={() => setPicker(null)}
+        >
+          <p className="muted sc-modal-lead">
+            Tap Awakening to pick the tier, edit Speed, then tap each skill to
+            choose from its pool.
+          </p>
+          <div className="sc-awaken-summary">
             <button
-              className="tan-btn"
               type="button"
+              className="sc-awaken-summary-row"
               onClick={() =>
                 setPicker({
                   type: "hero-awakening",
                   slotIndex: picker.slotIndex,
-                  step: statIndex > 0 ? "stats" : "speed",
+                  panel: "tier",
                   draft,
-                  statIndex: Math.max(0, statIndex - 1),
                 })
               }
             >
-              Back
+              <span className="sc-awaken-summary-label">Awakening</span>
+              <span
+                className="sc-awaken-summary-value"
+                style={{ color: tierMeta?.color || undefined }}
+              >
+                {tierId}
+              </span>
+            </button>
+
+            <label className="sc-awaken-summary-row sc-awaken-speed-row">
+              <span className="sc-awaken-summary-label">Speed</span>
+              <input
+                className="sc-awaken-speed-input"
+                type="number"
+                min={speedSpan.min}
+                max={speedSpan.max}
+                value={draft.speed ?? speedSpan.min}
+                onChange={(event) => {
+                  const nextSpeed = clampAwakenSpeed(tierId, event.target.value);
+                  setPicker({
+                    ...picker,
+                    panel: "summary",
+                    draft: { ...draft, speed: nextSpeed },
+                  });
+                }}
+              />
+              <span className="muted sc-awaken-speed-hint">
+                {speedSpan.min}–{speedSpan.max}
+              </span>
+            </label>
+
+            {Array.from({ length: needStats }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className="sc-awaken-summary-row"
+                onClick={() =>
+                  setPicker({
+                    type: "hero-awakening",
+                    slotIndex: picker.slotIndex,
+                    panel: "stat",
+                    statIndex: i,
+                    draft,
+                  })
+                }
+              >
+                <span className="sc-awaken-summary-label">Skill {i + 1}</span>
+                <span className="sc-awaken-summary-value">
+                  {picked[i] || "Pick…"}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="row-actions sc-pick-actions">
+            {progress.awakening ? (
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() => {
+                  patchProgress(picker.slotIndex, { awakening: null });
+                  setPicker(null);
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                const next = {
+                  ...draft,
+                  speed: clampAwakenSpeed(tierId, draft.speed),
+                  stats: picked,
+                };
+                patchProgress(picker.slotIndex, { awakening: next });
+                setPicker(null);
+              }}
+            >
+              Save
             </button>
           </div>
         </Modal>
@@ -1666,7 +1740,7 @@ export default function StatCalculator() {
                 title="Stat Calculator"
                 steps={[
                   "Top summary shows each position and its hero. Tap i on a card for a local breakdown.",
-                  "Under each hero name: star (stage), infusion (1–60), and awakening copy. Icons only — details open in popups.",
+                  "Under each hero name: stage star, infusion, and awakening. Icons only — details open in popups. Awakening opens a summary (tier, speed, skills).",
                   "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Every choice opens a popup.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",
@@ -1853,17 +1927,19 @@ export default function StatCalculator() {
                 onInfo={() =>
                   setPicker({ type: "hero-stats", slotIndex: index })
                 }
-                onPickStage={() =>
+                onPickStage={() => {
+                  const progress =
+                    board.slots[index].progress || defaultHeroProgress();
                   setPicker({
                     type: "hero-stage",
                     slotIndex: index,
-                    stageId: board.slots[index].progress?.stageId || "E5",
-                    optionals: {
-                      ...(board.slots[index].progress?.optionals ||
-                        defaultHeroProgress().optionals),
-                    },
-                  })
-                }
+                    stageId: progress.stageId || "E5",
+                    optionals: resolvedStageOptionals(
+                      progress.stageId || "E5",
+                      progress.optionals
+                    ),
+                  });
+                }}
                 onPickInfusion={() =>
                   setPicker({ type: "hero-infusion", slotIndex: index })
                 }
@@ -1871,10 +1947,10 @@ export default function StatCalculator() {
                   setPicker({
                     type: "hero-awakening",
                     slotIndex: index,
-                    step: "tier",
-                    draft:
-                      board.slots[index].progress?.awakening ||
-                      defaultAwakening(),
+                    panel: "summary",
+                    draft: awakenDraftFromProgress(
+                      board.slots[index].progress?.awakening
+                    ),
                   })
                 }
               />

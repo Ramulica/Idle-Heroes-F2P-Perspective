@@ -247,16 +247,11 @@ function clampInt(value, min, max, fallback) {
 export function normalizeHeroProgress(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const stageId = HERO_STAGE_BY_ID[src.stageId] ? src.stageId : "E5";
-  const optionals = { ...EMPTY_OPTIONALS };
+  const rawOptionals = { ...EMPTY_OPTIONALS };
   HERO_T_OPTIONALS.forEach((item) => {
-    optionals[item.id] = Boolean(src.optionals?.[item.id] ?? src[item.id]);
+    rawOptionals[item.id] = Boolean(src.optionals?.[item.id] ?? src[item.id]);
   });
-  // D stages imply full T optionals available/owned for display defaults
-  if (stageId.startsWith("D")) {
-    HERO_T_OPTIONALS.forEach((item) => {
-      optionals[item.id] = true;
-    });
-  }
+  const optionals = resolvedStageOptionals(stageId, rawOptionals);
 
   let awakening = null;
   if (src.awakening && typeof src.awakening === "object") {
@@ -301,4 +296,26 @@ export function optionalsForStage(stageId) {
     const minIdx = order.indexOf(item.min);
     return minIdx >= 0 && minIdx <= idx;
   });
+}
+
+/** D1–D6 always own core + all skill subs. */
+export function stageLocksOptionals(stageId) {
+  return Boolean(stageId && String(stageId).startsWith("D"));
+}
+
+export function resolvedStageOptionals(stageId, previous = EMPTY_OPTIONALS) {
+  if (!stageAllowsOptionals(stageId)) return { ...EMPTY_OPTIONALS };
+  if (stageLocksOptionals(stageId)) {
+    const out = { ...EMPTY_OPTIONALS };
+    HERO_T_OPTIONALS.forEach((item) => {
+      out[item.id] = true;
+    });
+    return out;
+  }
+  const allowed = new Set(optionalsForStage(stageId).map((item) => item.id));
+  const out = { ...EMPTY_OPTIONALS };
+  HERO_T_OPTIONALS.forEach((item) => {
+    out[item.id] = allowed.has(item.id) ? Boolean(previous?.[item.id]) : false;
+  });
+  return out;
 }

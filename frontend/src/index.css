@@ -4429,6 +4429,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   border-radius: 14px;
   background: linear-gradient(180deg, #fffaf0, #efe0c4);
   min-width: 0;
+  height: 100%;
 }
 
 .sc-hero-card-head {
@@ -4488,22 +4489,28 @@ button.sc-aura-badge:hover .sc-aura-core {
   text-align: center;
   font-size: 0.78rem;
   font-weight: 800;
-  min-height: 1.1em;
+  min-height: 2.4em;
+  max-height: 2.4em;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sc-progress-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  gap: 6px;
   align-items: center;
   justify-items: center;
   margin: 0 0 2px;
+  min-height: 52px;
 }
 
 .sc-progress-btn {
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   border: none;
   padding: 0;
   background: transparent;
@@ -4518,41 +4525,18 @@ button.sc-aura-badge:hover .sc-aura-core {
   cursor: default;
 }
 
-.sc-stage-star-shape {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(180deg, #ffe27a, #f4c430);
-  clip-path: polygon(
-    50% 4%,
-    61% 35%,
-    95% 35%,
-    68% 57%,
-    79% 91%,
-    50% 72%,
-    21% 91%,
-    32% 57%,
-    5% 35%,
-    39% 35%
-  );
-  border: none;
-  box-shadow: 0 0 0 1px #8a5a2a;
+.sc-stage-star .hero-mark {
+  width: 46px;
+  height: 46px;
 }
 
-.sc-stage-star-mark {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 0.55rem;
-  font-weight: 900;
-  color: #3a2818;
-  line-height: 1;
-  pointer-events: none;
+.sc-stage-star .hero-mark-text {
+  font-size: 0.82rem;
 }
 
 .sc-infusion-btn img {
-  width: 32px;
-  height: 32px;
+  width: 46px;
+  height: 46px;
   object-fit: cover;
   border-radius: 999px;
   display: block;
@@ -4563,7 +4547,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 900;
   color: #ffe27a;
   text-shadow:
@@ -4576,13 +4560,13 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-awaken-btn {
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   border-radius: 999px;
   border: 2px solid #8a5a2a;
   background: #efe0c4;
   color: #8a6a3a;
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -4602,6 +4586,15 @@ button.sc-aura-badge:hover .sc-aura-core {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   max-height: 48vh;
   overflow: auto;
+}
+
+.sc-stage-group {
+  margin-top: 10px;
+}
+
+.sc-stage-group h4 {
+  margin: 0 0 6px;
+  font-family: Cinzel, serif;
 }
 
 .sc-stage-optionals {
@@ -4635,6 +4628,66 @@ button.sc-aura-badge:hover .sc-aura-core {
   background: #3a2818;
   color: #f4c430;
   border-color: #c9a227;
+}
+
+.sc-optional-chip:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.sc-awaken-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-awaken-summary-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #7a4a22;
+  background: #fff8e8;
+  color: #3a2818;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sc-awaken-summary-label {
+  color: #6a4424;
+  font-size: 0.82rem;
+}
+
+.sc-awaken-summary-value {
+  justify-self: end;
+  font-size: 0.95rem;
+}
+
+.sc-awaken-speed-row {
+  grid-template-columns: 110px auto auto;
+  cursor: default;
+}
+
+.sc-awaken-speed-input {
+  width: 88px;
+  justify-self: end;
+  text-align: center;
+  font-weight: 900;
+  font-size: 1rem;
+  padding: 6px 8px;
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #3a2818;
+}
+
+.sc-awaken-speed-hint {
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .sc-awaken-chip {
