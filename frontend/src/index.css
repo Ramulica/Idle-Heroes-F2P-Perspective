@@ -4056,16 +4056,35 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-pick-grid-monster {
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  justify-content: stretch;
+  align-items: stretch;
+  max-height: 56vh;
+}
+
+.sc-pick-grid-monster .sc-pick {
+  width: auto;
+  min-height: 132px;
+  justify-content: flex-start;
 }
 
 .sc-pick-monster {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
   border-radius: 999px;
   display: block;
-  margin: 0 auto 4px;
+  margin: 0 auto 6px;
+  background: #1a1020;
+}
+
+.sc-pick-grid-monster .sc-pick > span {
+  min-height: 2.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
 }
 
 .sc-monster-detail {
@@ -4086,7 +4105,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   width: 120px;
   height: 120px;
   border-radius: 999px;
-  object-fit: cover;
+  object-fit: contain;
   border: 3px solid #b8860b;
   background: #1a1020;
 }
@@ -4095,17 +4114,14 @@ button.sc-aura-badge:hover .sc-aura-core {
   min-width: min(100%, 220px);
 }
 
-.sc-monster-detail-info strong {
-  display: block;
-  font-family: Cinzel, serif;
-  font-size: 1.15rem;
-  margin-bottom: 6px;
-}
-
 .sc-monster-detail-stats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #7a4a22;
+  background: #3a2818;
   font-weight: 700;
   color: #f4c430;
 }
@@ -4184,15 +4200,14 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .sc-monster-runes {
   position: relative;
-  width: 180px;
-  height: 150px;
+  width: 220px;
+  height: 190px;
   margin: 4px auto 0;
 }
 
 .sc-monster-rune {
   position: absolute;
-  width: 72px;
-  height: 72px;
+  width: 88px;
   border: none;
   background: transparent;
   padding: 0;
@@ -4209,8 +4224,8 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-monster-rune img {
-  width: 56px;
-  height: 56px;
+  width: 78px;
+  height: auto;
   object-fit: contain;
   display: block;
 }
@@ -4228,12 +4243,12 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-monster-rune-1 {
-  left: 8px;
+  left: 6px;
   bottom: 0;
 }
 
 .sc-monster-rune-2 {
-  right: 8px;
+  right: 6px;
   bottom: 0;
 }
 
@@ -4784,5 +4799,9 @@ button.sc-aura-badge:hover .sc-aura-core {
   .sc-aura-badge {
     width: 96px;
     height: 96px;
+  }
+
+  .sc-pick-grid-monster {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

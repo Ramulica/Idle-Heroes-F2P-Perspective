@@ -833,7 +833,6 @@ export default function StatCalculator() {
             <div className="sc-monster-detail-top">
               <img src={def.icon} alt="" className="sc-monster-detail-icon" />
               <div className="sc-monster-detail-info">
-                <strong>{def.name}</strong>
                 <div className="sc-monster-detail-stats">
                   {lines.map((row, index) => (
                     <span key={`${row.stat}-${index}`}>{formatMonsterStat(row)}</span>
