@@ -34,6 +34,48 @@ import {
   stoneStatTone,
   writeStatCalculator,
 } from "../statCalculator";
+import {
+  AURA_CORE_ICON,
+  AURA_GROUP_BONUSES,
+  FACTION_AURA,
+  FACTION_ORDER,
+  computeFactionAura,
+  formatAuraPct,
+} from "../factionAura";
+
+function AuraBadge({ aura, onClick, interactive = true }) {
+  const slots = aura.slotFactions;
+  const body = (
+    <>
+      <span className="sc-aura-core">
+        <img src={AURA_CORE_ICON} alt="" />
+      </span>
+      {slots.map((faction, index) => (
+        <span
+          key={index}
+          className={`sc-aura-petal sc-aura-petal-${index}${
+            faction ? " filled" : ""
+          }`}
+        >
+          {faction ? <img src={faction.icon} alt="" /> : null}
+        </span>
+      ))}
+    </>
+  );
+  if (!interactive) {
+    return <div className="sc-aura-badge">{body}</div>;
+  }
+  return (
+    <button
+      type="button"
+      className="sc-aura-badge"
+      onClick={onClick}
+      title="Faction Aura — tap for breakdown"
+    >
+      {body}
+    </button>
+  );
+}
 
 function StatLines({ stats, compact = false, colored = false }) {
   if (!stats?.length) return <span className="muted">No stats</span>;
@@ -256,6 +298,11 @@ export default function StatCalculator() {
         title: slotTitle(index),
         hero: heroOf(slot.heroId),
       })),
+    [board.slots]
+  );
+
+  const factionAura = useMemo(
+    () => computeFactionAura(board.slots, heroOf),
     [board.slots]
   );
 
@@ -788,6 +835,91 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "aura") {
+      const aura = factionAura;
+      const t = aura.totals;
+      return (
+        <Modal title="Faction Aura" onClose={() => setPicker(null)}>
+          <div className="sc-aura-modal">
+            <div className="sc-aura-modal-top">
+              <AuraBadge aura={aura} interactive={false} />
+              <div className="sc-aura-current">
+                <strong>Current team bonuses</strong>
+                {!aura.fullTeam ? (
+                  <p className="muted">(deploy 6 heroes to activate the Aura)</p>
+                ) : null}
+                <p className="sc-aura-basic">
+                  +{formatAuraPct(t.hp)} HP · +{formatAuraPct(t.attack)} Attack
+                </p>
+                <p className="sc-aura-special">
+                  +{formatAuraPct(t.damageReduction)} Damage Reduction
+                </p>
+                <p className="sc-aura-special">
+                  +{formatAuraPct(t.controlImmunity)} Control Immunity
+                </p>
+              </div>
+            </div>
+
+            <section className="sc-aura-section">
+              <h4>Multiple heroes per faction</h4>
+              <p className="muted">
+                Each group size (1–6) applies once. Example: 3+3 → only the 3
+                bonus; 2+4 → both.
+              </p>
+              <ul className="sc-aura-list">
+                {[1, 2, 3, 4, 5, 6].map((size) => {
+                  const bonus = AURA_GROUP_BONUSES[size];
+                  const on = aura.activeGroups.some((g) => g.size === size);
+                  return (
+                    <li key={size} className={on ? "active" : ""}>
+                      {size} hero{size > 1 ? "es" : ""}: +{formatAuraPct(bonus.hp)}{" "}
+                      HP, +{formatAuraPct(bonus.attack)} Attack
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            <section className="sc-aura-section">
+              <h4>Additional bonuses per hero</h4>
+              <p className="muted">
+                Special stats only — HP / Attack above stay muted for this tool.
+              </p>
+              <ul className="sc-aura-list sc-aura-faction-list">
+                {FACTION_ORDER.map((name) => {
+                  const def = FACTION_AURA[name];
+                  const row = aura.perFaction.find((p) => p.faction === name);
+                  const on = Boolean(row);
+                  const bits = [];
+                  if (def.damageReduction) {
+                    bits.push(`+${formatAuraPct(def.damageReduction)} DR`);
+                  }
+                  if (def.controlImmunity) {
+                    bits.push(`+${formatAuraPct(def.controlImmunity)} Ctrl Imm`);
+                  }
+                  return (
+                    <li key={name} className={on ? "active" : ""}>
+                      <img src={def.icon} alt="" />
+                      <span>
+                        {name}
+                        {on ? ` ×${row.count}` : ""}: {bits.join(", ")}
+                        {on && def.damageReduction
+                          ? ` → +${formatAuraPct(row.damageReduction)} DR`
+                          : ""}
+                        {on && def.controlImmunity
+                          ? ` → +${formatAuraPct(row.controlImmunity)} Ctrl Imm`
+                          : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          </div>
+        </Modal>
+      );
+    }
+
     return null;
   }
 
@@ -861,11 +993,17 @@ export default function StatCalculator() {
         </section>
 
         <section className="sc-block">
-          <div className="calc-row-head">
-            <h3>Hero lineup</h3>
-            <HelpTip
-              title="Hero lineup"
-              message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup."
+          <div className="calc-row-head sc-lineup-head">
+            <div className="sc-lineup-head-left">
+              <h3>Hero lineup</h3>
+              <HelpTip
+                title="Hero lineup"
+                message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup. Top-right Faction Aura uses each hero’s faction (special stats: DR and Control Immunity)."
+              />
+            </div>
+            <AuraBadge
+              aura={factionAura}
+              onClick={() => setPicker({ type: "aura" })}
             />
           </div>
 

@@ -3820,6 +3820,166 @@ input[type="range"] {
   margin: 10px 0 12px;
 }
 
+.sc-lineup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sc-lineup-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-aura-badge {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+button.sc-aura-badge:hover .sc-aura-core {
+  filter: brightness(1.08);
+}
+
+.sc-aura-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.sc-aura-core img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sc-aura-petal {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid #b8860b;
+  background: #efe0c4;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.sc-aura-petal.filled {
+  background: #2a1a0c;
+  box-shadow: 0 0 0 1px rgba(184, 134, 11, 0.45);
+}
+
+.sc-aura-petal img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 6 petals around center (clock positions) */
+.sc-aura-petal-0 { left: 32px; top: 2px; }
+.sc-aura-petal-1 { right: 4px; top: 18px; }
+.sc-aura-petal-2 { right: 4px; bottom: 18px; }
+.sc-aura-petal-3 { left: 32px; bottom: 2px; }
+.sc-aura-petal-4 { left: 4px; bottom: 18px; }
+.sc-aura-petal-5 { left: 4px; top: 18px; }
+
+.sc-aura-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sc-aura-modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sc-aura-current {
+  min-width: min(100%, 260px);
+  padding: 10px 12px;
+  border: 2px solid #7a4a22;
+  border-radius: 12px;
+  background: #3a2818;
+  color: #fff8e8;
+}
+
+.sc-aura-current strong {
+  display: block;
+  margin-bottom: 4px;
+  font-family: Cinzel, serif;
+}
+
+.sc-aura-current .muted {
+  color: #d2b48c;
+  margin: 0 0 6px;
+}
+
+.sc-aura-basic {
+  margin: 0 0 4px;
+  color: #a89880;
+  font-weight: 700;
+}
+
+.sc-aura-special {
+  margin: 0;
+  color: #f4c430;
+  font-weight: 800;
+}
+
+.sc-aura-section h4 {
+  margin: 0 0 4px;
+  font-family: Cinzel, serif;
+}
+
+.sc-aura-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.sc-aura-list li.active {
+  color: #1f7a2c;
+}
+
+.sc-aura-faction-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.sc-aura-faction-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sc-aura-faction-list img {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid #8a5a2a;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .sc-monster-btn {
   width: 48px;
   height: 48px;
