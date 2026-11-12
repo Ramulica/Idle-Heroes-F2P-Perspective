@@ -345,6 +345,45 @@ def sg_calculator(request):
     return JsonResponse({"state": profile.sg_calculator})
 
 
+def _stat_calculator_progress(state):
+    if not isinstance(state, dict):
+        return False
+    if state.get("lineups"):
+        return True
+    board = state.get("board") or {}
+    if not isinstance(board, dict):
+        return False
+    if board.get("monster"):
+        return True
+    slots = board.get("slots") or []
+    if not isinstance(slots, list):
+        return False
+    return any(
+        isinstance(slot, dict) and slot.get("heroId") for slot in slots
+    )
+
+
+@require_http_methods(["GET", "PUT", "PATCH"])
+def stat_calculator(request):
+    if not request.user.is_authenticated:
+        if request.method == "GET":
+            return JsonResponse({"state": {}})
+        return JsonResponse({"error": "Please log in to save."}, status=401)
+    profile = _profile(request.user)
+    if request.method == "GET":
+        return JsonResponse({"state": profile.stat_calculator or {}})
+    data = _json_body(request)
+    incoming = data.get("state") or {}
+    existing = profile.stat_calculator or {}
+    if not _stat_calculator_progress(incoming) and _stat_calculator_progress(
+        existing
+    ):
+        return JsonResponse({"state": existing})
+    profile.stat_calculator = incoming if isinstance(incoming, dict) else {}
+    profile.save(update_fields=["stat_calculator"])
+    return JsonResponse({"state": profile.stat_calculator})
+
+
 @login_required_json
 @require_http_methods(["GET", "POST"])
 def options_collection(request):

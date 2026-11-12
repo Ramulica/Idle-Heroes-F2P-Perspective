@@ -60,6 +60,7 @@ class UserProfile(models.Model):
         related_name="profile",
     )
     sg_calculator = models.JSONField(default=dict, blank=True)
+    stat_calculator = models.JSONField(default=dict, blank=True)
     cases_initialized = models.BooleanField(default=False)
 
     def __str__(self):

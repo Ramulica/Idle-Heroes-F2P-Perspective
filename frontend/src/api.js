@@ -65,6 +65,13 @@ export const api = {
       silent: true,
       body: JSON.stringify({ state }),
     }),
+  getStatCalc: () => request("/api/stat-calculator/"),
+  saveStatCalc: (state) =>
+    request("/api/stat-calculator/", {
+      method: "PUT",
+      silent: true,
+      body: JSON.stringify({ state }),
+    }),
   createOption: (payload) =>
     request("/api/options/", { method: "POST", body: JSON.stringify(payload) }),
     updateOption: (id, payload, options = {}) =>

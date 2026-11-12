@@ -9,6 +9,7 @@ urlpatterns = [
     path("logout/", views.logout_view),
     path("bootstrap/", views.bootstrap),
     path("sg-calculator/", views.sg_calculator),
+    path("stat-calculator/", views.stat_calculator),
     path("options/", views.options_collection),
     path("options/<int:option_id>/", views.option_detail),
     path("options/<int:option_id>/rate/", views.option_rate),

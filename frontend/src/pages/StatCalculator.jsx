@@ -29,12 +29,11 @@ import {
   monsterOf,
   newLineupId,
   patchSlot,
-  readStatCalculator,
   setSlotListValue,
   slotTitle,
   stoneStatTone,
-  writeStatCalculator,
 } from "../statCalculator";
+import { useStatCalculator } from "../useStatCalculator";
 import {
   AURA_CORE_ICON,
   AURA_GROUP_BONUSES,
@@ -311,13 +310,9 @@ function HeroCard({
 
 export default function StatCalculator() {
   const navigate = useNavigate();
-  const [state, setState] = useState(() => readStatCalculator());
+  const { guest, state, setState, loaded } = useStatCalculator();
   const [picker, setPicker] = useState(null);
   const [saveName, setSaveName] = useState("");
-
-  useEffect(() => {
-    writeStatCalculator(state);
-  }, [state]);
 
   const board = state.board;
   const monster = board.monster;
@@ -1181,6 +1176,15 @@ export default function StatCalculator() {
             </p>
           </div>
         </div>
+        {guest ? (
+          <p className="guest-banner">
+            Guest mode — this lineup stays on this device only. Log in to save
+            it to your account.
+          </p>
+        ) : null}
+        {!loaded ? (
+          <p className="muted">Loading saved lineup…</p>
+        ) : null}
 
         <section className="sc-summary">
           <div className="calc-row-head">

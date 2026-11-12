@@ -311,6 +311,13 @@ export function defaultStatCalculator() {
   return normalizeStatCalculator({});
 }
 
+export function hasStatCalculatorProgress(raw) {
+  const state = normalizeStatCalculator(raw);
+  if (state.lineups.length) return true;
+  if (state.board.monster) return true;
+  return state.board.slots.some((slot) => Boolean(slot.heroId));
+}
+
 export function readStatCalculator() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
