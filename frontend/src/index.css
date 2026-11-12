@@ -3820,10 +3820,22 @@ input[type="range"] {
   margin: 10px 0 12px;
 }
 
-.sc-lineup-head {
+.sc-lineup-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.sc-lineup-top-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.sc-lineup-head {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
@@ -3833,15 +3845,20 @@ input[type="range"] {
   gap: 8px;
 }
 
+.sc-lineup-top .sc-toolbar {
+  margin: 8px 0 0;
+}
+
 .sc-aura-badge {
   position: relative;
-  width: 92px;
-  height: 92px;
+  width: 108px;
+  height: 108px;
   flex-shrink: 0;
   border: none;
   padding: 0;
   background: transparent;
   cursor: pointer;
+  align-self: center;
 }
 
 button.sc-aura-badge:hover .sc-aura-core {
@@ -3852,8 +3869,8 @@ button.sc-aura-badge:hover .sc-aura-core {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   transform: translate(-50%, -50%);
   z-index: 2;
 }
@@ -3867,8 +3884,8 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .sc-aura-petal {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   border: 2px solid #b8860b;
   background: #efe0c4;
@@ -3878,7 +3895,7 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-aura-petal.filled {
-  background: #2a1a0c;
+  background: #1a1020;
   box-shadow: 0 0 0 1px rgba(184, 134, 11, 0.45);
 }
 
@@ -3890,12 +3907,12 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 /* 6 petals around center (clock positions) */
-.sc-aura-petal-0 { left: 32px; top: 2px; }
-.sc-aura-petal-1 { right: 4px; top: 18px; }
-.sc-aura-petal-2 { right: 4px; bottom: 18px; }
-.sc-aura-petal-3 { left: 32px; bottom: 2px; }
-.sc-aura-petal-4 { left: 4px; bottom: 18px; }
-.sc-aura-petal-5 { left: 4px; top: 18px; }
+.sc-aura-petal-0 { left: 38px; top: 2px; }
+.sc-aura-petal-1 { right: 4px; top: 22px; }
+.sc-aura-petal-2 { right: 4px; bottom: 22px; }
+.sc-aura-petal-3 { left: 38px; bottom: 2px; }
+.sc-aura-petal-4 { left: 4px; bottom: 22px; }
+.sc-aura-petal-5 { left: 4px; top: 22px; }
 
 .sc-aura-modal {
   display: flex;

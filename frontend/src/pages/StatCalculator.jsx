@@ -993,64 +993,68 @@ export default function StatCalculator() {
         </section>
 
         <section className="sc-block">
-          <div className="calc-row-head sc-lineup-head">
-            <div className="sc-lineup-head-left">
-              <h3>Hero lineup</h3>
-              <HelpTip
-                title="Hero lineup"
-                message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup. Top-right Faction Aura uses each hero’s faction (special stats: DR and Control Immunity)."
-              />
+          <div className="sc-lineup-top">
+            <div className="sc-lineup-top-main">
+              <div className="calc-row-head sc-lineup-head">
+                <div className="sc-lineup-head-left">
+                  <h3>Hero lineup</h3>
+                  <HelpTip
+                    title="Hero lineup"
+                    message="Six cards: Front 1–2 and Back 3–6. Tap any empty portrait or gear/enable/imprint slot to open a popup. Top-right Faction Aura uses each hero’s faction (special stats: DR and Control Immunity)."
+                  />
+                </div>
+              </div>
+
+              <div className="sc-toolbar">
+                <button
+                  className="gold-btn"
+                  type="button"
+                  onClick={() => {
+                    setSaveName("");
+                    setPicker({ type: "save" });
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={() => setPicker({ type: "lineups" })}
+                >
+                  Lineups
+                </button>
+                <button
+                  className="sc-monster-btn"
+                  type="button"
+                  title="Selected monster"
+                  onClick={() => setPicker({ type: "monster" })}
+                >
+                  {monster ? (
+                    <img src={monster.icon} alt={monster.name} />
+                  ) : (
+                    <span>?</span>
+                  )}
+                </button>
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={() => setPicker({ type: "monster" })}
+                >
+                  Select monster
+                </button>
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={() => updateBoard(emptyBoard())}
+                >
+                  Clear board
+                </button>
+              </div>
             </div>
             <AuraBadge
               aura={factionAura}
               onClick={() => setPicker({ type: "aura" })}
             />
-          </div>
-
-          <div className="sc-toolbar">
-            <button
-              className="gold-btn"
-              type="button"
-              onClick={() => {
-                setSaveName("");
-                setPicker({ type: "save" });
-              }}
-            >
-              Save
-            </button>
-            <button
-              className="tan-btn"
-              type="button"
-              onClick={() => setPicker({ type: "lineups" })}
-            >
-              Lineups
-            </button>
-            <button
-              className="sc-monster-btn"
-              type="button"
-              title="Selected monster"
-              onClick={() => setPicker({ type: "monster" })}
-            >
-              {monster ? (
-                <img src={monster.icon} alt={monster.name} />
-              ) : (
-                <span>?</span>
-              )}
-            </button>
-            <button
-              className="tan-btn"
-              type="button"
-              onClick={() => setPicker({ type: "monster" })}
-            >
-              Select monster
-            </button>
-            <button
-              className="tan-btn"
-              type="button"
-              onClick={() => updateBoard(emptyBoard())}
-            >
-              Clear board
-            </button>
           </div>
 
           <div className="sc-hero-row">
