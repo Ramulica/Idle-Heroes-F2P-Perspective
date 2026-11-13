@@ -138,7 +138,6 @@ function buildBlue(list, byId, rootX, rootY) {
   addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
 
   const up = dirLeftOfUp(0);
-  const left45 = dirLeftOfUp(45);
   const left60 = dirLeftOfUp(60);
   const left120 = dirLeftOfUp(120);
 
@@ -151,23 +150,23 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 1.1: 8 nodes at -45° from vertical
+  // 1.1: 8 nodes at absolute 210°
   addPolyline(list, byId, {
     prefix: "b-1-1-",
     parentId: b1,
     branch,
-    segments: [{ count: 8, dir: left45 }],
+    segments: [{ count: 8, dir: dirAbsolute(210) }],
     stats: BLUE_LEAVES[0],
   });
 
-  // 1.2: 2 vertical, then 6 at -45°
+  // 1.2: 2 vertical, then 6 at absolute 210°
   addPolyline(list, byId, {
     prefix: "b-1-2-",
     parentId: b1,
     branch,
     segments: [
       { count: 2, dir: up },
-      { count: 6, dir: left45 },
+      { count: 6, dir: dirAbsolute(210) },
     ],
     stats: BLUE_LEAVES[1],
   });
@@ -251,7 +250,6 @@ function buildRed(list, byId, rootX, rootY) {
   addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
 
   const up = dirRightOfUp(0);
-  const right45 = dirRightOfUp(45);
   const right60 = dirRightOfUp(60);
   const right120 = dirRightOfUp(120);
 
@@ -263,21 +261,23 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
+  // Mirror of blue 1.1: absolute 210° → 330°
   addPolyline(list, byId, {
     prefix: "r-1-1-",
     parentId: b1,
     branch,
-    segments: [{ count: 8, dir: right45 }],
+    segments: [{ count: 8, dir: dirAbsolute(330) }],
     stats: RED_LEAVES[0],
   });
 
+  // Mirror of blue 1.2: 2 up, then 6 @ 330°
   addPolyline(list, byId, {
     prefix: "r-1-2-",
     parentId: b1,
     branch,
     segments: [
       { count: 2, dir: up },
-      { count: 6, dir: right45 },
+      { count: 6, dir: dirAbsolute(330) },
     ],
     stats: RED_LEAVES[1],
   });
