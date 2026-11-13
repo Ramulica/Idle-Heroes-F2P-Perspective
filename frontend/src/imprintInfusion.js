@@ -110,25 +110,55 @@ function addRoot(list, byId, { id, branch, x, y }) {
   });
 }
 
+/** On each 8-node leaf, stats sit on nodes 1,2,3,5,6,7 (not 4 or 8). */
+const LEAF_STAT_NODES = new Set([1, 2, 3, 5, 6, 7]);
+
+function cloneRows(rows) {
+  return (rows || []).map((r) => ({ ...r }));
+}
+
+/** Apply leaf bonus only on circle indices 1,2,3,5,6,7 (1-based). */
+function perCircleStats(rows) {
+  return (index0) => {
+    const n = index0 + 1;
+    if (!LEAF_STAT_NODES.has(n)) return [];
+    return cloneRows(rows);
+  };
+}
+
+/**
+ * Like perCircleStats, plus optional tip-only rows on node 8
+ * (e.g. red 2.2 −50 Crit).
+ */
+function perCircleStatsWithTip(rows, tipRows) {
+  return (index0, total) => {
+    const n = index0 + 1;
+    if (n === total && tipRows?.length) return cloneRows(tipRows);
+    if (!LEAF_STAT_NODES.has(n)) return [];
+    return cloneRows(rows);
+  };
+}
+
+// Order: 1.1, 1.2, 2.1, 2.2, 3.1, 3.2
 const BLUE_LEAVES = [
-  [pct("Armor", 12)],
-  [pct("Dodge", 2.5), pct("Block", 7.5)],
-  [pct("Control Immunity", 3.3)],
-  [pct("Damage Reduction", 3.3), pct("Crit Damage Reduction", 3.3)],
-  [pct("All Damage Reduction", 2.5)],
-  [pct("Effect of Being Healed", 6.6)],
+  perCircleStats([pct("Armor", 12)]),
+  perCircleStats([pct("Dodge", 2.5), pct("Block", 7.5)]),
+  perCircleStats([pct("Control Immunity", 3.3)]),
+  perCircleStats([
+    pct("Damage Reduction", 3.3),
+    pct("Crit Damage Reduction", 3.3),
+  ]),
+  perCircleStats([pct("Effect of Being Healed", 6.6)]),
+  perCircleStats([pct("All Damage Reduction", 2.5)]),
 ];
 
 const RED_LEAVES = [
-  [pct("Crit", 3.3)],
-  [pct("Crit Damage", 9.5)],
-  [pct("Holy Damage", 7.5)],
-  (i, len) =>
-    i === len - 1
-      ? [pct("Precision", 6.6), flat("Crit", -50)]
-      : [pct("Precision", 6.6)],
-  [pct("All Damage Dealt", 3.3)],
-  [pct("Damage Reduction Offset", 2.0)],
+  perCircleStats([pct("Crit", 3.3)]),
+  perCircleStats([pct("Crit Damage", 9.5)]),
+  perCircleStats([pct("Holy Damage", 7.5)]),
+  perCircleStatsWithTip([pct("Precision", 6.6)], [flat("Crit", -50)]),
+  perCircleStats([pct("Damage Reduction Offset", 2.0)]),
+  perCircleStats([pct("All Damage Dealt", 3.3)]),
 ];
 
 /** Blue top-left detailed geometry (user spec). */
@@ -367,12 +397,12 @@ function buildGreen(list, byId, rootX, rootY) {
   const downLeft = dirAbsolute(210); // user 30 / mirror of 150
 
   const leaves = [
-    [pct("Control Immunity Offset", 2.5)],
-    [flat("Speed", 20)],
-    [],
-    [],
-    [],
-    [],
+    perCircleStats([pct("Control Immunity Offset", 2.5)]),
+    perCircleStats([flat("Speed", 20)]),
+    perCircleStats([]),
+    perCircleStats([]),
+    perCircleStats([]),
+    perCircleStats([]),
   ];
 
   // Branch 1 (right): 3 @ user 150° → 330°, then split
