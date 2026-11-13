@@ -67,6 +67,8 @@ import {
   awakeningStatPool,
   defaultAwakening,
   defaultHeroProgress,
+  IMPRINT_UNLOCK_STAGES,
+  imprintUnlocked,
   optionalsForStage,
   resolvedStageOptionals,
   stageLocksOptionals,
@@ -290,10 +292,13 @@ function AwakeningButton({ awakening, onClick, disabled }) {
   const tier = awakening?.tierId || null;
   const color =
     AWAKENING_TIERS.find((row) => row.id === tier)?.color || "#8a6a3a";
+  const long = tier && tier.length >= 3;
   return (
     <button
       type="button"
-      className={`sc-progress-btn sc-awaken-btn${tier ? " filled" : ""}`}
+      className={`sc-progress-btn sc-awaken-btn${tier ? " filled" : ""}${
+        long ? " long" : ""
+      }`}
       onClick={onClick}
       disabled={disabled}
       title={disabled ? "Pick a hero first" : tier ? `Awakening · ${tier}` : "Awakening"}
@@ -447,22 +452,32 @@ function HeroCard({
       <div className="sc-imprint-row">
         {Array.from({ length: IMPRINT_COUNT }, (_, imprintIndex) => {
           const option = imprintOf(slot.imprints[imprintIndex]);
+          const unlocked = imprintUnlocked(progress.stageId, imprintIndex);
+          const unlockAt = IMPRINT_UNLOCK_STAGES[imprintIndex];
           return (
             <button
               key={imprintIndex}
               type="button"
-              className={`sc-circle-slot sc-imprint-slot${option ? " filled" : ""}`}
-              onClick={() => onPickImprint(imprintIndex)}
+              className={`sc-circle-slot sc-imprint-slot${
+                option && unlocked ? " filled" : ""
+              }${unlocked ? "" : " locked"}`}
+              onClick={() => {
+                if (!unlocked) return;
+                onPickImprint(imprintIndex);
+              }}
+              disabled={!hero || !unlocked}
               title={
-                option
-                  ? `${option.name} +${option.percent}%`
-                  : `Imprint ${imprintIndex + 1}`
+                !unlocked
+                  ? `Imprint ${imprintIndex + 1} unlocks at ${unlockAt}`
+                  : option
+                    ? `${option.name} +${option.percent}%`
+                    : `Imprint ${imprintIndex + 1}`
               }
             >
-              {option ? (
+              {option && unlocked ? (
                 <img src={option.icon} alt="" />
               ) : (
-                <span>+</span>
+                <span>{unlocked ? "+" : "–"}</span>
               )}
             </button>
           );
@@ -893,10 +908,37 @@ export default function StatCalculator() {
 
     if (picker.type === "imprint") {
       const slot = board.slots[picker.slotIndex];
+      const progress = slot.progress || defaultHeroProgress();
+      if (!imprintUnlocked(progress.stageId, picker.listIndex)) {
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · Imprint ${picker.listIndex + 1}`}
+            onClose={() => setPicker(null)}
+          >
+            <p className="muted sc-modal-lead">
+              This imprint unlocks at{" "}
+              {IMPRINT_UNLOCK_STAGES[picker.listIndex]}. Raise the hero stage
+              to use it.
+            </p>
+            <div className="row-actions sc-pick-actions">
+              <button
+                className="gold-btn"
+                type="button"
+                onClick={() => setPicker(null)}
+              >
+                Close
+              </button>
+            </div>
+          </Modal>
+        );
+      }
       const selected = slot.imprints[picker.listIndex];
       const usedElsewhere = new Set(
         slot.imprints.filter(
-          (id, index) => id && index !== picker.listIndex
+          (id, index) =>
+            id &&
+            index !== picker.listIndex &&
+            imprintUnlocked(progress.stageId, index)
         )
       );
       return (
@@ -906,6 +948,7 @@ export default function StatCalculator() {
         >
           <p className="muted sc-modal-lead">
             Choose 3 of 10. You cannot pick the same imprint twice on one hero.
+            Slot 1 unlocks at V1, slot 2 at V2, slot 3 at V3.
           </p>
           <div className="sc-pick-panel">
             <div className="sc-pick-grid sc-pick-grid-imprints">
@@ -1742,7 +1785,7 @@ export default function StatCalculator() {
                   "Top summary shows each position and its hero. Tap i on a card for a local breakdown.",
                   "Under each hero name: stage star, infusion, and awakening. Icons only — details open in popups. Awakening opens a summary (tier, speed, skills).",
                   "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
-                  "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Every choice opens a popup.",
+                  "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Imprints unlock at V1 / V2 / V3 — grey slots stay out of the calc.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",
                   "Imprints are 3 of 10 on that hero — no duplicates. Each enable circle opens its own icon choices (Enable 3 has 6).",
                 ]}
@@ -1793,7 +1836,10 @@ export default function StatCalculator() {
               const slot = board.slots[row.index];
               const gearFilled = slot.gear.filter(Boolean).length;
               const enableFilled = slot.enables.filter(Boolean).length;
-              const imprintFilled = slot.imprints.filter(Boolean).length;
+              const stageId = slot.progress?.stageId || "E5";
+              const imprintFilled = slot.imprints.filter(
+                (id, index) => id && imprintUnlocked(stageId, index)
+              ).length;
               const breakdown = boardStats.slots[row.index];
               return (
                 <div key={row.index} className="sc-summary-card">

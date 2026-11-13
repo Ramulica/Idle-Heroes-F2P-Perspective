@@ -2943,25 +2943,36 @@ input[type="range"] {
 .hero-mark-e .hero-mark-star {
   background: radial-gradient(circle at 35% 30%, #ffe27a, #f4a012 58%, #c56a08);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter: drop-shadow(0 0 4px rgba(255, 180, 40, 0.8));
+  filter:
+    drop-shadow(0 0 1px #1a1008)
+    drop-shadow(0 0 1.5px #1a1008)
+    drop-shadow(0 0 3px rgba(255, 180, 40, 0.75));
 }
 
 .hero-mark-v .hero-mark-star {
   background: radial-gradient(circle at 35% 30%, #9ad8ff, #2f6adf 62%, #1a3f9a);
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(80, 140, 255, 0.7);
+  box-shadow:
+    0 0 0 2px #1a1008,
+    0 0 8px rgba(80, 140, 255, 0.7);
 }
 
 .hero-mark-t .hero-mark-star {
   background: radial-gradient(circle at 35% 30%, #ff8a7a, #d41c1c 58%, #7a0808);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter: drop-shadow(0 0 6px rgba(255, 60, 40, 0.95));
+  filter:
+    drop-shadow(0 0 1px #1a1008)
+    drop-shadow(0 0 1.5px #1a1008)
+    drop-shadow(0 0 4px rgba(255, 60, 40, 0.9));
 }
 
 .hero-mark-d .hero-mark-star {
   background: conic-gradient(from 200deg, #fff, #ffd1e8, #c9b6ff, #9be7ff, #fff6b0, #fff);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.9));
+  filter:
+    drop-shadow(0 0 1px #1a1008)
+    drop-shadow(0 0 1.5px #1a1008)
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
 }
 
 .hero-mark-d .hero-mark-text,
@@ -4534,6 +4545,21 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-size: 0.82rem;
 }
 
+.sc-stage-star .hero-mark-e .hero-mark-star,
+.sc-stage-star .hero-mark-t .hero-mark-star,
+.sc-stage-star .hero-mark-d .hero-mark-star {
+  filter:
+    drop-shadow(0 0 1.25px #0d0704)
+    drop-shadow(0 0 2px #0d0704)
+    drop-shadow(0 0 2.5px #1a1008);
+}
+
+.sc-stage-star .hero-mark-v .hero-mark-star {
+  box-shadow:
+    0 0 0 2.5px #0d0704,
+    0 0 6px rgba(80, 140, 255, 0.55);
+}
+
 .sc-infusion-btn img {
   width: 46px;
   height: 46px;
@@ -4563,18 +4589,36 @@ button.sc-aura-badge:hover .sc-aura-core {
   width: 46px;
   height: 46px;
   border-radius: 999px;
-  border: 2px solid #8a5a2a;
+  border: 2.5px solid #8a5a2a;
   background: #efe0c4;
   color: #8a6a3a;
-  font-size: 0.78rem;
+  font-size: 1.05rem;
   font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.sc-awaken-btn span {
+  display: block;
+  transform: scale(1.08);
+  font-stretch: condensed;
 }
 
 .sc-awaken-btn.filled {
   background: #2a1a10;
   border-color: var(--sc-awaken-color, #f4c430);
+  border-width: 3px;
   color: var(--sc-awaken-color, #f4c430);
   box-shadow: 0 0 0 1px rgba(244, 196, 48, 0.35);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.sc-awaken-btn.long {
+  font-size: 0.78rem;
+}
+
+.sc-awaken-btn.long span {
+  transform: scale(1);
 }
 
 .sc-stage-grid,
@@ -4982,6 +5026,21 @@ button.sc-aura-badge:hover .sc-aura-core {
   border-color: #c4921a;
   box-shadow: 0 0 0 2px rgba(244, 196, 48, 0.35);
   background: #1a1008;
+}
+
+.sc-imprint-slot.locked {
+  border-color: #8a8a8a;
+  background: #c8c4bc;
+  color: #6a6a6a;
+  box-shadow: none;
+  cursor: default;
+  filter: grayscale(1);
+  opacity: 0.72;
+}
+
+.sc-imprint-slot.locked img {
+  filter: grayscale(1) brightness(0.85);
+  opacity: 0.55;
 }
 
 .sc-pick-circle {

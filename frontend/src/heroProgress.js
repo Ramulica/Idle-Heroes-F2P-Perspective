@@ -1,5 +1,5 @@
-import infusionBadge from "./assets/stats/infusion/infusion-badge.png";
-import { T_OPTIONALS, EMPTY_OPTIONALS } from "./heroUpgrade";
+import infusionBadge from "./assets/stats/infusion/infusion-badge-clean.png";
+import { T_OPTIONALS, EMPTY_OPTIONALS, STAGE_BY_ID } from "./heroUpgrade";
 
 /** Hero stage options for Stat Calculator (no temple +levels, no T max). */
 export const HERO_STAGE_OPTIONS = [
@@ -279,6 +279,21 @@ export function normalizeHeroProgress(raw) {
     infusion: clampInt(src.infusion, INFUSION_MIN, INFUSION_MAX, INFUSION_DEFAULT),
     awakening,
   };
+}
+
+/** Imprint slot 0→V1, 1→V2, 2→V3; all stay unlocked from there up. */
+export const IMPRINT_UNLOCK_STAGES = ["V1", "V2", "V3"];
+
+export function stageRank(stageId) {
+  return STAGE_BY_ID[stageId]?.rank ?? 0;
+}
+
+export function imprintUnlocked(stageId, imprintIndex) {
+  const need = IMPRINT_UNLOCK_STAGES[imprintIndex];
+  if (!need) return false;
+  const have = stageRank(stageId);
+  const needRank = STAGE_BY_ID[need]?.rank ?? 0;
+  return have >= needRank;
 }
 
 export function stageAllowsOptionals(stageId) {

@@ -1,6 +1,7 @@
 import { gearOf, gearSlotDef, heroOf, imprintOf } from "./statCalculator";
 import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
+import { imprintUnlocked } from "./heroProgress";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -147,15 +148,17 @@ function collectSoulStone(slot) {
 
 function collectImprints(slot) {
   const map = emptyMap();
-  for (const id of slot?.imprints || []) {
+  const stageId = slot?.progress?.stageId || "E5";
+  (slot?.imprints || []).forEach((id, index) => {
+    if (!imprintUnlocked(stageId, index)) return;
     const option = imprintOf(id);
-    if (!option) continue;
+    if (!option) return;
     addRow(map, {
       stat: option.name,
       value: option.percent,
       unit: "%",
     });
-  }
+  });
   return map;
 }
 
