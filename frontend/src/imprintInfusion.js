@@ -15,7 +15,7 @@ export const BRANCH_META = {
 const pct = (stat, value) => ({ stat, value, unit: "%" });
 const flat = (stat, value) => ({ stat, value, unit: "" });
 
-const STEP = 26;
+const STEP = 34;
 
 /** SVG y-down: 0° = up, positive deg = left of vertical. */
 function dirLeftOfUp(deg) {
@@ -132,6 +132,7 @@ function buildBlue(list, byId, rootX, rootY) {
   const left45 = dirLeftOfUp(45);
   const left60 = dirLeftOfUp(60);
   const left120 = dirLeftOfUp(120);
+  const right120FromVertical = dirRightOfUp(120);
 
   // Branch 1: 3 vertical up
   const b1 = addPolyline(list, byId, {
@@ -172,7 +173,7 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 2.1: 4 continue -60°, then 4 at +120° (right) from that heading
+  // 2.1: 4 continue -60°, then 4 at -120° to the right from that heading
   const b21turn = rotCW(left60[0], left60[1], 120);
   addPolyline(list, byId, {
     prefix: "b-2-1-",
@@ -185,17 +186,18 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: BLUE_LEAVES[2],
   });
 
-  // 2.2 zigzag totaling 8: 1 @ -60, 3 @ -120, 3 @ +120, 1 @ -120
-  let d = left60;
-  const zig = [
-    { count: 1, dir: d },
-  ];
+  // 2.2: 1 @ +120° from vertical, then zigzag -120 / +120 / -120 / +120
+  // Counts as written: 1+3+3+1+3 (11) — keep literal so angles can be checked
+  let d = right120FromVertical;
+  const zig = [{ count: 1, dir: d }];
   d = rotCCW(d[0], d[1], 120);
   zig.push({ count: 3, dir: d });
   d = rotCW(d[0], d[1], 120);
   zig.push({ count: 3, dir: d });
   d = rotCCW(d[0], d[1], 120);
   zig.push({ count: 1, dir: d });
+  d = rotCW(d[0], d[1], 120);
+  zig.push({ count: 3, dir: d });
   addPolyline(list, byId, {
     prefix: "b-2-2-",
     parentId: b2,
@@ -213,7 +215,7 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 3.1: 6 continue, then 2 at -120° from that heading
+  // 3.1: 6 continue, then 2 at -120° to the left from that heading
   const b31turn = rotCCW(left120[0], left120[1], 120);
   addPolyline(list, byId, {
     prefix: "b-3-1-",
@@ -226,8 +228,8 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: BLUE_LEAVES[4],
   });
 
-  // 3.2: 2 @ -120 from heading, 4 @ +120, 2 @ -120
-  let d3 = rotCCW(left120[0], left120[1], 120);
+  // 3.2: 2 @ +60 from heading, 4 @ +120, 2 @ -120 left
+  let d3 = rotCW(left120[0], left120[1], 60);
   const b32 = [{ count: 2, dir: d3 }];
   d3 = rotCW(d3[0], d3[1], 120);
   b32.push({ count: 4, dir: d3 });
@@ -252,6 +254,7 @@ function buildRed(list, byId, rootX, rootY) {
   const right45 = dirRightOfUp(45);
   const right60 = dirRightOfUp(60);
   const right120 = dirRightOfUp(120);
+  const left120FromVertical = dirLeftOfUp(120);
 
   const b1 = addPolyline(list, byId, {
     prefix: "r-1-m",
@@ -288,7 +291,7 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // Mirror: +120 right on blue → -120 left on red (CCW from heading)
+  // Mirror of blue 2.1 turn-right-120 → turn-left-120
   const r21turn = rotCCW(right60[0], right60[1], 120);
   addPolyline(list, byId, {
     prefix: "r-2-1-",
@@ -301,14 +304,17 @@ function buildRed(list, byId, rootX, rootY) {
     stats: RED_LEAVES[2],
   });
 
-  let d = right60;
+  // Mirror of blue 2.2: 1 @ +120 from vertical (mirrored → left), then zig
+  let d = left120FromVertical;
   const zig = [{ count: 1, dir: d }];
-  d = rotCW(d[0], d[1], 120); // mirror of CCW
+  d = rotCW(d[0], d[1], 120);
   zig.push({ count: 3, dir: d });
   d = rotCCW(d[0], d[1], 120);
   zig.push({ count: 3, dir: d });
   d = rotCW(d[0], d[1], 120);
   zig.push({ count: 1, dir: d });
+  d = rotCCW(d[0], d[1], 120);
+  zig.push({ count: 3, dir: d });
   addPolyline(list, byId, {
     prefix: "r-2-2-",
     parentId: b2,
@@ -337,7 +343,8 @@ function buildRed(list, byId, rootX, rootY) {
     stats: RED_LEAVES[4],
   });
 
-  let d3 = rotCW(right120[0], right120[1], 120);
+  // Mirror of blue 3.2: +60 right → -60 left, then flip turn signs
+  let d3 = rotCCW(right120[0], right120[1], 60);
   const r32 = [{ count: 2, dir: d3 }];
   d3 = rotCCW(d3[0], d3[1], 120);
   r32.push({ count: 4, dir: d3 });
@@ -397,10 +404,10 @@ function buildTree() {
   const list = [];
   const byId = {};
 
-  // Upside-down equilateral triangle, roots toward center
+  // Upside-down equilateral triangle — roots closer toward center
   const cx = 500;
-  const topY = 360;
-  const half = 95;
+  const topY = 390;
+  const half = 58;
   const blue = [cx - half, topY];
   const red = [cx + half, topY];
   const green = [cx, topY + half * Math.sqrt(3)];
