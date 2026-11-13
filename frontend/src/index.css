@@ -5219,16 +5219,17 @@ button.sc-aura-badge:hover .sc-aura-core {
 .sc-pick-grid-artifact {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sc-pick-grid-artifact .sc-pick-artifact {
-  width: 148px;
-  min-height: 148px;
-  padding: 6px;
+  width: 178px;
+  min-height: 168px;
+  padding: 8px 8px 10px;
   background: #fff8e8;
   align-items: center;
   text-align: center;
+  overflow: hidden;
 }
 
 .sc-pick-artifact-icon {
@@ -5239,6 +5240,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   background: #fff8e8;
   border-radius: 8px;
   margin: 0 auto;
+  flex-shrink: 0;
 }
 
 .sc-pick-artifact .sc-pick-title {
@@ -5248,6 +5250,21 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-weight: 800;
   line-height: 1.15;
   color: #3a2818;
+}
+
+.sc-pick-artifact .sc-stat-lines {
+  gap: 1px;
+  padding: 0 2px;
+}
+
+.sc-pick-artifact .sc-stat-line {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #6a4a28;
 }
 
 .sc-pick-artifact.selected .sc-pick-artifact-icon {

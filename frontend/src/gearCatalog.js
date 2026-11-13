@@ -169,10 +169,19 @@ const STAT_SHORT = {
   "All Damage Reduction": "All DR",
   "Damage Reduction": "DR",
   "Crit Damage": "Crit DMG",
+  "Crit Damage Reduction": "Crit DR",
   "Skill Damage": "Skill DMG",
   "Armor Break": "Armor Brk",
   "Control Immunity": "Ctrl Imm",
+  "Control Precision": "Ctrl Prec",
+  "Damage Reduction Offset": "DR Off",
+  "Dodge Offset": "Dodge Off",
+  "Reduces DoT received": "DoT Red",
+  "Holy Damage": "Holy",
   Precision: "Prec",
+  Energy: "Energy",
+  Speed: "Speed",
+  Dodge: "Dodge",
 };
 
 function formatStat(row, compact = false) {
