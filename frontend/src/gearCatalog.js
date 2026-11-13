@@ -9,6 +9,11 @@ import {
   formatStoneStat,
   stoneStatTone,
 } from "./soulStones";
+import {
+  ARTIFACT_BY_ID,
+  ARTIFACT_OPTIONS,
+  artifactOf,
+} from "./artifacts";
 
 export {
   SOUL_STONE_BY_ID,
@@ -16,6 +21,9 @@ export {
   SOUL_STONE_OPTIONS,
   formatStoneStat,
   stoneStatTone,
+  ARTIFACT_BY_ID,
+  ARTIFACT_OPTIONS,
+  artifactOf,
 };
 import g02w from "./assets/stats/gear/gear-02-weapon.png";
 import g02a from "./assets/stats/gear/gear-02-armor.png";
@@ -103,7 +111,7 @@ export const GEAR_SLOTS = [
   { id: "armor", name: "Armor", locked: false },
   { id: "accessory", name: "Accessory", locked: false },
   { id: "boots", name: "Boots", locked: false },
-  { id: "artifact", name: "Artifact", locked: true },
+  { id: "artifact", name: "Artifact", locked: false },
   { id: "stone", name: "Soul Stone", locked: false },
 ];
 
@@ -402,6 +410,7 @@ const SETS = [
 export const GEAR_OPTIONS = [
   ...SETS.flatMap(makeSet),
   ...SOUL_STONE_OPTIONS,
+  ...ARTIFACT_OPTIONS,
 ];
 
 export const GEAR_BY_ID = Object.fromEntries(
@@ -421,6 +430,7 @@ export function gearOptionsForSlot(slotIndex, heroClass) {
   const slot = GEAR_SLOTS[slotIndex];
   if (!slot || slot.locked) return [];
   if (slot.id === "stone") return SOUL_STONE_OPTIONS;
+  if (slot.id === "artifact") return ARTIFACT_OPTIONS;
   return GEAR_OPTIONS.filter((row) => {
     if (row.slot !== slot.id) return false;
     if (!row.heroClass) return true;

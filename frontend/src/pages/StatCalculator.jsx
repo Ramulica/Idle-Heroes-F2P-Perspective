@@ -419,13 +419,20 @@ function HeroCard({
           const option = gearOf(slot.gear[gearIndex]);
           const locked = Boolean(def?.locked);
           const isStone = def?.id === "stone";
+          const isArtifact = def?.id === "artifact";
           const tip = locked
             ? `${def.name} · coming later`
             : option
-              ? `${option.name} · ${
-                  isStone
-                    ? option.stats.map((row) => formatStoneStat(row, true)).join(" · ")
-                    : formatGearStats(option.stats)
+              ? `${option.name}${
+                  option.stats?.length
+                    ? ` · ${
+                        isStone
+                          ? option.stats
+                              .map((row) => formatStoneStat(row, true))
+                              .join(" · ")
+                          : formatGearStats(option.stats)
+                      }`
+                    : ""
                 }`
               : def?.name || `Gear ${gearIndex + 1}`;
           return (
@@ -434,7 +441,9 @@ function HeroCard({
               type="button"
               className={`sc-gear-slot${option ? " filled" : ""}${
                 locked ? " locked" : ""
-              }${isStone ? " stone-slot" : ""}`}
+              }${isStone ? " stone-slot" : ""}${
+                isArtifact ? " artifact-slot" : ""
+              }`}
               onClick={() => onPickGear(gearIndex)}
               title={tip}
             >
@@ -443,7 +452,7 @@ function HeroCard({
               ) : locked ? (
                 <span className="sc-gear-lock">{def.name[0]}</span>
               ) : (
-                <span>{isStone ? "S" : "+"}</span>
+                <span>{isStone ? "S" : isArtifact ? "A" : "+"}</span>
               )}
             </button>
           );
@@ -667,6 +676,70 @@ export default function StatCalculator() {
             <p className="muted">
               {def.name} options will be added in a later step.
             </p>
+          </Modal>
+        );
+      }
+
+      if (def?.id === "artifact") {
+        const selected = board.slots[picker.slotIndex].gear[picker.listIndex];
+        const choices = gearOptionsForSlot(picker.listIndex);
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · Artifact`}
+            onClose={() => setPicker(null)}
+          >
+            <p className="muted sc-modal-lead">
+              Pick an artifact. Stats will be filled in next.
+            </p>
+            <div className="sc-pick-panel">
+              <div className="sc-pick-grid sc-pick-grid-circle">
+                {choices.map((item) => {
+                  const on = item.id === selected;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`sc-pick${on ? " selected" : ""}`}
+                      title={item.name}
+                      onClick={() => {
+                        updateBoard(
+                          setSlotListValue(
+                            board,
+                            picker.slotIndex,
+                            "gear",
+                            picker.listIndex,
+                            item.id
+                          )
+                        );
+                        setPicker(null);
+                      }}
+                    >
+                      <img src={item.icon} alt="" className="sc-pick-circle" />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="sc-pick-actions">
+                <button
+                  className="tan-btn"
+                  type="button"
+                  onClick={() => {
+                    updateBoard(
+                      setSlotListValue(
+                        board,
+                        picker.slotIndex,
+                        "gear",
+                        picker.listIndex,
+                        null
+                      )
+                    );
+                    setPicker(null);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
           </Modal>
         );
       }
