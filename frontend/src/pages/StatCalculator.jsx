@@ -692,14 +692,14 @@ export default function StatCalculator() {
               Pick an artifact. Stats will be filled in next.
             </p>
             <div className="sc-pick-panel">
-              <div className="sc-pick-grid sc-pick-grid-circle">
+              <div className="sc-pick-grid sc-pick-grid-artifact">
                 {choices.map((item) => {
                   const on = item.id === selected;
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      className={`sc-pick${on ? " selected" : ""}`}
+                      className={`sc-pick sc-pick-artifact${on ? " selected" : ""}`}
                       title={item.name}
                       onClick={() => {
                         updateBoard(
@@ -714,7 +714,7 @@ export default function StatCalculator() {
                         setPicker(null);
                       }}
                     >
-                      <img src={item.icon} alt="" className="sc-pick-circle" />
+                      <img src={item.icon} alt="" className="sc-pick-artifact-icon" />
                     </button>
                   );
                 })}
