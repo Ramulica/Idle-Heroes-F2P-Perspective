@@ -352,15 +352,19 @@ function buildRed(list, byId, rootX, rootY) {
   });
 }
 
-/** Green bottom placeholder — same abstract 3×3→6×8, pointing down. */
-function buildGreenPlaceholder(list, byId, rootX, rootY) {
+/**
+ * Green grows down from the bottom root. User angles are given in the same
+ * "up" frame as blue/red (90=up, 150=up-left, 30=up-right); map to down by +180°.
+ * Branch 1 (right): user 150 → 330. Branch 3 (left mirror): → 210. Branch 2: → 270.
+ */
+function buildGreen(list, byId, rootX, rootY) {
   const branch = "green";
   const rootId = "green-root";
   addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
 
-  const d0 = dirLeftOfUp(180);
-  const dL = dirLeftOfUp(180 - 40);
-  const dR = dirRightOfUp(180 - 40);
+  const down = dirAbsolute(270);
+  const downRight = dirAbsolute(330); // user 150
+  const downLeft = dirAbsolute(210); // user 30 / mirror of 150
 
   const leaves = [
     [pct("Control Immunity Offset", 2.5)],
@@ -371,25 +375,109 @@ function buildGreenPlaceholder(list, byId, rootX, rootY) {
     [],
   ];
 
-  [dL, d0, dR].forEach((dir, armIndex) => {
-    const mid = addPolyline(list, byId, {
-      prefix: `g-a${armIndex}-m`,
-      parentId: rootId,
-      branch,
-      segments: [{ count: 3, dir }],
-      stats: [],
-    });
-    const left = rotCCW(dir[0], dir[1], 18);
-    const right = rotCW(dir[0], dir[1], 18);
-    [left, right].forEach((leafDir, leafIndex) => {
-      addPolyline(list, byId, {
-        prefix: `g-a${armIndex}-l${leafIndex}-`,
-        parentId: mid,
-        branch,
-        segments: [{ count: 8, dir: leafDir }],
-        stats: leaves[armIndex * 2 + leafIndex],
-      });
-    });
+  // Branch 1 (right): 3 @ user 150° → 330°, then split
+  const b1 = addPolyline(list, byId, {
+    prefix: "g-1-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: downRight }],
+    stats: [],
+  });
+
+  // 1.1: 3 @ 150→330, 5 @ 90→270
+  addPolyline(list, byId, {
+    prefix: "g-1-1-",
+    parentId: b1,
+    branch,
+    segments: [
+      { count: 3, dir: downRight },
+      { count: 5, dir: down },
+    ],
+    stats: leaves[0],
+  });
+
+  // 1.2: 1 @ 90→270, 1 @ 150→330, 6 @ 90→270
+  addPolyline(list, byId, {
+    prefix: "g-1-2-",
+    parentId: b1,
+    branch,
+    segments: [
+      { count: 1, dir: down },
+      { count: 1, dir: downRight },
+      { count: 6, dir: down },
+    ],
+    stats: leaves[1],
+  });
+
+  // Branch 2 (center): 3 @ 90→270, then split
+  const b2 = addPolyline(list, byId, {
+    prefix: "g-2-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: down }],
+    stats: [],
+  });
+
+  // 2.1: 2 @ 150→330, 3 @ 90→270, 1 @ 30→210, 2 @ 90→270
+  addPolyline(list, byId, {
+    prefix: "g-2-1-",
+    parentId: b2,
+    branch,
+    segments: [
+      { count: 2, dir: downRight },
+      { count: 3, dir: down },
+      { count: 1, dir: downLeft },
+      { count: 2, dir: down },
+    ],
+    stats: leaves[2],
+  });
+
+  // 2.2: 2 @ 30→210, 3 @ 90→270, 1 @ 150→330, 2 @ 90→270
+  addPolyline(list, byId, {
+    prefix: "g-2-2-",
+    parentId: b2,
+    branch,
+    segments: [
+      { count: 2, dir: downLeft },
+      { count: 3, dir: down },
+      { count: 1, dir: downRight },
+      { count: 2, dir: down },
+    ],
+    stats: leaves[3],
+  });
+
+  // Branch 3 (left): mirror of branch 1
+  const b3 = addPolyline(list, byId, {
+    prefix: "g-3-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: downLeft }],
+    stats: [],
+  });
+
+  // 3.1: mirror of 1.1
+  addPolyline(list, byId, {
+    prefix: "g-3-1-",
+    parentId: b3,
+    branch,
+    segments: [
+      { count: 3, dir: downLeft },
+      { count: 5, dir: down },
+    ],
+    stats: leaves[4],
+  });
+
+  // 3.2: mirror of 1.2
+  addPolyline(list, byId, {
+    prefix: "g-3-2-",
+    parentId: b3,
+    branch,
+    segments: [
+      { count: 1, dir: down },
+      { count: 1, dir: downLeft },
+      { count: 6, dir: down },
+    ],
+    stats: leaves[5],
   });
 }
 
@@ -407,7 +495,7 @@ function buildTree() {
 
   buildBlue(list, byId, blue[0], blue[1]);
   buildRed(list, byId, red[0], red[1]);
-  buildGreenPlaceholder(list, byId, green[0], green[1]);
+  buildGreen(list, byId, green[0], green[1]);
 
   return { list, byId };
 }
