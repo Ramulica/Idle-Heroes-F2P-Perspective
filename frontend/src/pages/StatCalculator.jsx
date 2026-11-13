@@ -1650,7 +1650,7 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-wrap">
             <svg
               className="sc-infusion-map"
-              viewBox="0 0 1000 940"
+              viewBox="0 0 1000 1040"
               role="img"
               aria-label="Imprint Infusion node map"
             >
@@ -1661,12 +1661,12 @@ export default function StatCalculator() {
                   <stop offset="100%" stopColor="#050a18" />
                 </radialGradient>
               </defs>
-              <rect width="1000" height="940" fill="url(#sc-infusion-space)" />
+              <rect width="1000" height="1040" fill="url(#sc-infusion-space)" />
               {Array.from({ length: 40 }, (_, i) => (
                 <circle
                   key={i}
                   cx={(i * 97) % 1000}
-                  cy={(i * 173) % 940}
+                  cy={(i * 173) % 1040}
                   r={i % 5 === 0 ? 1.6 : 1}
                   fill="rgba(255,255,255,0.35)"
                 />
@@ -1686,7 +1686,7 @@ export default function StatCalculator() {
                     x2={to.x}
                     y2={to.y}
                     stroke={lit ? color : "rgba(180,200,220,0.35)"}
-                    strokeWidth={lit ? 2.5 : 1.25}
+                    strokeWidth={lit ? 3.25 : 1.75}
                   />
                 );
               })}
@@ -1704,7 +1704,7 @@ export default function StatCalculator() {
                     <circle
                       cx={node.x}
                       cy={node.y}
-                      r={isRoot ? (on ? 14 : 12) : on ? 10 : 8}
+                      r={isRoot ? (on ? 18 : 15) : on ? 13 : 11}
                       fill={on ? color : isRoot ? "#1a2438" : "#2a3344"}
                       stroke={on ? "#fff6c8" : canOn ? color : "#667788"}
                       strokeWidth={on || isRoot ? 2.5 : 1.5}

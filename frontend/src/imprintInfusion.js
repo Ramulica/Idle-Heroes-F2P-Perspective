@@ -15,7 +15,7 @@ export const BRANCH_META = {
 const pct = (stat, value) => ({ stat, value, unit: "%" });
 const flat = (stat, value) => ({ stat, value, unit: "" });
 
-const STEP = 34;
+const STEP = 42;
 
 /** SVG y-down: 0° = up, positive deg = left of vertical. */
 function dirLeftOfUp(deg) {
@@ -150,23 +150,23 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 1.1: 8 nodes at absolute 210°
+  // 1.1: 8 nodes at absolute 150° (user 210° / up-left)
   addPolyline(list, byId, {
     prefix: "b-1-1-",
     parentId: b1,
     branch,
-    segments: [{ count: 8, dir: dirAbsolute(210) }],
+    segments: [{ count: 8, dir: dirAbsolute(150) }],
     stats: BLUE_LEAVES[0],
   });
 
-  // 1.2: 2 vertical, then 6 at absolute 210°
+  // 1.2: 2 vertical, then 6 at absolute 150°
   addPolyline(list, byId, {
     prefix: "b-1-2-",
     parentId: b1,
     branch,
     segments: [
       { count: 2, dir: up },
-      { count: 6, dir: dirAbsolute(210) },
+      { count: 6, dir: dirAbsolute(150) },
     ],
     stats: BLUE_LEAVES[1],
   });
@@ -180,29 +180,29 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 2.1: 4 continue -60°, then 4 on absolute 210° line
+  // 2.1: 4 continue -60°, then 4 on absolute 150°
   addPolyline(list, byId, {
     prefix: "b-2-1-",
     parentId: b2,
     branch,
     segments: [
       { count: 4, dir: left60 },
-      { count: 4, dir: dirAbsolute(210) },
+      { count: 4, dir: dirAbsolute(150) },
     ],
     stats: BLUE_LEAVES[2],
   });
 
-  // 2.2: 1@150, 2@210, 2@150, 1@210, 2@150
+  // 2.2: user 150↔210 swapped → 210/150 zigzag
   addPolyline(list, byId, {
     prefix: "b-2-2-",
     parentId: b2,
     branch,
     segments: [
-      { count: 1, dir: dirAbsolute(150) },
-      { count: 2, dir: dirAbsolute(210) },
-      { count: 2, dir: dirAbsolute(150) },
       { count: 1, dir: dirAbsolute(210) },
       { count: 2, dir: dirAbsolute(150) },
+      { count: 2, dir: dirAbsolute(210) },
+      { count: 1, dir: dirAbsolute(150) },
+      { count: 2, dir: dirAbsolute(210) },
     ],
     stats: BLUE_LEAVES[3],
   });
@@ -216,19 +216,19 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 3.1: 6 continue, then 2 on absolute 150° line
+  // 3.1: 6 continue, then 2 on absolute 210°
   addPolyline(list, byId, {
     prefix: "b-3-1-",
     parentId: b3,
     branch,
     segments: [
       { count: 6, dir: left120 },
-      { count: 2, dir: dirAbsolute(150) },
+      { count: 2, dir: dirAbsolute(210) },
     ],
     stats: BLUE_LEAVES[4],
   });
 
-  // 3.2: first 2 keep +60 from branch-3 heading, then 4@150, 2@210
+  // 3.2: first 2 keep +60 from branch-3 heading, then 4@210, 2@150
   const b32first = rotCW(left120[0], left120[1], 60);
   addPolyline(list, byId, {
     prefix: "b-3-2-",
@@ -236,8 +236,8 @@ function buildBlue(list, byId, rootX, rootY) {
     branch,
     segments: [
       { count: 2, dir: b32first },
-      { count: 4, dir: dirAbsolute(150) },
-      { count: 2, dir: dirAbsolute(210) },
+      { count: 4, dir: dirAbsolute(210) },
+      { count: 2, dir: dirAbsolute(150) },
     ],
     stats: BLUE_LEAVES[5],
   });
@@ -261,23 +261,23 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // Mirror of blue 1.1: absolute 210° → 330°
+  // Mirror of blue 1.1 @150 → 30°
   addPolyline(list, byId, {
     prefix: "r-1-1-",
     parentId: b1,
     branch,
-    segments: [{ count: 8, dir: dirAbsolute(330) }],
+    segments: [{ count: 8, dir: dirAbsolute(30) }],
     stats: RED_LEAVES[0],
   });
 
-  // Mirror of blue 1.2: 2 up, then 6 @ 330°
+  // Mirror of blue 1.2: 2 up, then 6 @ 30°
   addPolyline(list, byId, {
     prefix: "r-1-2-",
     parentId: b1,
     branch,
     segments: [
       { count: 2, dir: up },
-      { count: 6, dir: dirAbsolute(330) },
+      { count: 6, dir: dirAbsolute(30) },
     ],
     stats: RED_LEAVES[1],
   });
@@ -290,29 +290,29 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // Mirror of blue 2.1: absolute 210° → 330°
+  // Mirror of blue 2.1 @150 → 30°
   addPolyline(list, byId, {
     prefix: "r-2-1-",
     parentId: b2,
     branch,
     segments: [
       { count: 4, dir: right60 },
-      { count: 4, dir: dirAbsolute(330) },
+      { count: 4, dir: dirAbsolute(30) },
     ],
     stats: RED_LEAVES[2],
   });
 
-  // Mirror of blue 2.2: 150→30, 210→330
+  // Mirror of blue 2.2: 210→330, 150→30
   addPolyline(list, byId, {
     prefix: "r-2-2-",
     parentId: b2,
     branch,
     segments: [
-      { count: 1, dir: dirAbsolute(30) },
-      { count: 2, dir: dirAbsolute(330) },
-      { count: 2, dir: dirAbsolute(30) },
       { count: 1, dir: dirAbsolute(330) },
       { count: 2, dir: dirAbsolute(30) },
+      { count: 2, dir: dirAbsolute(330) },
+      { count: 1, dir: dirAbsolute(30) },
+      { count: 2, dir: dirAbsolute(330) },
     ],
     stats: RED_LEAVES[3],
   });
@@ -325,19 +325,19 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // Mirror of blue 3.1: absolute 150° → 30°
+  // Mirror of blue 3.1 @210 → 330°
   addPolyline(list, byId, {
     prefix: "r-3-1-",
     parentId: b3,
     branch,
     segments: [
       { count: 6, dir: right120 },
-      { count: 2, dir: dirAbsolute(30) },
+      { count: 2, dir: dirAbsolute(330) },
     ],
     stats: RED_LEAVES[4],
   });
 
-  // Mirror of blue 3.2: first 2 mirrored +60, then 150→30, 210→330
+  // Mirror of blue 3.2: 210→330, 150→30
   const r32first = rotCCW(right120[0], right120[1], 60);
   addPolyline(list, byId, {
     prefix: "r-3-2-",
@@ -345,8 +345,8 @@ function buildRed(list, byId, rootX, rootY) {
     branch,
     segments: [
       { count: 2, dir: r32first },
-      { count: 4, dir: dirAbsolute(30) },
-      { count: 2, dir: dirAbsolute(330) },
+      { count: 4, dir: dirAbsolute(330) },
+      { count: 2, dir: dirAbsolute(30) },
     ],
     stats: RED_LEAVES[5],
   });
@@ -485,10 +485,10 @@ function buildTree() {
   const list = [];
   const byId = {};
 
-  // Upside-down equilateral triangle — roots closer toward center
+  // Upside-down equilateral triangle — roots tight; STEP is larger
   const cx = 500;
-  const topY = 390;
-  const half = 58;
+  const topY = 470;
+  const half = 30;
   const blue = [cx - half, topY];
   const red = [cx + half, topY];
   const green = [cx, topY + half * Math.sqrt(3)];
