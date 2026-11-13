@@ -543,13 +543,33 @@ export function normalizeInfusionNodes(rawIds, budget) {
   return selected;
 }
 
+/**
+ * Unselected nodes from the nearest selected ancestor (or root) down to `id`,
+ * ordered root→leaf so parents are selected before children.
+ */
+function missingPathTo(id, selectedSet) {
+  const node = INFUSION_NODE_BY_ID[id];
+  if (!node) return null;
+  const chain = [];
+  let cur = node;
+  while (cur) {
+    if (selectedSet.has(cur.id)) break;
+    chain.push(cur.id);
+    if (!cur.parentId) break;
+    cur = INFUSION_NODE_BY_ID[cur.parentId];
+    if (!cur) return null;
+  }
+  chain.reverse();
+  return chain;
+}
+
 export function canSelectInfusionNode(selectedSet, id, budget) {
   const node = INFUSION_NODE_BY_ID[id];
   if (!node) return false;
   if (selectedSet.has(id)) return false;
-  if (selectedSet.size >= budget) return false;
-  if (node.parentId && !selectedSet.has(node.parentId)) return false;
-  return true;
+  const chain = missingPathTo(id, selectedSet);
+  if (!chain?.length) return false;
+  return selectedSet.size + chain.length <= budget;
 }
 
 function descendantsOf(id) {
@@ -566,8 +586,10 @@ export function toggleInfusionNode(selectedIds, id, budget) {
     const drop = new Set([id, ...descendantsOf(id)]);
     return selected.filter((x) => !drop.has(x));
   }
-  if (!canSelectInfusionNode(set, id, budget)) return selected;
-  return [...selected, id];
+  const chain = missingPathTo(id, set);
+  if (!chain?.length) return selected;
+  if (set.size + chain.length > budget) return selected;
+  return [...selected, ...chain];
 }
 
 export function collectInfusionStats(selectedIds) {
