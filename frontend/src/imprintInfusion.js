@@ -1,6 +1,7 @@
 /**
- * Imprint Infusion: 3 independent trees (blue NW, red NE, green S).
- * Each side: root → 3 arms × 3 nodes → each arm splits to 2 → 8 nodes each (6 ways).
+ * Imprint Infusion: 3 independent trees.
+ * Blue (top-left) + Red (top-right, mirror) use detailed polylines.
+ * Green (bottom) keeps the same 3×3→6×8 topology as a placeholder.
  */
 
 export const INFUSION_UNLOCK_LEVEL = 15;
@@ -14,97 +15,379 @@ export const BRANCH_META = {
 const pct = (stat, value) => ({ stat, value, unit: "%" });
 const flat = (stat, value) => ({ stat, value, unit: "" });
 
+const STEP = 26;
+
+/** SVG y-down: 0° = up, positive deg = left of vertical. */
+function dirLeftOfUp(deg) {
+  const r = (deg * Math.PI) / 180;
+  return [-Math.sin(r), -Math.cos(r)];
+}
+
+/** SVG y-down: 0° = up, positive deg = right of vertical. */
+function dirRightOfUp(deg) {
+  const r = (deg * Math.PI) / 180;
+  return [Math.sin(r), -Math.cos(r)];
+}
+
+/** Clockwise rotation in screen space (y-down). */
+function rotCW(vx, vy, deg) {
+  const r = (deg * Math.PI) / 180;
+  return [
+    vx * Math.cos(r) - vy * Math.sin(r),
+    vx * Math.sin(r) + vy * Math.cos(r),
+  ];
+}
+
+function rotCCW(vx, vy, deg) {
+  return rotCW(vx, vy, -deg);
+}
+
 function pushNode(list, byId, node) {
   list.push(node);
   byId[node.id] = node;
 }
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-/** n points from near start toward end (inclusive of end). */
-function pointsToward(x0, y0, x1, y1, n) {
-  const out = [];
-  for (let i = 1; i <= n; i += 1) {
-    const t = i / n;
-    out.push([lerp(x0, x1, t), lerp(y0, y1, t)]);
-  }
-  return out;
-}
-
-function addChain(list, byId, { prefix, count, parentId, branch, stats, points }) {
+/**
+ * Walk polyline segments from a parent node.
+ * segments: [{ count, dir: [dx,dy] }] — each step moves STEP along unit dir.
+ */
+function addPolyline(list, byId, {
+  prefix,
+  parentId,
+  branch,
+  segments,
+  stats,
+}) {
+  const parent = byId[parentId];
+  let x = parent.x;
+  let y = parent.y;
   let prev = parentId;
-  for (let i = 0; i < count; i += 1) {
-    const id = `${prefix}${i + 1}`;
-    const [x, y] = points[i];
-    const rowStats =
-      typeof stats === "function" ? stats(i, count) : stats || [];
-    pushNode(list, byId, {
-      id,
-      branch,
-      x,
-      y,
-      parentId: prev,
-      stats: rowStats,
-    });
-    prev = id;
-  }
+  let index = 0;
+  const total = segments.reduce((sum, seg) => sum + seg.count, 0);
+
+  segments.forEach((seg) => {
+    const len = Math.hypot(seg.dir[0], seg.dir[1]) || 1;
+    const ux = seg.dir[0] / len;
+    const uy = seg.dir[1] / len;
+    for (let i = 0; i < seg.count; i += 1) {
+      x += ux * STEP;
+      y += uy * STEP;
+      index += 1;
+      const id = `${prefix}${index}`;
+      const rowStats =
+        typeof stats === "function" ? stats(index - 1, total) : stats || [];
+      pushNode(list, byId, {
+        id,
+        branch,
+        x,
+        y,
+        parentId: prev,
+        stats: rowStats,
+      });
+      prev = id;
+    }
+  });
   return prev;
 }
 
-/**
- * Build one independent side tree.
- * leafStats: length-6 array of stats (or stats fn) for the 6 outer ways.
- * armAngles: 3 angles in radians for the mid arms from root.
- */
-function buildSide(list, byId, {
-  branch,
-  rootId,
-  rootX,
-  rootY,
-  armAngles,
-  armLen = 120,
-  leafLen = 220,
-  leafSpread = 0.28,
-  leafStats,
-}) {
+function addRoot(list, byId, { id, branch, x, y }) {
   pushNode(list, byId, {
-    id: rootId,
+    id,
     branch,
-    x: rootX,
-    y: rootY,
+    x,
+    y,
     parentId: null,
     stats: [],
   });
+}
 
-  armAngles.forEach((angle, armIndex) => {
-    const midEndX = rootX + Math.cos(angle) * armLen;
-    const midEndY = rootY + Math.sin(angle) * armLen;
-    const midPoints = pointsToward(rootX, rootY, midEndX, midEndY, 3);
-    const midLast = addChain(list, byId, {
-      prefix: `${branch[0]}-a${armIndex}-m`,
-      count: 3,
+const BLUE_LEAVES = [
+  [pct("Armor", 12)],
+  [pct("Dodge", 2.5), pct("Block", 7.5)],
+  [pct("Control Immunity", 3.3)],
+  [pct("Damage Reduction", 3.3), pct("Crit Damage Reduction", 3.3)],
+  [pct("All Damage Reduction", 2.5)],
+  [pct("Effect of Being Healed", 6.6)],
+];
+
+const RED_LEAVES = [
+  [pct("Crit", 3.3)],
+  [pct("Crit Damage", 9.5)],
+  [pct("Holy Damage", 7.5)],
+  (i, len) =>
+    i === len - 1
+      ? [pct("Precision", 6.6), flat("Crit", -50)]
+      : [pct("Precision", 6.6)],
+  [pct("All Damage Dealt", 3.3)],
+  [pct("Damage Reduction Offset", 2.0)],
+];
+
+/** Blue top-left detailed geometry (user spec). */
+function buildBlue(list, byId, rootX, rootY) {
+  const branch = "blue";
+  const rootId = "blue-root";
+  addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
+
+  const up = dirLeftOfUp(0);
+  const left45 = dirLeftOfUp(45);
+  const left60 = dirLeftOfUp(60);
+  const left120 = dirLeftOfUp(120);
+
+  // Branch 1: 3 vertical up
+  const b1 = addPolyline(list, byId, {
+    prefix: "b-1-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: up }],
+    stats: [],
+  });
+
+  // 1.1: 8 nodes at -45° from vertical
+  addPolyline(list, byId, {
+    prefix: "b-1-1-",
+    parentId: b1,
+    branch,
+    segments: [{ count: 8, dir: left45 }],
+    stats: BLUE_LEAVES[0],
+  });
+
+  // 1.2: 2 vertical, then 6 at -45°
+  addPolyline(list, byId, {
+    prefix: "b-1-2-",
+    parentId: b1,
+    branch,
+    segments: [
+      { count: 2, dir: up },
+      { count: 6, dir: left45 },
+    ],
+    stats: BLUE_LEAVES[1],
+  });
+
+  // Branch 2: 3 nodes at -60° from vertical
+  const b2 = addPolyline(list, byId, {
+    prefix: "b-2-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: left60 }],
+    stats: [],
+  });
+
+  // 2.1: 4 continue -60°, then 4 at +120° (right) from that heading
+  const b21turn = rotCW(left60[0], left60[1], 120);
+  addPolyline(list, byId, {
+    prefix: "b-2-1-",
+    parentId: b2,
+    branch,
+    segments: [
+      { count: 4, dir: left60 },
+      { count: 4, dir: b21turn },
+    ],
+    stats: BLUE_LEAVES[2],
+  });
+
+  // 2.2 zigzag totaling 8: 1 @ -60, 3 @ -120, 3 @ +120, 1 @ -120
+  let d = left60;
+  const zig = [
+    { count: 1, dir: d },
+  ];
+  d = rotCCW(d[0], d[1], 120);
+  zig.push({ count: 3, dir: d });
+  d = rotCW(d[0], d[1], 120);
+  zig.push({ count: 3, dir: d });
+  d = rotCCW(d[0], d[1], 120);
+  zig.push({ count: 1, dir: d });
+  addPolyline(list, byId, {
+    prefix: "b-2-2-",
+    parentId: b2,
+    branch,
+    segments: zig,
+    stats: BLUE_LEAVES[3],
+  });
+
+  // Branch 3: 3 nodes at -120° from vertical
+  const b3 = addPolyline(list, byId, {
+    prefix: "b-3-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: left120 }],
+    stats: [],
+  });
+
+  // 3.1: 6 continue, then 2 at -120° from that heading
+  const b31turn = rotCCW(left120[0], left120[1], 120);
+  addPolyline(list, byId, {
+    prefix: "b-3-1-",
+    parentId: b3,
+    branch,
+    segments: [
+      { count: 6, dir: left120 },
+      { count: 2, dir: b31turn },
+    ],
+    stats: BLUE_LEAVES[4],
+  });
+
+  // 3.2: 2 @ -120 from heading, 4 @ +120, 2 @ -120
+  let d3 = rotCCW(left120[0], left120[1], 120);
+  const b32 = [{ count: 2, dir: d3 }];
+  d3 = rotCW(d3[0], d3[1], 120);
+  b32.push({ count: 4, dir: d3 });
+  d3 = rotCCW(d3[0], d3[1], 120);
+  b32.push({ count: 2, dir: d3 });
+  addPolyline(list, byId, {
+    prefix: "b-3-2-",
+    parentId: b3,
+    branch,
+    segments: b32,
+    stats: BLUE_LEAVES[5],
+  });
+}
+
+/** Red top-right = mirror of blue (left↔right). */
+function buildRed(list, byId, rootX, rootY) {
+  const branch = "red";
+  const rootId = "red-root";
+  addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
+
+  const up = dirRightOfUp(0);
+  const right45 = dirRightOfUp(45);
+  const right60 = dirRightOfUp(60);
+  const right120 = dirRightOfUp(120);
+
+  const b1 = addPolyline(list, byId, {
+    prefix: "r-1-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: up }],
+    stats: [],
+  });
+
+  addPolyline(list, byId, {
+    prefix: "r-1-1-",
+    parentId: b1,
+    branch,
+    segments: [{ count: 8, dir: right45 }],
+    stats: RED_LEAVES[0],
+  });
+
+  addPolyline(list, byId, {
+    prefix: "r-1-2-",
+    parentId: b1,
+    branch,
+    segments: [
+      { count: 2, dir: up },
+      { count: 6, dir: right45 },
+    ],
+    stats: RED_LEAVES[1],
+  });
+
+  const b2 = addPolyline(list, byId, {
+    prefix: "r-2-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: right60 }],
+    stats: [],
+  });
+
+  // Mirror: +120 right on blue → -120 left on red (CCW from heading)
+  const r21turn = rotCCW(right60[0], right60[1], 120);
+  addPolyline(list, byId, {
+    prefix: "r-2-1-",
+    parentId: b2,
+    branch,
+    segments: [
+      { count: 4, dir: right60 },
+      { count: 4, dir: r21turn },
+    ],
+    stats: RED_LEAVES[2],
+  });
+
+  let d = right60;
+  const zig = [{ count: 1, dir: d }];
+  d = rotCW(d[0], d[1], 120); // mirror of CCW
+  zig.push({ count: 3, dir: d });
+  d = rotCCW(d[0], d[1], 120);
+  zig.push({ count: 3, dir: d });
+  d = rotCW(d[0], d[1], 120);
+  zig.push({ count: 1, dir: d });
+  addPolyline(list, byId, {
+    prefix: "r-2-2-",
+    parentId: b2,
+    branch,
+    segments: zig,
+    stats: RED_LEAVES[3],
+  });
+
+  const b3 = addPolyline(list, byId, {
+    prefix: "r-3-m",
+    parentId: rootId,
+    branch,
+    segments: [{ count: 3, dir: right120 }],
+    stats: [],
+  });
+
+  const r31turn = rotCW(right120[0], right120[1], 120);
+  addPolyline(list, byId, {
+    prefix: "r-3-1-",
+    parentId: b3,
+    branch,
+    segments: [
+      { count: 6, dir: right120 },
+      { count: 2, dir: r31turn },
+    ],
+    stats: RED_LEAVES[4],
+  });
+
+  let d3 = rotCW(right120[0], right120[1], 120);
+  const r32 = [{ count: 2, dir: d3 }];
+  d3 = rotCCW(d3[0], d3[1], 120);
+  r32.push({ count: 4, dir: d3 });
+  d3 = rotCW(d3[0], d3[1], 120);
+  r32.push({ count: 2, dir: d3 });
+  addPolyline(list, byId, {
+    prefix: "r-3-2-",
+    parentId: b3,
+    branch,
+    segments: r32,
+    stats: RED_LEAVES[5],
+  });
+}
+
+/** Green bottom placeholder — same abstract 3×3→6×8, pointing down. */
+function buildGreenPlaceholder(list, byId, rootX, rootY) {
+  const branch = "green";
+  const rootId = "green-root";
+  addRoot(list, byId, { id: rootId, branch, x: rootX, y: rootY });
+
+  const d0 = dirLeftOfUp(180);
+  const dL = dirLeftOfUp(180 - 40);
+  const dR = dirRightOfUp(180 - 40);
+
+  const leaves = [
+    [pct("Control Immunity Offset", 2.5)],
+    [flat("Speed", 20)],
+    [],
+    [],
+    [],
+    [],
+  ];
+
+  [dL, d0, dR].forEach((dir, armIndex) => {
+    const mid = addPolyline(list, byId, {
+      prefix: `g-a${armIndex}-m`,
       parentId: rootId,
       branch,
+      segments: [{ count: 3, dir }],
       stats: [],
-      points: midPoints,
     });
-
-    [-1, 1].forEach((side, leafIndex) => {
-      const wayIndex = armIndex * 2 + leafIndex;
-      const leafAngle = angle + side * leafSpread;
-      const leafEndX = midEndX + Math.cos(leafAngle) * leafLen;
-      const leafEndY = midEndY + Math.sin(leafAngle) * leafLen;
-      const leafPoints = pointsToward(midEndX, midEndY, leafEndX, leafEndY, 8);
-      const statsSpec = leafStats[wayIndex] || [];
-      addChain(list, byId, {
-        prefix: `${branch[0]}-a${armIndex}-l${leafIndex}-`,
-        count: 8,
-        parentId: midLast,
+    const left = rotCCW(dir[0], dir[1], 18);
+    const right = rotCW(dir[0], dir[1], 18);
+    [left, right].forEach((leafDir, leafIndex) => {
+      addPolyline(list, byId, {
+        prefix: `g-a${armIndex}-l${leafIndex}-`,
+        parentId: mid,
         branch,
-        stats: statsSpec,
-        points: leafPoints,
+        segments: [{ count: 8, dir: leafDir }],
+        stats: leaves[armIndex * 2 + leafIndex],
       });
     });
   });
@@ -114,62 +397,17 @@ function buildTree() {
   const list = [];
   const byId = {};
 
-  // Blue NW — 6 ways: black, white, yellow, brown, green, red
-  buildSide(list, byId, {
-    branch: "blue",
-    rootId: "blue-root",
-    rootX: 380,
-    rootY: 360,
-    armAngles: [(-150 * Math.PI) / 180, (-110 * Math.PI) / 180, (-70 * Math.PI) / 180],
-    leafStats: [
-      [pct("Armor", 12)],
-      [pct("Dodge", 2.5), pct("Block", 7.5)],
-      [pct("Control Immunity", 3.3)],
-      [pct("Damage Reduction", 3.3), pct("Crit Damage Reduction", 3.3)],
-      [pct("All Damage Reduction", 2.5)],
-      [pct("Effect of Being Healed", 6.6)],
-    ],
-  });
+  // Upside-down equilateral triangle, roots toward center
+  const cx = 500;
+  const topY = 360;
+  const half = 95;
+  const blue = [cx - half, topY];
+  const red = [cx + half, topY];
+  const green = [cx, topY + half * Math.sqrt(3)];
 
-  // Red NE — 6 ways: black, white, yellow, brown, green, red
-  buildSide(list, byId, {
-    branch: "red",
-    rootId: "red-root",
-    rootX: 620,
-    rootY: 360,
-    armAngles: [(-110 * Math.PI) / 180, (-70 * Math.PI) / 180, (-30 * Math.PI) / 180],
-    leafStats: [
-      [pct("Crit", 3.3)],
-      [pct("Crit Damage", 9.5)],
-      [pct("Holy Damage", 7.5)],
-      (i, len) =>
-        i === len - 1
-          ? [pct("Precision", 6.6), flat("Crit", -50)]
-          : [pct("Precision", 6.6)],
-      [pct("All Damage Dealt", 3.3)],
-      [pct("Damage Reduction Offset", 2.0)],
-    ],
-  });
-
-  // Green S — same format; CIO + Speed on two ways (others path-only for now)
-  buildSide(list, byId, {
-    branch: "green",
-    rootId: "green-root",
-    rootX: 500,
-    rootY: 470,
-    armAngles: [(70 * Math.PI) / 180, (90 * Math.PI) / 180, (110 * Math.PI) / 180],
-    armLen: 100,
-    leafLen: 240,
-    leafSpread: 0.22,
-    leafStats: [
-      [pct("Control Immunity Offset", 2.5)],
-      [flat("Speed", 20)],
-      [],
-      [],
-      [],
-      [],
-    ],
-  });
+  buildBlue(list, byId, blue[0], blue[1]);
+  buildRed(list, byId, red[0], red[1]);
+  buildGreenPlaceholder(list, byId, green[0], green[1]);
 
   return { list, byId };
 }
