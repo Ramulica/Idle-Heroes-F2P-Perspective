@@ -689,7 +689,7 @@ export default function StatCalculator() {
             onClose={() => setPicker(null)}
           >
             <p className="muted sc-modal-lead">
-              Pick an artifact. Stats will be filled in next.
+              Pick an artifact. Speed and Energy are flat; other stats are %.
             </p>
             <div className="sc-pick-panel">
               <div className="sc-pick-grid sc-pick-grid-artifact">
@@ -700,7 +700,11 @@ export default function StatCalculator() {
                       key={item.id}
                       type="button"
                       className={`sc-pick sc-pick-artifact${on ? " selected" : ""}`}
-                      title={item.name}
+                      title={
+                        item.stats?.length
+                          ? `${item.name} · ${formatGearStats(item.stats)}`
+                          : item.name
+                      }
                       onClick={() => {
                         updateBoard(
                           setSlotListValue(
@@ -715,6 +719,10 @@ export default function StatCalculator() {
                       }}
                     >
                       <img src={item.icon} alt="" className="sc-pick-artifact-icon" />
+                      <span className="sc-pick-title">{item.name}</span>
+                      {item.stats?.length ? (
+                        <StatLines stats={item.stats} compact />
+                      ) : null}
                     </button>
                   );
                 })}

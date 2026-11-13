@@ -5223,10 +5223,12 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-pick-grid-artifact .sc-pick-artifact {
-  width: 78px;
-  min-height: 78px;
-  padding: 4px;
+  width: 148px;
+  min-height: 148px;
+  padding: 6px;
   background: #fff8e8;
+  align-items: center;
+  text-align: center;
 }
 
 .sc-pick-artifact-icon {
@@ -5236,6 +5238,16 @@ button.sc-aura-badge:hover .sc-aura-core {
   object-fit: contain;
   background: #fff8e8;
   border-radius: 8px;
+  margin: 0 auto;
+}
+
+.sc-pick-artifact .sc-pick-title {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #3a2818;
 }
 
 .sc-pick-artifact.selected .sc-pick-artifact-icon {

@@ -29,6 +29,7 @@ const IGNORED_STATS = new Set(["HP", "Attack"]);
 
 const STAT_SHORT = {
   Speed: "Spd",
+  Energy: "Energy",
   Crit: "Crit",
   "Crit Damage": "Crit DMG",
   "Crit Damage Reduction": "Crit DR",
@@ -36,6 +37,7 @@ const STAT_SHORT = {
   Armor: "Armor",
   "Armor Break": "Armor Brk",
   Precision: "Prec",
+  "Control Precision": "Ctrl Prec",
   "Skill Damage": "Skill DMG",
   "Holy Damage": "Holy",
   "Heal Effect": "Heal",
@@ -46,6 +48,8 @@ const STAT_SHORT = {
   "Control Immunity": "Ctrl Imm",
   "Control Immunity Offset": "CIO",
   "Damage Reduction Offset": "DR Off",
+  "Dodge Offset": "Dodge Off",
+  "Reduces DoT received": "DoT Red",
   Dodge: "Dodge",
 };
 
