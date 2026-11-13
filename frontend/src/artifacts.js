@@ -8,20 +8,19 @@ const iconModules = import.meta.glob(
   { eager: true, import: "default" }
 );
 
-function artifactIcon(index) {
-  const key = `./assets/stats/artifacts/arti-${String(index).padStart(2, "0")}.png`;
-  return iconModules[key];
-}
+const ARTIFACT_ICONS = Object.keys(iconModules)
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  .map((key) => iconModules[key]);
 
-export const ARTIFACT_COUNT = 47;
+export const ARTIFACT_COUNT = ARTIFACT_ICONS.length;
 
-export const ARTIFACT_OPTIONS = Array.from({ length: ARTIFACT_COUNT }, (_, i) => {
+export const ARTIFACT_OPTIONS = ARTIFACT_ICONS.map((icon, i) => {
   const n = i + 1;
   return {
     id: `arti-${String(n).padStart(2, "0")}`,
     name: `Artifact ${n}`,
     slot: "artifact",
-    icon: artifactIcon(n),
+    icon,
     stats: [],
   };
 });

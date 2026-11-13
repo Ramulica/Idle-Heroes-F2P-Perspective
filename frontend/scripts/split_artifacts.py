@@ -9,9 +9,10 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "assets" / "stats" / "artifa
 OUT = Path(__file__).resolve().parents[1] / "src" / "assets" / "stats" / "artifacts"
 
 # Measured cell origins from the sheet; each tile is ~93×93 inside pink frame.
-LEFT_XS = [20, 147, 274, 401]
+# First left cell is slightly inset vs the rest of the left block.
+LEFT_XS = [23, 147, 274, 401]
 RIGHT_XS = [538, 665, 792, 919]
-LEFT_YS = [14, 140, 266, 391, 513, 639]
+LEFT_YS = [17, 140, 266, 391, 513, 639]
 RIGHT_YS = [8, 134, 259, 385, 508, 633]
 CELL = 98
 
