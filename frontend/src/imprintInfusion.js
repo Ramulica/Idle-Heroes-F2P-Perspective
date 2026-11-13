@@ -141,8 +141,8 @@ function perCircleStatsWithTip(rows, tipRows) {
 
 // Order: 1.1, 1.2, 2.1, 2.2, 3.1, 3.2
 const BLUE_LEAVES = [
-  perCircleStats([pct("Armor", 12)]),
   perCircleStats([pct("Dodge", 2.5), pct("Block", 7.5)]),
+  perCircleStats([pct("Armor", 12)]),
   perCircleStats([pct("Control Immunity", 3.3)]),
   perCircleStats([
     pct("Damage Reduction", 3.3),
@@ -153,8 +153,8 @@ const BLUE_LEAVES = [
 ];
 
 const RED_LEAVES = [
-  perCircleStats([pct("Crit", 3.3)]),
   perCircleStats([pct("Crit Damage", 9.5)]),
+  perCircleStats([pct("Crit", 3.3)]),
   perCircleStats([pct("Holy Damage", 7.5)]),
   perCircleStatsWithTip([pct("Precision", 6.6)], [flat("Crit", -50)]),
   perCircleStats([pct("Damage Reduction Offset", 2.0)]),
@@ -396,13 +396,14 @@ function buildGreen(list, byId, rootX, rootY) {
   const downRight = dirAbsolute(330); // user 150
   const downLeft = dirAbsolute(210); // user 30 / mirror of 150
 
+  // Stats on left branches (3.1 / 3.2), not right (1.1 / 1.2)
   const leaves = [
+    perCircleStats([]),
+    perCircleStats([]),
+    perCircleStats([]),
+    perCircleStats([]),
     perCircleStats([pct("Control Immunity Offset", 2.5)]),
     perCircleStats([flat("Speed", 20)]),
-    perCircleStats([]),
-    perCircleStats([]),
-    perCircleStats([]),
-    perCircleStats([]),
   ];
 
   // Branch 1 (right): 3 @ user 150° → 330°, then split
