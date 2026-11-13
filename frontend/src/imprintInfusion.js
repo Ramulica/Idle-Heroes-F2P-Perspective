@@ -29,6 +29,15 @@ function dirRightOfUp(deg) {
   return [Math.sin(r), -Math.cos(r)];
 }
 
+/**
+ * Absolute heading in general degrees: 0° = right, CCW (90° = up, 180° = left).
+ * SVG y-down.
+ */
+function dirAbsolute(deg) {
+  const r = (deg * Math.PI) / 180;
+  return [Math.cos(r), -Math.sin(r)];
+}
+
 /** Clockwise rotation in screen space (y-down). */
 function rotCW(vx, vy, deg) {
   const r = (deg * Math.PI) / 180;
@@ -173,15 +182,14 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 2.1: 4 continue -60°, then 4 at -120° to the right from that heading
-  const b21turn = rotCW(left60[0], left60[1], 120);
+  // 2.1: 4 continue -60°, then 4 on absolute 150° line
   addPolyline(list, byId, {
     prefix: "b-2-1-",
     parentId: b2,
     branch,
     segments: [
       { count: 4, dir: left60 },
-      { count: 4, dir: b21turn },
+      { count: 4, dir: dirAbsolute(150) },
     ],
     stats: BLUE_LEAVES[2],
   });
@@ -215,15 +223,14 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // 3.1: 6 continue, then 2 at -120° to the left from that heading
-  const b31turn = rotCCW(left120[0], left120[1], 120);
+  // 3.1: 6 continue, then 2 on absolute 210° line
   addPolyline(list, byId, {
     prefix: "b-3-1-",
     parentId: b3,
     branch,
     segments: [
       { count: 6, dir: left120 },
-      { count: 2, dir: b31turn },
+      { count: 2, dir: dirAbsolute(210) },
     ],
     stats: BLUE_LEAVES[4],
   });
@@ -291,15 +298,14 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  // Mirror of blue 2.1 turn-right-120 → turn-left-120
-  const r21turn = rotCCW(right60[0], right60[1], 120);
+  // Mirror of blue 2.1: absolute 150° → 30°
   addPolyline(list, byId, {
     prefix: "r-2-1-",
     parentId: b2,
     branch,
     segments: [
       { count: 4, dir: right60 },
-      { count: 4, dir: r21turn },
+      { count: 4, dir: dirAbsolute(30) },
     ],
     stats: RED_LEAVES[2],
   });
@@ -331,14 +337,14 @@ function buildRed(list, byId, rootX, rootY) {
     stats: [],
   });
 
-  const r31turn = rotCW(right120[0], right120[1], 120);
+  // Mirror of blue 3.1: absolute 210° → 330°
   addPolyline(list, byId, {
     prefix: "r-3-1-",
     parentId: b3,
     branch,
     segments: [
       { count: 6, dir: right120 },
-      { count: 2, dir: r31turn },
+      { count: 2, dir: dirAbsolute(330) },
     ],
     stats: RED_LEAVES[4],
   });
