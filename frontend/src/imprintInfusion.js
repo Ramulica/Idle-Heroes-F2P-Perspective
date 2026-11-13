@@ -15,7 +15,7 @@ export const BRANCH_META = {
 const pct = (stat, value) => ({ stat, value, unit: "%" });
 const flat = (stat, value) => ({ stat, value, unit: "" });
 
-const STEP = 42;
+const STEP = 54;
 
 /** SVG y-down: 0° = up, positive deg = left of vertical. */
 function dirLeftOfUp(deg) {
@@ -485,10 +485,10 @@ function buildTree() {
   const list = [];
   const byId = {};
 
-  // Upside-down equilateral triangle — roots tight; STEP is larger
-  const cx = 500;
-  const topY = 470;
-  const half = 30;
+  // Upside-down equilateral triangle — roots tight; large STEP
+  const cx = 560;
+  const topY = 560;
+  const half = 24;
   const blue = [cx - half, topY];
   const red = [cx + half, topY];
   const green = [cx, topY + half * Math.sqrt(3)];
@@ -513,10 +513,19 @@ export const INFUSION_EDGES = INFUSION_NODES.filter((n) => n.parentId).map(
 
 export const INFUSION_ROOTS = ["blue-root", "red-root", "green-root"];
 
+/** Map points stop accruing after this infusion level. */
+export const INFUSION_POINT_CAP_LEVEL = 40;
+
+/**
+ * Map points from infusion level:
+ * 15–30 → +1 per level (16 pts at 30), 31–40 → +3 per level (+30 at 40). Cap 46.
+ */
 export function infusionPointBudget(level) {
   const n = Math.round(Number(level));
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, n - INFUSION_UNLOCK_LEVEL);
+  if (!Number.isFinite(n) || n < INFUSION_UNLOCK_LEVEL) return 0;
+  const tier1 = Math.min(n, 30) - 14; // level 15 → 1 … 30 → 16
+  const tier2 = n >= 31 ? (Math.min(n, INFUSION_POINT_CAP_LEVEL) - 30) * 3 : 0;
+  return tier1 + tier2;
 }
 
 export function normalizeInfusionNodes(rawIds, budget) {
@@ -571,14 +580,27 @@ export function collectInfusionStats(selectedIds) {
   return rows;
 }
 
+/** Aggregate selected node stats for the map summary. */
+export function summarizeInfusionStats(selectedIds) {
+  const map = new Map();
+  for (const row of collectInfusionStats(selectedIds)) {
+    const key = `${row.stat}|${row.unit || ""}`;
+    const prev = map.get(key);
+    if (prev) prev.value += row.value;
+    else map.set(key, { stat: row.stat, value: row.value, unit: row.unit || "" });
+  }
+  return [...map.values()].sort((a, b) => a.stat.localeCompare(b.stat));
+}
+
+export function formatInfusionStatLine(row) {
+  if (!row) return "";
+  const sign = row.value > 0 ? "+" : "";
+  const unit = row.unit === "%" ? "%" : "";
+  return `${row.stat} ${sign}${row.value}${unit}`;
+}
+
 export function infusionNodeTip(node) {
   if (!node) return "";
   if (!node.stats?.length) return "Path node";
-  return node.stats
-    .map((s) => {
-      const sign = s.value > 0 ? "+" : "";
-      const unit = s.unit === "%" ? "%" : "";
-      return `${s.stat} ${sign}${s.value}${unit}`;
-    })
-    .join(" · ");
+  return node.stats.map(formatInfusionStatLine).join(" · ");
 }

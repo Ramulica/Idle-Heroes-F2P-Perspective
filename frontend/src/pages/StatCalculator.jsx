@@ -78,12 +78,15 @@ import {
   INFUSION_EDGES,
   INFUSION_NODES,
   INFUSION_NODE_BY_ID,
+  INFUSION_POINT_CAP_LEVEL,
   INFUSION_ROOTS,
   INFUSION_UNLOCK_LEVEL,
   canSelectInfusionNode,
+  formatInfusionStatLine,
   infusionNodeTip,
   infusionPointBudget,
   normalizeInfusionNodes,
+  summarizeInfusionStats,
   toggleInfusionNode,
 } from "../imprintInfusion";
 
@@ -1538,8 +1541,9 @@ export default function StatCalculator() {
           onClose={() => setPicker(null)}
         >
           <p className="muted sc-modal-lead">
-            Set infusion level 1–60. Imprint Infusion unlocks at{" "}
-            {INFUSION_UNLOCK_LEVEL}+ ({budget} path point
+            Set infusion level 1–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
+            Levels {INFUSION_UNLOCK_LEVEL}–30 give 1 point each; 31–
+            {INFUSION_POINT_CAP_LEVEL} give 3 each (now {budget} point
             {budget === 1 ? "" : "s"}).
           </p>
           <label className="sc-infusion-field-row">
@@ -1569,7 +1573,14 @@ export default function StatCalculator() {
                   INFUSION_MAX,
                   progress.infusion
                 );
-                patchProgress(picker.slotIndex, { infusion: next });
+                const nextBudget = infusionPointBudget(next);
+                patchProgress(picker.slotIndex, {
+                  infusion: next,
+                  infusionNodes: normalizeInfusionNodes(
+                    progress.infusionNodes,
+                    nextBudget
+                  ),
+                });
                 setPicker(null);
               }}
             >
@@ -1623,6 +1634,9 @@ export default function StatCalculator() {
       );
       const selectedSet = new Set(draft);
       const remaining = Math.max(0, budget - draft.length);
+      const draftStats = summarizeInfusionStats(draft);
+      const mapW = 1120;
+      const mapH = 1180;
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Imprint Infusion`}
@@ -1632,7 +1646,8 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-head">
             <p className="muted sc-modal-lead">
               Remaining points: <strong>{remaining}</strong> / {budget} (level{" "}
-              {progress.infusion} − {INFUSION_UNLOCK_LEVEL})
+              {progress.infusion}; 15–30 → 1 pt, 31–{INFUSION_POINT_CAP_LEVEL} →
+              3 pts)
             </p>
             <button
               type="button"
@@ -1650,7 +1665,7 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-wrap">
             <svg
               className="sc-infusion-map"
-              viewBox="0 0 1000 1040"
+              viewBox={`0 0 ${mapW} ${mapH}`}
               role="img"
               aria-label="Imprint Infusion node map"
             >
@@ -1661,12 +1676,12 @@ export default function StatCalculator() {
                   <stop offset="100%" stopColor="#050a18" />
                 </radialGradient>
               </defs>
-              <rect width="1000" height="1040" fill="url(#sc-infusion-space)" />
+              <rect width={mapW} height={mapH} fill="url(#sc-infusion-space)" />
               {Array.from({ length: 40 }, (_, i) => (
                 <circle
                   key={i}
-                  cx={(i * 97) % 1000}
-                  cy={(i * 173) % 1040}
+                  cx={(i * 97) % mapW}
+                  cy={(i * 173) % mapH}
                   r={i % 5 === 0 ? 1.6 : 1}
                   fill="rgba(255,255,255,0.35)"
                 />
@@ -1686,7 +1701,7 @@ export default function StatCalculator() {
                     x2={to.x}
                     y2={to.y}
                     stroke={lit ? color : "rgba(180,200,220,0.35)"}
-                    strokeWidth={lit ? 3.25 : 1.75}
+                    strokeWidth={lit ? 4 : 2.25}
                   />
                 );
               })}
@@ -1704,10 +1719,10 @@ export default function StatCalculator() {
                     <circle
                       cx={node.x}
                       cy={node.y}
-                      r={isRoot ? (on ? 18 : 15) : on ? 13 : 11}
+                      r={isRoot ? (on ? 22 : 18) : on ? 16 : 13}
                       fill={on ? color : isRoot ? "#1a2438" : "#2a3344"}
                       stroke={on ? "#fff6c8" : canOn ? color : "#667788"}
-                      strokeWidth={on || isRoot ? 2.5 : 1.5}
+                      strokeWidth={on || isRoot ? 3 : 1.75}
                       className={`sc-infusion-node${on ? " on" : ""}${
                         canOn ? " can" : ""
                       }`}
@@ -1731,10 +1746,10 @@ export default function StatCalculator() {
                     {!on && !isRoot ? (
                       <text
                         x={node.x}
-                        y={node.y + 3.5}
+                        y={node.y + 4}
                         textAnchor="middle"
                         fill="#9aa8b8"
-                        fontSize="9"
+                        fontSize="11"
                         pointerEvents="none"
                       >
                         +
@@ -1744,6 +1759,20 @@ export default function StatCalculator() {
                 );
               })}
             </svg>
+          </div>
+          <div className="sc-infusion-stat-summary">
+            <h4>Path stats</h4>
+            {draftStats.length ? (
+              <ul>
+                {draftStats.map((row) => (
+                  <li key={`${row.stat}|${row.unit}`}>
+                    {formatInfusionStatLine(row)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">No leaf stats selected yet.</p>
+            )}
           </div>
           <div className="row-actions sc-pick-actions">
             <button
@@ -2030,7 +2059,7 @@ export default function StatCalculator() {
                 title="Stat Calculator"
                 steps={[
                   "Top summary shows each position and its hero. Tap i on a card for a local breakdown.",
-                  "Under each hero name: stage star, infusion, and awakening. Infusion uses a level field; at 15+ open Imprint Infusion for the node map (points = level − 15).",
+                  "Under each hero name: stage star, infusion, and awakening. Infusion uses a level field; at 15+ open Imprint Infusion. Map points: 15–30 give 1 each, 31–40 give 3 each.",
                   "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Imprints unlock at V1 / V2 / V3 — grey slots stay out of the calc.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",

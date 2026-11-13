@@ -4689,7 +4689,7 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-infusion-map-modal {
-  max-width: min(960px, 96vw);
+  max-width: min(1100px, 98vw);
 }
 
 .sc-infusion-map-head {
@@ -4712,11 +4712,44 @@ button.sc-aura-badge:hover .sc-aura-core {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 62vh;
+  max-height: 72vh;
 }
 
 .sc-infusion-node {
   transition: r 0.12s ease, fill 0.12s ease;
+}
+
+.sc-infusion-stat-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #2a1a10;
+  background: #fff8e8;
+}
+
+.sc-infusion-stat-summary h4 {
+  margin: 0 0 6px;
+  font-family: Cinzel, serif;
+  color: #3a2818;
+}
+
+.sc-infusion-stat-summary ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.sc-infusion-stat-summary li {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3a2818;
+}
+
+.sc-infusion-stat-summary .muted {
+  margin: 0;
 }
 
 .sc-stage-group {
