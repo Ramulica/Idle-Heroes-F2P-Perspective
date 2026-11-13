@@ -141,7 +141,6 @@ function buildBlue(list, byId, rootX, rootY) {
   const left45 = dirLeftOfUp(45);
   const left60 = dirLeftOfUp(60);
   const left120 = dirLeftOfUp(120);
-  const right120FromVertical = dirRightOfUp(120);
 
   // Branch 1: 3 vertical up
   const b1 = addPolyline(list, byId, {
@@ -194,23 +193,18 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: BLUE_LEAVES[2],
   });
 
-  // 2.2: 1 @ +120° from vertical, then zigzag -120 / +120 / -120 / +120
-  // Counts as written: 1+3+3+1+3 (11) — keep literal so angles can be checked
-  let d = right120FromVertical;
-  const zig = [{ count: 1, dir: d }];
-  d = rotCCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
-  d = rotCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
-  d = rotCCW(d[0], d[1], 120);
-  zig.push({ count: 1, dir: d });
-  d = rotCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
+  // 2.2: 1@150, 2@210, 2@150, 1@210, 2@150
   addPolyline(list, byId, {
     prefix: "b-2-2-",
     parentId: b2,
     branch,
-    segments: zig,
+    segments: [
+      { count: 1, dir: dirAbsolute(150) },
+      { count: 2, dir: dirAbsolute(210) },
+      { count: 2, dir: dirAbsolute(150) },
+      { count: 1, dir: dirAbsolute(210) },
+      { count: 2, dir: dirAbsolute(150) },
+    ],
     stats: BLUE_LEAVES[3],
   });
 
@@ -235,18 +229,17 @@ function buildBlue(list, byId, rootX, rootY) {
     stats: BLUE_LEAVES[4],
   });
 
-  // 3.2: 2 @ +60 from heading, 4 @ +120, 2 @ -120 left
-  let d3 = rotCW(left120[0], left120[1], 60);
-  const b32 = [{ count: 2, dir: d3 }];
-  d3 = rotCW(d3[0], d3[1], 120);
-  b32.push({ count: 4, dir: d3 });
-  d3 = rotCCW(d3[0], d3[1], 120);
-  b32.push({ count: 2, dir: d3 });
+  // 3.2: first 2 keep +60 from branch-3 heading, then 4@150, 2@210
+  const b32first = rotCW(left120[0], left120[1], 60);
   addPolyline(list, byId, {
     prefix: "b-3-2-",
     parentId: b3,
     branch,
-    segments: b32,
+    segments: [
+      { count: 2, dir: b32first },
+      { count: 4, dir: dirAbsolute(150) },
+      { count: 2, dir: dirAbsolute(210) },
+    ],
     stats: BLUE_LEAVES[5],
   });
 }
@@ -261,7 +254,6 @@ function buildRed(list, byId, rootX, rootY) {
   const right45 = dirRightOfUp(45);
   const right60 = dirRightOfUp(60);
   const right120 = dirRightOfUp(120);
-  const left120FromVertical = dirLeftOfUp(120);
 
   const b1 = addPolyline(list, byId, {
     prefix: "r-1-m",
@@ -310,22 +302,18 @@ function buildRed(list, byId, rootX, rootY) {
     stats: RED_LEAVES[2],
   });
 
-  // Mirror of blue 2.2: 1 @ +120 from vertical (mirrored → left), then zig
-  let d = left120FromVertical;
-  const zig = [{ count: 1, dir: d }];
-  d = rotCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
-  d = rotCCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
-  d = rotCW(d[0], d[1], 120);
-  zig.push({ count: 1, dir: d });
-  d = rotCCW(d[0], d[1], 120);
-  zig.push({ count: 3, dir: d });
+  // Mirror of blue 2.2: 150→30, 210→330
   addPolyline(list, byId, {
     prefix: "r-2-2-",
     parentId: b2,
     branch,
-    segments: zig,
+    segments: [
+      { count: 1, dir: dirAbsolute(30) },
+      { count: 2, dir: dirAbsolute(330) },
+      { count: 2, dir: dirAbsolute(30) },
+      { count: 1, dir: dirAbsolute(330) },
+      { count: 2, dir: dirAbsolute(30) },
+    ],
     stats: RED_LEAVES[3],
   });
 
@@ -349,18 +337,17 @@ function buildRed(list, byId, rootX, rootY) {
     stats: RED_LEAVES[4],
   });
 
-  // Mirror of blue 3.2: +60 right → -60 left, then flip turn signs
-  let d3 = rotCCW(right120[0], right120[1], 60);
-  const r32 = [{ count: 2, dir: d3 }];
-  d3 = rotCCW(d3[0], d3[1], 120);
-  r32.push({ count: 4, dir: d3 });
-  d3 = rotCW(d3[0], d3[1], 120);
-  r32.push({ count: 2, dir: d3 });
+  // Mirror of blue 3.2: first 2 mirrored +60, then 150→30, 210→330
+  const r32first = rotCCW(right120[0], right120[1], 60);
   addPolyline(list, byId, {
     prefix: "r-3-2-",
     parentId: b3,
     branch,
-    segments: r32,
+    segments: [
+      { count: 2, dir: r32first },
+      { count: 4, dir: dirAbsolute(30) },
+      { count: 2, dir: dirAbsolute(330) },
+    ],
     stats: RED_LEAVES[5],
   });
 }
