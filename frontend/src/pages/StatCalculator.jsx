@@ -73,6 +73,18 @@ import {
   resolvedStageOptionals,
   stageLocksOptionals,
 } from "../heroProgress";
+import {
+  BRANCH_META,
+  INFUSION_EDGES,
+  INFUSION_NODES,
+  INFUSION_NODE_BY_ID,
+  INFUSION_UNLOCK_LEVEL,
+  canSelectInfusionNode,
+  infusionNodeTip,
+  infusionPointBudget,
+  normalizeInfusionNodes,
+  toggleInfusionNode,
+} from "../imprintInfusion";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -320,6 +332,12 @@ function clampAwakenSpeed(tierId, value) {
   return Math.min(max, Math.max(min, n));
 }
 
+function clampIntField(value, min, max, fallback) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 function HeroCard({
   index,
   slot,
@@ -521,13 +539,20 @@ export default function StatCalculator() {
 
   function patchProgress(slotIndex, partial) {
     const slot = board.slots[slotIndex];
+    const base = slot.progress || defaultHeroProgress();
+    const nextInfusion =
+      partial.infusion != null ? partial.infusion : base.infusion;
+    const budget = infusionPointBudget(nextInfusion);
+    const rawNodes =
+      partial.infusionNodes != null ? partial.infusionNodes : base.infusionNodes;
     const progress = {
-      ...(slot.progress || defaultHeroProgress()),
+      ...base,
       ...partial,
       optionals: {
-        ...(slot.progress?.optionals || defaultHeroProgress().optionals),
+        ...(base.optionals || defaultHeroProgress().optionals),
         ...(partial.optionals || {}),
       },
+      infusionNodes: normalizeInfusionNodes(rawNodes, budget),
     };
     updateBoard(patchSlot(board, slotIndex, { progress }));
   }
@@ -1497,31 +1522,272 @@ export default function StatCalculator() {
     if (picker.type === "hero-infusion") {
       const progress =
         board.slots[picker.slotIndex]?.progress || defaultHeroProgress();
-      const current = picker.value ?? progress.infusion;
-      const choices = Array.from(
-        { length: INFUSION_MAX - INFUSION_MIN + 1 },
-        (_, i) => INFUSION_MIN + i
+      const current = clampIntField(
+        picker.value ?? progress.infusion,
+        INFUSION_MIN,
+        INFUSION_MAX,
+        progress.infusion
       );
+      const unlocked = current >= INFUSION_UNLOCK_LEVEL;
+      const budget = infusionPointBudget(current);
+      const selectedCount = (progress.infusionNodes || []).length;
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Infusion`}
           onClose={() => setPicker(null)}
         >
-          <p className="muted sc-modal-lead">Pick infusion level 1–60.</p>
-          <div className="sc-level-grid sc-infusion-grid">
-            {choices.map((lv) => (
-              <button
-                key={lv}
-                type="button"
-                className={`sc-level-chip${lv === current ? " selected" : ""}`}
-                onClick={() => {
-                  patchProgress(picker.slotIndex, { infusion: lv });
-                  setPicker(null);
-                }}
+          <p className="muted sc-modal-lead">
+            Set infusion level 1–60. Imprint Infusion unlocks at{" "}
+            {INFUSION_UNLOCK_LEVEL}+ ({budget} path point
+            {budget === 1 ? "" : "s"}).
+          </p>
+          <label className="sc-infusion-field-row">
+            <span>Level</span>
+            <input
+              className="sc-infusion-level-input"
+              type="number"
+              min={INFUSION_MIN}
+              max={INFUSION_MAX}
+              value={picker.value ?? progress.infusion}
+              onChange={(event) =>
+                setPicker({
+                  ...picker,
+                  value: event.target.value,
+                })
+              }
+            />
+          </label>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                const next = clampIntField(
+                  picker.value ?? progress.infusion,
+                  INFUSION_MIN,
+                  INFUSION_MAX,
+                  progress.infusion
+                );
+                patchProgress(picker.slotIndex, { infusion: next });
+                setPicker(null);
+              }}
+            >
+              Save level
+            </button>
+          </div>
+          <div className="sc-infusion-imprint-block">
+            <button
+              type="button"
+              className={`sc-imprint-infusion-btn${unlocked ? "" : " locked"}`}
+              disabled={!unlocked}
+              onClick={() => {
+                const next = clampIntField(
+                  picker.value ?? progress.infusion,
+                  INFUSION_MIN,
+                  INFUSION_MAX,
+                  progress.infusion
+                );
+                const nextBudget = infusionPointBudget(next);
+                const nodes = normalizeInfusionNodes(
+                  progress.infusionNodes,
+                  nextBudget
+                );
+                patchProgress(picker.slotIndex, { infusion: next });
+                setPicker({
+                  type: "imprint-infusion",
+                  slotIndex: picker.slotIndex,
+                  draftNodes: nodes,
+                });
+              }}
+            >
+              Imprint Infusion
+            </button>
+            <p className="muted">
+              {unlocked
+                ? `${selectedCount}/${budget} nodes spent`
+                : `Greyed out until infusion ${INFUSION_UNLOCK_LEVEL}`}
+            </p>
+          </div>
+        </Modal>
+      );
+    }
+
+    if (picker.type === "imprint-infusion") {
+      const progress =
+        board.slots[picker.slotIndex]?.progress || defaultHeroProgress();
+      const budget = infusionPointBudget(progress.infusion);
+      const draft = normalizeInfusionNodes(
+        picker.draftNodes ?? progress.infusionNodes,
+        budget
+      );
+      const selectedSet = new Set(draft);
+      const remaining = Math.max(0, budget - draft.length);
+      return (
+        <Modal
+          title={`${slotTitle(picker.slotIndex)} · Imprint Infusion`}
+          onClose={() => setPicker(null)}
+          className="sc-infusion-map-modal"
+        >
+          <div className="sc-infusion-map-head">
+            <p className="muted sc-modal-lead">
+              Remaining points: <strong>{remaining}</strong> / {budget} (level{" "}
+              {progress.infusion} − {INFUSION_UNLOCK_LEVEL})
+            </p>
+            <button
+              type="button"
+              className="tan-btn"
+              onClick={() =>
+                setPicker({
+                  ...picker,
+                  draftNodes: [],
+                })
+              }
+            >
+              Reset Path
+            </button>
+          </div>
+          <div className="sc-infusion-map-wrap">
+            <svg
+              className="sc-infusion-map"
+              viewBox="0 0 1000 940"
+              role="img"
+              aria-label="Imprint Infusion node map"
+            >
+              <defs>
+                <radialGradient id="sc-infusion-space" cx="50%" cy="45%" r="65%">
+                  <stop offset="0%" stopColor="#1a3a6a" />
+                  <stop offset="55%" stopColor="#0c1a38" />
+                  <stop offset="100%" stopColor="#050a18" />
+                </radialGradient>
+              </defs>
+              <rect width="1000" height="940" fill="url(#sc-infusion-space)" />
+              {Array.from({ length: 40 }, (_, i) => (
+                <circle
+                  key={i}
+                  cx={(i * 97) % 1000}
+                  cy={(i * 173) % 940}
+                  r={i % 5 === 0 ? 1.6 : 1}
+                  fill="rgba(255,255,255,0.35)"
+                />
+              ))}
+              <circle cx="500" cy="410" r="28" fill="#1e4a8a" stroke="#7ec8ff" strokeWidth="2" />
+              <text
+                x="500"
+                y="416"
+                textAnchor="middle"
+                fill="#cfe9ff"
+                fontSize="14"
+                fontWeight="700"
               >
-                {lv}
-              </button>
-            ))}
+                Hub
+              </text>
+              {INFUSION_EDGES.map((edge) => {
+                const from = INFUSION_NODE_BY_ID[edge.from];
+                const to = INFUSION_NODE_BY_ID[edge.to];
+                if (!from || !to) return null;
+                const lit = selectedSet.has(edge.from) && selectedSet.has(edge.to);
+                const color = BRANCH_META[to.branch]?.color || "#8899aa";
+                return (
+                  <line
+                    key={`${edge.from}-${edge.to}`}
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke={lit ? color : "rgba(180,200,220,0.35)"}
+                    strokeWidth={lit ? 2.5 : 1.25}
+                  />
+                );
+              })}
+              {/* Hub spokes to branch roots */}
+              {["b-s1", "r-s1", "g-s1"].map((id) => {
+                const node = INFUSION_NODE_BY_ID[id];
+                if (!node) return null;
+                const lit = selectedSet.has(id);
+                return (
+                  <line
+                    key={`hub-${id}`}
+                    x1={500}
+                    y1={410}
+                    x2={node.x}
+                    y2={node.y}
+                    stroke={
+                      lit
+                        ? BRANCH_META[node.branch]?.color || "#8899aa"
+                        : "rgba(180,200,220,0.35)"
+                    }
+                    strokeWidth={lit ? 2.5 : 1.25}
+                  />
+                );
+              })}
+              {INFUSION_NODES.map((node) => {
+                const on = selectedSet.has(node.id);
+                const canOn = canSelectInfusionNode(selectedSet, node.id, budget);
+                const color = BRANCH_META[node.branch]?.color || "#8899aa";
+                return (
+                  <g key={node.id}>
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={on ? 11 : 9}
+                      fill={on ? color : "#2a3344"}
+                      stroke={on ? "#fff6c8" : canOn ? color : "#667788"}
+                      strokeWidth={on ? 2.5 : 1.5}
+                      className={`sc-infusion-node${on ? " on" : ""}${
+                        canOn ? " can" : ""
+                      }`}
+                      onClick={() => {
+                        const next = toggleInfusionNode(draft, node.id, budget);
+                        setPicker({
+                          ...picker,
+                          draftNodes: next,
+                        });
+                      }}
+                      style={{ cursor: on || canOn ? "pointer" : "default" }}
+                    >
+                      <title>{infusionNodeTip(node)}</title>
+                    </circle>
+                    {!on ? (
+                      <text
+                        x={node.x}
+                        y={node.y + 3.5}
+                        textAnchor="middle"
+                        fill="#9aa8b8"
+                        fontSize="10"
+                        pointerEvents="none"
+                      >
+                        +
+                      </text>
+                    ) : null}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() =>
+                setPicker({
+                  type: "hero-infusion",
+                  slotIndex: picker.slotIndex,
+                  value: progress.infusion,
+                })
+              }
+            >
+              Back
+            </button>
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                patchProgress(picker.slotIndex, { infusionNodes: draft });
+                setPicker(null);
+              }}
+            >
+              Save path
+            </button>
           </div>
         </Modal>
       );
@@ -1602,7 +1868,7 @@ export default function StatCalculator() {
         );
         return (
           <Modal
-            title={`${slotTitle(picker.slotIndex)} · Skill ${statIndex + 1}`}
+            title={`${slotTitle(picker.slotIndex)} · Stat ${statIndex + 1}`}
             onClose={() =>
               setPicker({
                 ...picker,
@@ -1612,7 +1878,7 @@ export default function StatCalculator() {
             }
           >
             <p className="muted sc-modal-lead">
-              Choose skill {statIndex + 1} of {needStats} for {tierId}.
+              Choose stat {statIndex + 1} of {needStats} for {tierId}.
             </p>
             <div className="sc-awaken-stat-list">
               {pool.map((name) => {
@@ -1667,7 +1933,7 @@ export default function StatCalculator() {
           onClose={() => setPicker(null)}
         >
           <p className="muted sc-modal-lead">
-            Tap Awakening to pick the tier, edit Speed, then tap each skill to
+            Tap Awakening to pick the tier, edit Speed, then tap each stat to
             choose from its pool.
           </p>
           <div className="sc-awaken-summary">
@@ -1729,7 +1995,7 @@ export default function StatCalculator() {
                   })
                 }
               >
-                <span className="sc-awaken-summary-label">Skill {i + 1}</span>
+                <span className="sc-awaken-summary-label">Stat {i + 1}</span>
                 <span className="sc-awaken-summary-value">
                   {picked[i] || "Pick…"}
                 </span>
@@ -1783,7 +2049,7 @@ export default function StatCalculator() {
                 title="Stat Calculator"
                 steps={[
                   "Top summary shows each position and its hero. Tap i on a card for a local breakdown.",
-                  "Under each hero name: stage star, infusion, and awakening. Icons only — details open in popups. Awakening opens a summary (tier, speed, skills).",
+                  "Under each hero name: stage star, infusion, and awakening. Infusion uses a level field; at 15+ open Imprint Infusion for the node map (points = level − 15).",
                   "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Imprints unlock at V1 / V2 / V3 — grey slots stay out of the calc.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",

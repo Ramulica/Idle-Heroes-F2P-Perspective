@@ -2,6 +2,7 @@ import { gearOf, gearSlotDef, heroOf, imprintOf } from "./statCalculator";
 import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
 import { imprintUnlocked } from "./heroProgress";
+import { collectInfusionStats } from "./imprintInfusion";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -10,7 +11,7 @@ export const STAT_SOURCES = [
   { id: "soul_stone", label: "Soul Stone" },
   { id: "enables", label: "Enables" },
   { id: "imprints", label: "Imprints" },
-  { id: "tree_of_origin", label: "Tree of Origin" },
+  { id: "tree_of_origin", label: "Imprint Infusion" },
   { id: "team_aura", label: "Team Aura" },
   { id: "monster", label: "Monster" },
   { id: "train", label: "Train" },
@@ -43,6 +44,9 @@ const STAT_SHORT = {
   "All Damage Dealt": "All DMG",
   "All Damage Reduction": "All DR",
   "Control Immunity": "Ctrl Imm",
+  "Control Immunity Offset": "CIO",
+  "Damage Reduction Offset": "DR Off",
+  Dodge: "Dodge",
 };
 
 /** Speed first, then alphabetical by label (stat + unit). */
@@ -162,6 +166,12 @@ function collectImprints(slot) {
   return map;
 }
 
+function collectImprintInfusion(slot) {
+  const map = emptyMap();
+  addRows(map, collectInfusionStats(slot?.progress?.infusionNodes));
+  return map;
+}
+
 function collectTeamAura(aura, slotIndex) {
   const map = emptyMap();
   if (!aura) return map;
@@ -205,7 +215,7 @@ export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
     soul_stone: collectSoulStone(slot),
     enables: emptySourceMap(),
     imprints: collectImprints(slot),
-    tree_of_origin: emptySourceMap(),
+    tree_of_origin: collectImprintInfusion(slot),
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
     train: emptySourceMap(),

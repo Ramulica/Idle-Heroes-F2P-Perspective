@@ -1,5 +1,9 @@
 import infusionBadge from "./assets/stats/infusion/infusion-badge-clean.png";
 import { T_OPTIONALS, EMPTY_OPTIONALS, STAGE_BY_ID } from "./heroUpgrade";
+import {
+  infusionPointBudget,
+  normalizeInfusionNodes,
+} from "./imprintInfusion";
 
 /** Hero stage options for Stat Calculator (no temple +levels, no T max). */
 export const HERO_STAGE_OPTIONS = [
@@ -223,6 +227,7 @@ export function defaultHeroProgress() {
     stageId: "E5",
     optionals: { ...EMPTY_OPTIONALS },
     infusion: INFUSION_DEFAULT,
+    infusionNodes: [],
     awakening: null,
   };
 }
@@ -273,10 +278,22 @@ export function normalizeHeroProgress(raw) {
     }
   }
 
+  const infusion = clampInt(
+    src.infusion,
+    INFUSION_MIN,
+    INFUSION_MAX,
+    INFUSION_DEFAULT
+  );
+  const infusionNodes = normalizeInfusionNodes(
+    src.infusionNodes,
+    infusionPointBudget(infusion)
+  );
+
   return {
     stageId,
     optionals,
-    infusion: clampInt(src.infusion, INFUSION_MIN, INFUSION_MAX, INFUSION_DEFAULT),
+    infusion,
+    infusionNodes,
     awakening,
   };
 }

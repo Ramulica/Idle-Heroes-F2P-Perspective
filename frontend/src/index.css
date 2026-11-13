@@ -4638,6 +4638,87 @@ button.sc-aura-badge:hover .sc-aura-core {
   overflow: auto;
 }
 
+.sc-infusion-field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  color: #5a3a18;
+  margin: 8px 0 4px;
+}
+
+.sc-infusion-level-input {
+  width: 96px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 1.15rem;
+  padding: 8px 10px;
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #3a2818;
+}
+
+.sc-infusion-imprint-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(122, 74, 34, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sc-imprint-infusion-btn {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 2px solid #7a4a22;
+  background: linear-gradient(180deg, #ffe27a, #f4c430);
+  color: #3a2818;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sc-imprint-infusion-btn.locked,
+.sc-imprint-infusion-btn:disabled {
+  background: #c8c4bc;
+  border-color: #8a8a8a;
+  color: #6a6a6a;
+  cursor: default;
+  filter: grayscale(0.4);
+}
+
+.sc-infusion-map-modal {
+  max-width: min(960px, 96vw);
+}
+
+.sc-infusion-map-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sc-infusion-map-wrap {
+  margin-top: 8px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid #2a1a10;
+  background: #050a18;
+}
+
+.sc-infusion-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62vh;
+}
+
+.sc-infusion-node {
+  transition: r 0.12s ease, fill 0.12s ease;
+}
+
 .sc-stage-group {
   margin-top: 10px;
 }
