@@ -78,6 +78,7 @@ import {
   INFUSION_EDGES,
   INFUSION_NODES,
   INFUSION_NODE_BY_ID,
+  INFUSION_ROOTS,
   INFUSION_UNLOCK_LEVEL,
   canSelectInfusionNode,
   infusionNodeTip,
@@ -1670,22 +1671,12 @@ export default function StatCalculator() {
                   fill="rgba(255,255,255,0.35)"
                 />
               ))}
-              <circle cx="500" cy="410" r="28" fill="#1e4a8a" stroke="#7ec8ff" strokeWidth="2" />
-              <text
-                x="500"
-                y="416"
-                textAnchor="middle"
-                fill="#cfe9ff"
-                fontSize="14"
-                fontWeight="700"
-              >
-                Hub
-              </text>
               {INFUSION_EDGES.map((edge) => {
                 const from = INFUSION_NODE_BY_ID[edge.from];
                 const to = INFUSION_NODE_BY_ID[edge.to];
                 if (!from || !to) return null;
-                const lit = selectedSet.has(edge.from) && selectedSet.has(edge.to);
+                const lit =
+                  selectedSet.has(edge.from) && selectedSet.has(edge.to);
                 const color = BRANCH_META[to.branch]?.color || "#8899aa";
                 return (
                   <line
@@ -1699,40 +1690,24 @@ export default function StatCalculator() {
                   />
                 );
               })}
-              {/* Hub spokes to branch roots */}
-              {["b-s1", "r-s1", "g-s1"].map((id) => {
-                const node = INFUSION_NODE_BY_ID[id];
-                if (!node) return null;
-                const lit = selectedSet.has(id);
-                return (
-                  <line
-                    key={`hub-${id}`}
-                    x1={500}
-                    y1={410}
-                    x2={node.x}
-                    y2={node.y}
-                    stroke={
-                      lit
-                        ? BRANCH_META[node.branch]?.color || "#8899aa"
-                        : "rgba(180,200,220,0.35)"
-                    }
-                    strokeWidth={lit ? 2.5 : 1.25}
-                  />
-                );
-              })}
               {INFUSION_NODES.map((node) => {
                 const on = selectedSet.has(node.id);
-                const canOn = canSelectInfusionNode(selectedSet, node.id, budget);
+                const canOn = canSelectInfusionNode(
+                  selectedSet,
+                  node.id,
+                  budget
+                );
                 const color = BRANCH_META[node.branch]?.color || "#8899aa";
+                const isRoot = INFUSION_ROOTS.includes(node.id);
                 return (
                   <g key={node.id}>
                     <circle
                       cx={node.x}
                       cy={node.y}
-                      r={on ? 11 : 9}
-                      fill={on ? color : "#2a3344"}
+                      r={isRoot ? (on ? 14 : 12) : on ? 10 : 8}
+                      fill={on ? color : isRoot ? "#1a2438" : "#2a3344"}
                       stroke={on ? "#fff6c8" : canOn ? color : "#667788"}
-                      strokeWidth={on ? 2.5 : 1.5}
+                      strokeWidth={on || isRoot ? 2.5 : 1.5}
                       className={`sc-infusion-node${on ? " on" : ""}${
                         canOn ? " can" : ""
                       }`}
@@ -1743,17 +1718,23 @@ export default function StatCalculator() {
                           draftNodes: next,
                         });
                       }}
-                      style={{ cursor: on || canOn ? "pointer" : "default" }}
+                      style={{
+                        cursor: on || canOn ? "pointer" : "default",
+                      }}
                     >
-                      <title>{infusionNodeTip(node)}</title>
+                      <title>
+                        {isRoot
+                          ? `${BRANCH_META[node.branch]?.label || node.branch} start`
+                          : infusionNodeTip(node)}
+                      </title>
                     </circle>
-                    {!on ? (
+                    {!on && !isRoot ? (
                       <text
                         x={node.x}
                         y={node.y + 3.5}
                         textAnchor="middle"
                         fill="#9aa8b8"
-                        fontSize="10"
+                        fontSize="9"
                         pointerEvents="none"
                       >
                         +
