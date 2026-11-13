@@ -2929,50 +2929,64 @@ input[type="range"] {
 .hero-mark-star {
   position: absolute;
   inset: 0;
+  z-index: 1;
+}
+
+.hero-mark-outline {
+  z-index: 0;
+  background: #1a1008 !important;
+  filter: none !important;
+  box-shadow: none !important;
+  transform: scale(1.16);
 }
 
 .hero-mark-text {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   font-size: 0.72rem;
   font-weight: 900;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
-.hero-mark-e .hero-mark-star {
+.hero-mark-e .hero-mark-star:not(.hero-mark-outline) {
   background: radial-gradient(circle at 35% 30%, #ffe27a, #f4a012 58%, #c56a08);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter:
-    drop-shadow(0 0 1px #1a1008)
-    drop-shadow(0 0 1.5px #1a1008)
-    drop-shadow(0 0 3px rgba(255, 180, 40, 0.75));
+  filter: drop-shadow(0 0 3px rgba(255, 180, 40, 0.75));
 }
 
-.hero-mark-v .hero-mark-star {
+.hero-mark-e .hero-mark-outline {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.hero-mark-v .hero-mark-star:not(.hero-mark-outline) {
   background: radial-gradient(circle at 35% 30%, #9ad8ff, #2f6adf 62%, #1a3f9a);
   border-radius: 50%;
-  box-shadow:
-    0 0 0 2px #1a1008,
-    0 0 8px rgba(80, 140, 255, 0.7);
+  box-shadow: 0 0 8px rgba(80, 140, 255, 0.7);
 }
 
-.hero-mark-t .hero-mark-star {
+.hero-mark-v .hero-mark-outline {
+  border-radius: 50%;
+}
+
+.hero-mark-t .hero-mark-star:not(.hero-mark-outline) {
   background: radial-gradient(circle at 35% 30%, #ff8a7a, #d41c1c 58%, #7a0808);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter:
-    drop-shadow(0 0 1px #1a1008)
-    drop-shadow(0 0 1.5px #1a1008)
-    drop-shadow(0 0 4px rgba(255, 60, 40, 0.9));
+  filter: drop-shadow(0 0 4px rgba(255, 60, 40, 0.9));
 }
 
-.hero-mark-d .hero-mark-star {
+.hero-mark-t .hero-mark-outline {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.hero-mark-d .hero-mark-star:not(.hero-mark-outline) {
   background: conic-gradient(from 200deg, #fff, #ffd1e8, #c9b6ff, #9be7ff, #fff6b0, #fff);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  filter:
-    drop-shadow(0 0 1px #1a1008)
-    drop-shadow(0 0 1.5px #1a1008)
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
+}
+
+.hero-mark-d .hero-mark-outline {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 
 .hero-mark-d .hero-mark-text,
@@ -4545,19 +4559,8 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-size: 0.82rem;
 }
 
-.sc-stage-star .hero-mark-e .hero-mark-star,
-.sc-stage-star .hero-mark-t .hero-mark-star,
-.sc-stage-star .hero-mark-d .hero-mark-star {
-  filter:
-    drop-shadow(0 0 1.25px #0d0704)
-    drop-shadow(0 0 2px #0d0704)
-    drop-shadow(0 0 2.5px #1a1008);
-}
-
-.sc-stage-star .hero-mark-v .hero-mark-star {
-  box-shadow:
-    0 0 0 2.5px #0d0704,
-    0 0 6px rgba(80, 140, 255, 0.55);
+.sc-stage-star .hero-mark-outline {
+  transform: scale(1.2);
 }
 
 .sc-infusion-btn img {
@@ -4573,15 +4576,18 @@ button.sc-aura-badge:hover .sc-aura-core {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   font-weight: 900;
   color: #ffe27a;
+  letter-spacing: -0.03em;
   text-shadow:
     0 0 2px #000,
     0 1px 0 #000,
     1px 0 0 #000,
     -1px 0 0 #000,
-    0 -1px 0 #000;
+    0 -1px 0 #000,
+    1px 1px 0 #000,
+    -1px -1px 0 #000;
   pointer-events: none;
 }
 
