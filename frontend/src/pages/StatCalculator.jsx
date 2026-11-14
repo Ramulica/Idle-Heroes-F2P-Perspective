@@ -2244,12 +2244,28 @@ export default function StatCalculator() {
                 type="number"
                 min={speedSpan.min}
                 max={speedSpan.max}
-                value={draft.speed ?? speedSpan.min}
+                value={
+                  picker.speedText != null
+                    ? picker.speedText
+                    : (draft.speed ?? speedSpan.min)
+                }
                 onChange={(event) => {
-                  const nextSpeed = clampAwakenSpeed(tierId, event.target.value);
                   setPicker({
                     ...picker,
                     panel: "summary",
+                    speedText: event.target.value,
+                    draft: { ...draft, speed: event.target.value },
+                  });
+                }}
+                onBlur={() => {
+                  const nextSpeed = clampAwakenSpeed(
+                    tierId,
+                    picker.speedText ?? draft.speed
+                  );
+                  setPicker({
+                    ...picker,
+                    panel: "summary",
+                    speedText: undefined,
                     draft: { ...draft, speed: nextSpeed },
                   });
                 }}
