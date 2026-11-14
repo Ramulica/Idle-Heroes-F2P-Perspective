@@ -1,7 +1,7 @@
 import { gearOf, gearSlotDef, heroOf, imprintOf } from "./statCalculator";
 import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
-import { imprintUnlocked } from "./heroProgress";
+import { awakeningStatValue, imprintUnlocked } from "./heroProgress";
 import { collectInfusionStats } from "./imprintInfusion";
 import {
   cloudSpeedForFaction,
@@ -258,6 +258,23 @@ function collectCloudIsland(slot, cloudIsland) {
   return map;
 }
 
+function collectAwakening(slot) {
+  const map = emptyMap();
+  const awakening = slot?.progress?.awakening;
+  if (!awakening?.tierId || !heroOf(slot?.heroId)) return map;
+  const speed = Number(awakening.speed);
+  if (Number.isFinite(speed) && speed !== 0) {
+    addRow(map, { stat: "Speed", value: speed, unit: "" });
+  }
+  for (const name of awakening.stats || []) {
+    if (!name) continue;
+    const value = awakeningStatValue(awakening.tierId, name);
+    if (value == null) continue;
+    addRow(map, { stat: name, value, unit: "%" });
+  }
+  return map;
+}
+
 function emptySourceMap() {
   return emptyMap();
 }
@@ -285,7 +302,7 @@ export function computeHeroStatBreakdown(
     tenants: collectTenants(slot, tenants),
     cloud_island: collectCloudIsland(slot, cloudIsland),
     sigils: emptySourceMap(),
-    awakening: emptySourceMap(),
+    awakening: collectAwakening(slot),
     star_spawns: emptySourceMap(),
     guild_tech: emptySourceMap(),
   };

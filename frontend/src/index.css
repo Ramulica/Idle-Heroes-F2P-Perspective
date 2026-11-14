@@ -4891,6 +4891,10 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-awaken-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   text-align: left;
   padding: 8px 10px;
   border-radius: 10px;
@@ -4899,6 +4903,12 @@ button.sc-aura-badge:hover .sc-aura-core {
   color: #5a3a18;
   font-weight: 700;
   cursor: pointer;
+}
+
+.sc-awaken-stat-value {
+  flex-shrink: 0;
+  font-size: 0.85em;
+  opacity: 0.85;
 }
 
 .sc-awaken-stat.selected {

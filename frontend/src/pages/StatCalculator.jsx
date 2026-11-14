@@ -65,6 +65,7 @@ import {
   awakeningSpeedRange,
   awakeningStatCount,
   awakeningStatPool,
+  awakeningStatValue,
   defaultAwakening,
   defaultHeroProgress,
   IMPRINT_UNLOCK_STAGES,
@@ -2165,6 +2166,7 @@ export default function StatCalculator() {
                   (id, i) => id === name && i !== statIndex
                 );
                 const on = picked[statIndex] === name;
+                const value = awakeningStatValue(tierId, name);
                 return (
                   <button
                     key={name}
@@ -2183,6 +2185,9 @@ export default function StatCalculator() {
                     }}
                   >
                     {name}
+                    {value != null ? (
+                      <span className="sc-awaken-stat-value">+{value}%</span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -2292,7 +2297,14 @@ export default function StatCalculator() {
               >
                 <span className="sc-awaken-summary-label">Stat {i + 1}</span>
                 <span className="sc-awaken-summary-value">
-                  {picked[i] || "Pick…"}
+                  {picked[i]
+                    ? (() => {
+                        const value = awakeningStatValue(tierId, picked[i]);
+                        return value != null
+                          ? `${picked[i]} +${value}%`
+                          : picked[i];
+                      })()
+                    : "Pick…"}
                 </span>
               </button>
             ))}
