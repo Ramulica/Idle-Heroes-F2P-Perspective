@@ -1033,6 +1033,9 @@ export default function StatCalculator() {
             Pick one icon for this enable. Stats scale with infusion (Enable 1
             at 1/2/4, Enable 4 at 10/11; Enable 5 · D at{" "}
             {ENABLE_5D_UNLOCK_INFUSION}+).
+            {picker.listIndex === 0 || picker.listIndex === 3
+              ? " Enable 1/4 · A All DR only counts when a game mode is selected."
+              : ""}
           </p>
           <PickGrid
             items={choices}

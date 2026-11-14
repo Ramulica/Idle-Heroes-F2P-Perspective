@@ -18,7 +18,7 @@ import {
   cloudSpeedForFaction,
   tenantSpeedFromLevels,
 } from "./tenantsCloud";
-import { sourceAllowedInGameMode } from "./gameModes";
+import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -173,13 +173,25 @@ function collectSoulStone(slot) {
   return map;
 }
 
-function collectEnables(slot) {
+function collectEnables(slot, gameModeId = null) {
   const map = emptyMap();
   if (!heroOf(slot?.heroId)) return map;
   const infusion = slot?.progress?.infusion ?? 0;
+  const modeActive = Boolean(gameModeOf(gameModeId));
   (slot?.enables || []).forEach((id, index) => {
     if (!id) return;
-    addRows(map, resolveEnableStats(id, index, infusion));
+    const rows = resolveEnableStats(id, index, infusion).filter((row) => {
+      // Enable 1/4 · A ADR only counts in a selected game mode.
+      if (
+        id === "en-1a" &&
+        row.stat === "All Damage Reduction" &&
+        !modeActive
+      ) {
+        return false;
+      }
+      return true;
+    });
+    addRows(map, rows);
   });
   return map;
 }
@@ -322,7 +334,7 @@ export function computeHeroStatBreakdown(
     gear: collectGear(slot),
     arti: collectArtifact(slot),
     soul_stone: collectSoulStone(slot),
-    enables: collectEnables(slot),
+    enables: collectEnables(slot, gameModeId),
     imprints: collectImprints(slot),
     tree_of_origin: collectTreeOfOrigin(slot),
     imprint_infusion: collectImprintInfusion(slot),
