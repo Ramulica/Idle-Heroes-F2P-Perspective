@@ -1,4 +1,10 @@
-import { gearOf, gearSlotDef, heroOf, imprintOf } from "./statCalculator";
+import {
+  gearOf,
+  gearSlotDef,
+  heroOf,
+  imprintOf,
+  resolveEnableStats,
+} from "./statCalculator";
 import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
 import { awakeningStatValue, imprintUnlocked } from "./heroProgress";
@@ -161,6 +167,17 @@ function collectSoulStone(slot) {
   return map;
 }
 
+function collectEnables(slot) {
+  const map = emptyMap();
+  if (!heroOf(slot?.heroId)) return map;
+  const infusion = slot?.progress?.infusion ?? 0;
+  (slot?.enables || []).forEach((id, index) => {
+    if (!id) return;
+    addRows(map, resolveEnableStats(id, index, infusion));
+  });
+  return map;
+}
+
 function collectImprints(slot) {
   const map = emptyMap();
   const stageId = slot?.progress?.stageId || "E5";
@@ -292,7 +309,7 @@ export function computeHeroStatBreakdown(
     gear: collectGear(slot),
     arti: collectArtifact(slot),
     soul_stone: collectSoulStone(slot),
-    enables: emptySourceMap(),
+    enables: collectEnables(slot),
     imprints: collectImprints(slot),
     tree_of_origin: collectTreeOfOrigin(slot),
     imprint_infusion: collectImprintInfusion(slot),

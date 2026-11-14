@@ -167,6 +167,7 @@ function buildStats(slot, classDefs, stage) {
 const STAT_SHORT = {
   "All Damage Dealt": "All DMG",
   "All Damage Reduction": "All DR",
+  "Effect of Being Healed": "Healed",
   "Damage Reduction": "DR",
   "Crit Damage": "Crit DMG",
   "Crit Damage Reduction": "Crit DR",

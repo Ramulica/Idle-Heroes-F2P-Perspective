@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
 import {
+  ENABLE_5D_UNLOCK_INFUSION,
   ENABLE_COUNT,
   GEAR_COUNT,
   IMPRINT_COUNT,
@@ -1009,15 +1010,22 @@ export default function StatCalculator() {
     }
 
     if (picker.type === "enable") {
-      const selected = board.slots[picker.slotIndex].enables[picker.listIndex];
-      const choices = enableOptionsForSlot(picker.listIndex);
+      const slot = board.slots[picker.slotIndex];
+      const progress = slot.progress || defaultHeroProgress();
+      const selected = slot.enables[picker.listIndex];
+      const choices = enableOptionsForSlot(
+        picker.listIndex,
+        progress.infusion
+      );
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Enable ${picker.listIndex + 1}`}
           onClose={() => setPicker(null)}
         >
           <p className="muted sc-modal-lead">
-            Pick one icon for this enable. Stats for each choice come later.
+            Pick one icon for this enable. Stats scale with infusion (Enable 1
+            at 1/2/4, Enable 4 at 10/11; Enable 5 · D at{" "}
+            {ENABLE_5D_UNLOCK_INFUSION}+).
           </p>
           <PickGrid
             items={choices}
@@ -1051,6 +1059,11 @@ export default function StatCalculator() {
               <>
                 <img src={item.icon} alt="" className="sc-pick-circle" />
                 <span className="sc-pick-title">{item.label}</span>
+                {item.stats?.length ? (
+                  <span className="sc-pick-meta">
+                    <StatLines stats={item.stats} compact />
+                  </span>
+                ) : null}
               </>
             )}
           />

@@ -50,6 +50,7 @@ import enable12 from "./assets/stats/enables/enable-12.png";
 import enable13 from "./assets/stats/enables/enable-13.png";
 import enable14 from "./assets/stats/enables/enable-14.png";
 import enable15 from "./assets/stats/enables/enable-15.png";
+import enable16 from "./assets/stats/enables/enable-16.png";
 import imprint01 from "./assets/stats/imprints/imprint-01.png";
 import imprint02 from "./assets/stats/imprints/imprint-02.png";
 import imprint03 from "./assets/stats/imprints/imprint-03.png";
@@ -465,8 +466,8 @@ export {
 
 /**
  * Enable icons in attachment order after the imprint list.
- * Slot option lists below point into this pool. Stats come later.
  * Enable 4 uses the same choices as Enable 1.
+ * Enable 5 · D unlocks at infusion 13+.
  */
 export const ENABLE_OPTIONS = [
   { id: "en-1a", label: "Enable 1/4 · A", icon: enable01 },
@@ -484,6 +485,7 @@ export const ENABLE_OPTIONS = [
   { id: "en-5a", label: "Enable 5 · A", icon: enable13 },
   { id: "en-5b", label: "Enable 5 · B", icon: enable14 },
   { id: "en-5c", label: "Enable 5 · C", icon: enable15 },
+  { id: "en-5d", label: "Enable 5 · D", icon: enable16 },
 ];
 
 export const ENABLE_BY_ID = Object.fromEntries(
@@ -496,12 +498,85 @@ export const ENABLE_SLOT_OPTION_IDS = [
   ["en-2a", "en-2b", "en-2c"],
   ["en-3a", "en-3b", "en-3c", "en-3d", "en-3e", "en-3f"],
   ["en-1a", "en-1b", "en-1c"],
-  ["en-5a", "en-5b", "en-5c"],
+  ["en-5a", "en-5b", "en-5c", "en-5d"],
 ];
 
-export function enableOptionsForSlot(slotIndex) {
+/** Enable 5 · D only appears once infusion reaches this level. */
+export const ENABLE_5D_UNLOCK_INFUSION = 13;
+
+const enableFlat = (stat, value) => ({ stat, value, unit: "" });
+const enablePct = (stat, value) => ({ stat, value, unit: "%" });
+
+/**
+ * Resolve enable option stats for a slot at the hero's infusion level.
+ * Enable 1 upgrades at infusion 1 / 2 / 4; Enable 4 mirrors at 10 / 11.
+ */
+export function resolveEnableStats(optionId, enableSlotIndex, infusionLevel) {
+  const infusion = Math.max(0, Math.round(Number(infusionLevel)) || 0);
+  const slot = Number(enableSlotIndex);
+  const rows = [];
+
+  if (optionId === "en-2c") {
+    rows.push(enablePct("Effect of Being Healed", 15));
+    return rows;
+  }
+
+  const isEnable1 = slot === 0;
+  const isEnable4 = slot === 3;
+  if (!isEnable1 && !isEnable4) return rows;
+
+  const speedTier = isEnable1
+    ? [
+        { at: 2, speed: 80 },
+        { at: 1, speed: 30 },
+        { at: 0, speed: 20 },
+      ]
+    : [
+        { at: 11, speed: 80 },
+        { at: 10, speed: 30 },
+        { at: 0, speed: 20 },
+      ];
+  const optBoostAt = isEnable1 ? 2 : 11;
+
+  if (optionId === "en-1a") {
+    if (infusion >= optBoostAt) {
+      rows.push(enablePct("All Damage Reduction", 20));
+    }
+    return rows;
+  }
+  if (optionId === "en-1b") {
+    if (infusion >= optBoostAt) rows.push(enablePct("Precision", 20));
+    return rows;
+  }
+  if (optionId === "en-1c") {
+    const tier = speedTier.find((row) => infusion >= row.at) || speedTier.at(-1);
+    rows.push(enableFlat("Speed", tier.speed));
+    if (isEnable1 && infusion >= 4) {
+      rows.push(enablePct("Effect of Being Healed", 22));
+    }
+    return rows;
+  }
+
+  return rows;
+}
+
+export function enableOptionsForSlot(slotIndex, infusionLevel = 0) {
   const ids = ENABLE_SLOT_OPTION_IDS[slotIndex] || [];
-  return ids.map((id) => ENABLE_BY_ID[id]).filter(Boolean);
+  const infusion = Math.max(0, Math.round(Number(infusionLevel)) || 0);
+  return ids
+    .filter((id) => {
+      if (id === "en-5d" && infusion < ENABLE_5D_UNLOCK_INFUSION) return false;
+      return true;
+    })
+    .map((id) => {
+      const base = ENABLE_BY_ID[id];
+      if (!base) return null;
+      return {
+        ...base,
+        stats: resolveEnableStats(id, slotIndex, infusion),
+      };
+    })
+    .filter(Boolean);
 }
 
 export function enableOf(id) {
@@ -605,7 +680,15 @@ export function cloneBoard(board) {
         }),
         enables: Array.from({ length: ENABLE_COUNT }, (_, i) => {
           const id = slot.enables?.[i] || null;
-          return enableOf(id) ? id : null;
+          if (!enableOf(id)) return null;
+          const infusion = normalizeHeroProgress(slot.progress).infusion;
+          if (
+            id === "en-5d" &&
+            (i !== 4 || infusion < ENABLE_5D_UNLOCK_INFUSION)
+          ) {
+            return null;
+          }
+          return id;
         }),
         imprints: Array.from({ length: IMPRINT_COUNT }, (_, i) => {
           const id = slot.imprints?.[i] || null;
