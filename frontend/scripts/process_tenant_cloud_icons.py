@@ -186,11 +186,8 @@ for name, outdir, src in files:
     im = Image.open(base / src).convert("RGBA")
     if name == "tenants-btn.png":
         im = flood_clear(im, is_blue_bg)
-    elif name == "cloud-btn.png":
-        im = flood_clear(im, is_beige)
     else:
-        im = flood_clear(im, is_beige)
-        im = remove_grass_base(im)
+        # Keep grass/terrain tiles; only clear outer beige/white bg.
         im = flood_clear(im, is_beige)
     im = crop_alpha(im)
     dest = outdir / name

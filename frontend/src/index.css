@@ -5343,7 +5343,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 96px;
+  min-width: 140px;
   flex: 0 0 auto;
 }
 
@@ -5383,8 +5383,8 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-building-icon {
-  width: 88px;
-  height: 72px;
+  width: 140px;
+  height: 110px;
   object-fit: contain;
   display: block;
 }
