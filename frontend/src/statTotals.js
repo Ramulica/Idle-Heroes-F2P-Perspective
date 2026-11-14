@@ -3,6 +3,10 @@ import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
 import { imprintUnlocked } from "./heroProgress";
 import { collectInfusionStats } from "./imprintInfusion";
+import {
+  cloudSpeedForFaction,
+  tenantSpeedFromLevels,
+} from "./tenantsCloud";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -17,7 +21,8 @@ export const STAT_SOURCES = [
   { id: "team_aura", label: "Team Aura" },
   { id: "monster", label: "Monster" },
   { id: "train", label: "Train" },
-  { id: "houses", label: "Houses" },
+  { id: "tenants", label: "Tenants" },
+  { id: "cloud_island", label: "Cloud Island" },
   { id: "sigils", label: "Sigils" },
   { id: "awakening", label: "Awakening" },
   { id: "star_spawns", label: "Star Spawns" },
@@ -236,6 +241,23 @@ function collectMonster(monster) {
   return map;
 }
 
+function collectTenants(slot, tenants) {
+  const map = emptyMap();
+  if (!heroOf(slot?.heroId)) return map;
+  const speed = tenantSpeedFromLevels(tenants);
+  if (speed) addRow(map, { stat: "Speed", value: speed, unit: "" });
+  return map;
+}
+
+function collectCloudIsland(slot, cloudIsland) {
+  const map = emptyMap();
+  const hero = heroOf(slot?.heroId);
+  if (!hero) return map;
+  const speed = cloudSpeedForFaction(cloudIsland, hero.faction);
+  if (speed) addRow(map, { stat: "Speed", value: speed, unit: "" });
+  return map;
+}
+
 function emptySourceMap() {
   return emptyMap();
 }
@@ -243,7 +265,11 @@ function emptySourceMap() {
 /**
  * Per-hero source maps + totals for one board slot.
  */
-export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
+export function computeHeroStatBreakdown(
+  slot,
+  slotIndex,
+  { aura, monster, tenants, cloudIsland }
+) {
   const bySource = {
     hero_kit: collectHeroKit(slot),
     gear: collectGear(slot),
@@ -256,7 +282,8 @@ export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
     train: emptySourceMap(),
-    houses: emptySourceMap(),
+    tenants: collectTenants(slot, tenants),
+    cloud_island: collectCloudIsland(slot, cloudIsland),
     sigils: emptySourceMap(),
     awakening: emptySourceMap(),
     star_spawns: emptySourceMap(),
@@ -307,8 +334,15 @@ export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
 export function computeBoardStatTotals(board) {
   const aura = computeFactionAura(board?.slots, heroOf);
   const monster = board?.monster || null;
+  const tenants = board?.tenants;
+  const cloudIsland = board?.cloudIsland;
   const slots = (board?.slots || []).map((slot, index) =>
-    computeHeroStatBreakdown(slot, index, { aura, monster })
+    computeHeroStatBreakdown(slot, index, {
+      aura,
+      monster,
+      tenants,
+      cloudIsland,
+    })
   );
 
   return {

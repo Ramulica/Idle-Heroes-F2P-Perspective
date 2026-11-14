@@ -89,6 +89,21 @@ import {
   summarizeInfusionStats,
   toggleInfusionNode,
 } from "../imprintInfusion";
+import {
+  CLOUD_BUILDING_MAX,
+  CLOUD_BUILDINGS,
+  CLOUD_ISLAND_ICON,
+  CLOUD_SPEED_PER_LEVEL,
+  TENANT_HOUSE_MAX,
+  TENANT_HOUSES,
+  TENANTS_ICON,
+  defaultCloudIsland,
+  defaultTenants,
+  factionIconsFor,
+  normalizeCloudIsland,
+  normalizeTenants,
+  tenantSpeedFromLevels,
+} from "../tenantsCloud";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -354,6 +369,8 @@ function HeroCard({
   onPickStage,
   onPickInfusion,
   onPickAwakening,
+  onPickTenants,
+  onPickCloudIsland,
 }) {
   const hero = heroOf(slot.heroId);
   const progress = slot.progress || defaultHeroProgress();
@@ -513,6 +530,29 @@ function HeroCard({
             </button>
           );
         })}
+      </div>
+
+      <div className="sc-extra-row">
+        <button
+          type="button"
+          className="sc-extra-btn"
+          disabled={!hero}
+          onClick={onPickTenants}
+          title="Tenants"
+        >
+          <img src={TENANTS_ICON} alt="" />
+          <span>Tenants</span>
+        </button>
+        <button
+          type="button"
+          className="sc-extra-btn"
+          disabled={!hero}
+          onClick={onPickCloudIsland}
+          title="Cloud Island"
+        >
+          <img src={CLOUD_ISLAND_ICON} alt="" />
+          <span>Cloud</span>
+        </button>
       </div>
     </article>
   );
@@ -1884,6 +1924,153 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "tenants") {
+      const draft = normalizeTenants(picker.draft ?? board.tenants);
+      const totalSpeed = tenantSpeedFromLevels(draft);
+      return (
+        <Modal title="Tenants" onClose={() => setPicker(null)}>
+          <p className="muted sc-modal-lead">
+            Levels 0–{TENANT_HOUSE_MAX}. Every 2 levels give +1 Speed (now +
+            {totalSpeed} Spd total).
+          </p>
+          <div className="sc-building-row">
+            {TENANT_HOUSES.map((house, index) => (
+              <div key={house.id} className="sc-building-card">
+                <label className="sc-building-level">
+                  <span>Lv</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={TENANT_HOUSE_MAX}
+                    value={draft[index]}
+                    onChange={(event) => {
+                      const next = [...draft];
+                      next[index] = clampIntField(
+                        event.target.value,
+                        0,
+                        TENANT_HOUSE_MAX,
+                        draft[index]
+                      );
+                      setPicker({ ...picker, draft: next });
+                    }}
+                  />
+                </label>
+                <img src={house.icon} alt="" className="sc-building-icon" />
+                <span className="sc-building-spd">
+                  +{Math.floor(draft[index] / 2)} Spd
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() =>
+                setPicker({ ...picker, draft: defaultTenants() })
+              }
+            >
+              Reset
+            </button>
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                updateBoard({
+                  ...board,
+                  tenants: normalizeTenants(draft),
+                });
+                setPicker(null);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
+      );
+    }
+
+    if (picker.type === "cloud-island") {
+      const draft = normalizeCloudIsland(picker.draft ?? board.cloudIsland);
+      return (
+        <Modal title="Cloud Island" onClose={() => setPicker(null)}>
+          <p className="muted sc-modal-lead">
+            Levels 0–{CLOUD_BUILDING_MAX} (default {CLOUD_BUILDING_MAX}). Each
+            level gives +{CLOUD_SPEED_PER_LEVEL} Speed to matching factions.
+          </p>
+          <div className="sc-building-row">
+            {CLOUD_BUILDINGS.map((building, index) => {
+              const factions = factionIconsFor(building.factions);
+              const spd = draft[index] * CLOUD_SPEED_PER_LEVEL;
+              return (
+                <div key={building.id} className="sc-building-card">
+                  <label className="sc-building-level">
+                    <span>Lv</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={CLOUD_BUILDING_MAX}
+                      value={draft[index]}
+                      onChange={(event) => {
+                        const next = [...draft];
+                        next[index] = clampIntField(
+                          event.target.value,
+                          0,
+                          CLOUD_BUILDING_MAX,
+                          draft[index]
+                        );
+                        setPicker({ ...picker, draft: next });
+                      }}
+                    />
+                  </label>
+                  <div className="sc-building-factions">
+                    {factions.map((faction) => (
+                      <img
+                        key={faction.id}
+                        src={faction.icon}
+                        alt={faction.name}
+                        title={faction.name}
+                      />
+                    ))}
+                  </div>
+                  <img
+                    src={building.icon}
+                    alt=""
+                    className="sc-building-icon"
+                  />
+                  <span className="sc-building-spd">+{spd} Spd</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() =>
+                setPicker({ ...picker, draft: defaultCloudIsland() })
+              }
+            >
+              Max
+            </button>
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                updateBoard({
+                  ...board,
+                  cloudIsland: normalizeCloudIsland(draft),
+                });
+                setPicker(null);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
+      );
+    }
+
     if (picker.type === "hero-awakening") {
       const progress =
         board.slots[picker.slotIndex]?.progress || defaultHeroProgress();
@@ -2354,6 +2541,18 @@ export default function StatCalculator() {
                     draft: awakenDraftFromProgress(
                       board.slots[index].progress?.awakening
                     ),
+                  })
+                }
+                onPickTenants={() =>
+                  setPicker({
+                    type: "tenants",
+                    draft: normalizeTenants(board.tenants),
+                  })
+                }
+                onPickCloudIsland={() =>
+                  setPicker({
+                    type: "cloud-island",
+                    draft: normalizeCloudIsland(board.cloudIsland),
                   })
                 }
               />

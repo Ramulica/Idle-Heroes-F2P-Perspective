@@ -5284,9 +5284,115 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-hero-card .sc-enable-row,
-.sc-hero-card .sc-imprint-row {
+.sc-hero-card .sc-imprint-row,
+.sc-hero-card .sc-extra-row {
   width: 100%;
   justify-content: center;
+}
+
+.sc-extra-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.sc-extra-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 52px;
+  padding: 4px 2px;
+  border: 1px solid #8a5a2a;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #5a3a18;
+  font-size: 0.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.sc-extra-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sc-extra-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+
+.sc-building-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
+  width: 100%;
+}
+
+.sc-building-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 96px;
+  flex: 0 0 auto;
+}
+
+.sc-building-level {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5a3a18;
+}
+
+.sc-building-level input {
+  width: 52px;
+  padding: 3px 4px;
+  border: 1px solid #8a5a2a;
+  border-radius: 6px;
+  background: #fffaf0;
+  color: #3a2818;
+  font-weight: 800;
+  text-align: center;
+}
+
+.sc-building-factions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  min-height: 18px;
+}
+
+.sc-building-factions img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
+.sc-building-icon {
+  width: 88px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+}
+
+.sc-building-spd {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #6a4a28;
 }
 
 .sc-pick {

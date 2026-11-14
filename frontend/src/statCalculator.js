@@ -548,6 +548,12 @@ import {
   defaultHeroProgress,
   normalizeHeroProgress,
 } from "./heroProgress";
+import {
+  defaultCloudIsland,
+  defaultTenants,
+  normalizeCloudIsland,
+  normalizeTenants,
+} from "./tenantsCloud";
 
 export {
   MONSTER_OPTIONS,
@@ -571,6 +577,8 @@ export function emptySlot() {
 export function emptyBoard() {
   return {
     monster: null,
+    tenants: defaultTenants(),
+    cloudIsland: defaultCloudIsland(),
     slots: Array.from({ length: SLOT_COUNT }, emptySlot),
   };
 }
@@ -585,6 +593,8 @@ export function cloneBoard(board) {
   const src = board && typeof board === "object" ? board : emptyBoard();
   return {
     monster: normalizeMonster(src.monster, src.monsterId),
+    tenants: normalizeTenants(src.tenants),
+    cloudIsland: normalizeCloudIsland(src.cloudIsland),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
       return {
