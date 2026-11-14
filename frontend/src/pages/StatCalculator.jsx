@@ -1622,7 +1622,7 @@ export default function StatCalculator() {
           onClose={() => setPicker(null)}
         >
           <p className="muted sc-modal-lead">
-            Set infusion level 1–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
+            Set infusion level 0–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
             Levels {INFUSION_UNLOCK_LEVEL}–30 give 1 point each; 31–
             {INFUSION_POINT_CAP_LEVEL} give 3 each (now {budget} point
             {budget === 1 ? "" : "s"}).

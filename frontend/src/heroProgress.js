@@ -34,9 +34,9 @@ export const HERO_T_OPTIONALS = T_OPTIONALS.filter((row) =>
 );
 
 export const INFUSION_ICON = infusionBadge;
-export const INFUSION_MIN = 1;
+export const INFUSION_MIN = 0;
 export const INFUSION_MAX = 60;
-export const INFUSION_DEFAULT = 1;
+export const INFUSION_DEFAULT = 0;
 
 /** Ordered awakening copy ranks (for ±3 speed step window). */
 export const AWAKENING_TIERS = [

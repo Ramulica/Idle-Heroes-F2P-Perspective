@@ -6,12 +6,14 @@ import { collectInfusionStats } from "./imprintInfusion";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
+  { id: "hero_kit", label: "Hero Kit" },
   { id: "gear", label: "Gear" },
   { id: "arti", label: "Artifact" },
   { id: "soul_stone", label: "Soul Stone" },
   { id: "enables", label: "Enables" },
   { id: "imprints", label: "Imprints" },
-  { id: "tree_of_origin", label: "Imprint Infusion" },
+  { id: "tree_of_origin", label: "Tree of Origin" },
+  { id: "imprint_infusion", label: "Imprint Infusion" },
   { id: "team_aura", label: "Team Aura" },
   { id: "monster", label: "Monster" },
   { id: "train", label: "Train" },
@@ -170,6 +172,35 @@ function collectImprints(slot) {
   return map;
 }
 
+function collectHeroKit(slot) {
+  const map = emptyMap();
+  const hero = heroOf(slot?.heroId);
+  if (!hero) return map;
+  const speed = Number(hero.speed);
+  if (Number.isFinite(speed) && speed !== 0) {
+    addRow(map, { stat: "Speed", value: speed, unit: "" });
+  }
+  // Non-transcendence kit stats (beyond Speed) land here later.
+  if (Array.isArray(hero.kitStats)) addRows(map, hero.kitStats);
+  return map;
+}
+
+function collectTreeOfOrigin(slot) {
+  const map = emptyMap();
+  const hero = heroOf(slot?.heroId);
+  if (!hero) return map;
+  const optionals = slot?.progress?.optionals || {};
+  for (const row of hero.originSubs || []) {
+    if (!row?.optionalId || !optionals[row.optionalId]) continue;
+    addRow(map, {
+      stat: row.stat,
+      value: row.value,
+      unit: row.unit || "",
+    });
+  }
+  return map;
+}
+
 function collectImprintInfusion(slot) {
   const map = emptyMap();
   addRows(map, collectInfusionStats(slot?.progress?.infusionNodes));
@@ -214,12 +245,14 @@ function emptySourceMap() {
  */
 export function computeHeroStatBreakdown(slot, slotIndex, { aura, monster }) {
   const bySource = {
+    hero_kit: collectHeroKit(slot),
     gear: collectGear(slot),
     arti: collectArtifact(slot),
     soul_stone: collectSoulStone(slot),
     enables: emptySourceMap(),
     imprints: collectImprints(slot),
-    tree_of_origin: collectImprintInfusion(slot),
+    tree_of_origin: collectTreeOfOrigin(slot),
+    imprint_infusion: collectImprintInfusion(slot),
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
     train: emptySourceMap(),
