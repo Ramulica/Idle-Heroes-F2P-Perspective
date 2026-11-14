@@ -18,6 +18,7 @@ import {
   cloudSpeedForFaction,
   tenantSpeedFromLevels,
 } from "./tenantsCloud";
+import { sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -314,7 +315,7 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, tenants, cloudIsland }
+  { aura, monster, tenants, cloudIsland, gameModeId }
 ) {
   const bySource = {
     hero_kit: collectHeroKit(slot),
@@ -335,6 +336,12 @@ export function computeHeroStatBreakdown(
     star_spawns: emptySourceMap(),
     guild_tech: emptySourceMap(),
   };
+
+  for (const source of STAT_SOURCES) {
+    if (!sourceAllowedInGameMode(source.id, gameModeId)) {
+      bySource[source.id] = emptySourceMap();
+    }
+  }
 
   const totals = emptyMap();
   for (const source of STAT_SOURCES) {
@@ -382,12 +389,14 @@ export function computeBoardStatTotals(board) {
   const monster = board?.monster || null;
   const tenants = board?.tenants;
   const cloudIsland = board?.cloudIsland;
+  const gameModeId = board?.gameModeId || null;
   const slots = (board?.slots || []).map((slot, index) =>
     computeHeroStatBreakdown(slot, index, {
       aura,
       monster,
       tenants,
       cloudIsland,
+      gameModeId,
     })
   );
 

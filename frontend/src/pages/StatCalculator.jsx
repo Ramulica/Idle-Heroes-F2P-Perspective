@@ -108,6 +108,7 @@ import {
   tenantSpeedFromLevel,
   tenantSpeedFromLevels,
 } from "../tenantsCloud";
+import { GAME_MODES, gameModeOf } from "../gameModes";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -1945,6 +1946,47 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "game-mode") {
+      const selected = picker.draft ?? board.gameModeId ?? null;
+      return (
+        <Modal title="Select game mode" onClose={() => setPicker(null)}>
+          <p className="muted sc-modal-lead">
+            Monster, Team Aura, and Cloud Island only count when a mode is
+            selected. More mode-only buffs can plug in later.
+          </p>
+          <PickGrid
+            items={[
+              { id: "none", name: "No game mode", icon: null },
+              ...GAME_MODES,
+            ]}
+            selectedId={selected || "none"}
+            gridClassName="sc-pick-grid-game-modes"
+            onPick={(id) => {
+              updateBoard({
+                ...board,
+                gameModeId: id === "none" ? null : id,
+              });
+              setPicker(null);
+            }}
+            onClear={() => {
+              updateBoard({ ...board, gameModeId: null });
+              setPicker(null);
+            }}
+            renderItem={(item) => (
+              <>
+                {item.icon ? (
+                  <img src={item.icon} alt="" className="sc-pick-game-mode" />
+                ) : (
+                  <span className="sc-pick-game-mode empty">—</span>
+                )}
+                <span className="sc-pick-title">{item.name}</span>
+              </>
+            )}
+          />
+        </Modal>
+      );
+    }
+
     if (picker.type === "tenants") {
       const draft = normalizeTenants(picker.draft ?? board.tenants);
       const totalSpeed = tenantSpeedFromLevels(draft);
@@ -2415,13 +2457,39 @@ export default function StatCalculator() {
                 message="Each card shows that hero’s calculated totals (no HP / Attack). Use Stats to open or close every hero list together. Tap Info for the source × stat breakdown table."
               />
             </div>
-            <button
-              type="button"
-              className="sc-summary-stats-toggle"
-              onClick={() => setSummaryStatsOpen((open) => !open)}
-            >
-              {summaryStatsOpen ? "Hide stats" : "Show stats"}
-            </button>
+            <div className="sc-summary-head-actions">
+              <button
+                type="button"
+                className="sc-summary-stats-toggle"
+                onClick={() => setSummaryStatsOpen((open) => !open)}
+              >
+                {summaryStatsOpen ? "Hide stats" : "Show stats"}
+              </button>
+              <button
+                type="button"
+                className="sc-summary-stats-toggle sc-game-mode-btn"
+                onClick={() =>
+                  setPicker({
+                    type: "game-mode",
+                    draft: board.gameModeId || null,
+                  })
+                }
+                title="Game mode"
+              >
+                {board.gameModeId && gameModeOf(board.gameModeId) ? (
+                  <>
+                    <img
+                      src={gameModeOf(board.gameModeId).icon}
+                      alt=""
+                      className="sc-game-mode-btn-icon"
+                    />
+                    <span>{gameModeOf(board.gameModeId).name}</span>
+                  </>
+                ) : (
+                  <span>Select game mode</span>
+                )}
+              </button>
+            </div>
           </div>
           <div className="sc-summary-grid">
             {summarySlots.map((row) => {

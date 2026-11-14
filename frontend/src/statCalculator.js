@@ -629,6 +629,7 @@ import {
   normalizeCloudIsland,
   normalizeTenants,
 } from "./tenantsCloud";
+import { normalizeGameModeId } from "./gameModes";
 
 export {
   MONSTER_OPTIONS,
@@ -654,6 +655,7 @@ export function emptyBoard() {
     monster: null,
     tenants: defaultTenants(),
     cloudIsland: defaultCloudIsland(),
+    gameModeId: null,
     slots: Array.from({ length: SLOT_COUNT }, emptySlot),
   };
 }
@@ -670,6 +672,7 @@ export function cloneBoard(board) {
     monster: normalizeMonster(src.monster, src.monsterId),
     tenants: normalizeTenants(src.tenants),
     cloudIsland: normalizeCloudIsland(src.cloudIsland),
+    gameModeId: normalizeGameModeId(src.gameModeId),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
       return {

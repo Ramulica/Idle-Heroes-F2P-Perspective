@@ -3851,6 +3851,13 @@ input[type="range"] {
   gap: 8px;
 }
 
+.sc-summary-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .sc-summary-stats-toggle {
   border: 1px solid #8a5a2a;
   border-radius: 8px;
@@ -3860,6 +3867,63 @@ input[type="range"] {
   font-weight: 800;
   padding: 4px 10px;
   cursor: pointer;
+}
+
+.sc-game-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(220px, 46vw);
+}
+
+.sc-game-mode-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-game-mode-btn-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.sc-pick-grid-game-modes {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sc-pick-grid-game-modes .sc-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  min-height: 96px;
+}
+
+.sc-pick-game-mode {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.sc-pick-game-mode.empty {
+  display: grid;
+  place-items: center;
+  background: rgba(90, 50, 16, 0.08);
+  color: #8a5a2a;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.sc-pick-grid-game-modes .sc-pick-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5a3210;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .sc-summary-stats {
