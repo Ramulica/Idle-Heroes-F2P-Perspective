@@ -69,6 +69,7 @@ import {
   awakeningStatValue,
   defaultAwakening,
   defaultHeroProgress,
+  heroLevelForStage,
   IMPRINT_UNLOCK_STAGES,
   imprintUnlocked,
   optionalsForStage,
@@ -409,7 +410,12 @@ function HeroCard({
         onClick={onPickHero}
       >
         {hero ? (
-          <img src={hero.icon} alt={hero.name} />
+          <>
+            <img src={hero.icon} alt={hero.name} />
+            <span className="sc-hero-lv" title="Hero level">
+              {heroLevelForStage(progress.stageId)}
+            </span>
+          </>
         ) : (
           <span>Select hero</span>
         )}

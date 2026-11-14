@@ -4483,6 +4483,7 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-hero-portrait {
+  position: relative;
   aspect-ratio: 1;
   width: 100%;
   border: 3px solid #8a5a2a;
@@ -4499,6 +4500,23 @@ button.sc-aura-badge:hover .sc-aura-core {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.sc-hero-lv {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  min-width: 28px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: rgba(26, 16, 8, 0.82);
+  border: 1px solid #c9a227;
+  color: #f4e4b0;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
 }
 
 .sc-hero-portrait.empty {

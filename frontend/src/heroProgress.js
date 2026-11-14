@@ -29,6 +29,57 @@ export const HERO_STAGE_BY_ID = Object.fromEntries(
   HERO_STAGE_OPTIONS.map((row) => [row.id, row])
 );
 
+/** Hero level cap by stage (E5 = 350 … T5/D = 400). */
+export const HERO_LEVEL_BY_STAGE = {
+  E5: 350,
+  V1: 350,
+  V2: 350,
+  V3: 350,
+  V4: 350,
+  T1: 360,
+  T2: 370,
+  T3: 380,
+  T4: 390,
+  T5: 400,
+  D1: 400,
+  D2: 400,
+  D3: 400,
+  D4: 400,
+  D5: 400,
+  D6: 400,
+};
+
+/** Flat kit Speed from being E5+. */
+export const E5_KIT_SPEED = 320;
+/** Extra kit Speed from V4+. */
+export const V4_KIT_SPEED = 100;
+/** Tree of Origin Speed per T step (T1→1 … T5/D→5). */
+export const T_ORIGIN_SPEED_PER_STEP = 32;
+
+export function heroLevelForStage(stageId) {
+  return HERO_LEVEL_BY_STAGE[stageId] || HERO_LEVEL_BY_STAGE.E5;
+}
+
+export function tOriginSpeedSteps(stageId) {
+  if (!stageId) return 0;
+  if (String(stageId).startsWith("D")) return 5;
+  const match = /^T([1-5])$/.exec(stageId);
+  return match ? Number(match[1]) : 0;
+}
+
+/** Hero Kit Speed from stage (E5 +320, V4 +100). */
+export function stageHeroKitSpeed(stageId) {
+  if (!HERO_STAGE_BY_ID[stageId]) return 0;
+  let speed = E5_KIT_SPEED;
+  if (stageRank(stageId) >= stageRank("V4")) speed += V4_KIT_SPEED;
+  return speed;
+}
+
+/** Tree of Origin Speed from T1–T5 / D (+32 per T step). */
+export function stageOriginSpeed(stageId) {
+  return tOriginSpeedSteps(stageId) * T_ORIGIN_SPEED_PER_STEP;
+}
+
 export const HERO_T_OPTIONALS = T_OPTIONALS.filter((row) =>
   ["core", "subActive", "subP1", "subP2", "subP3"].includes(row.id)
 );

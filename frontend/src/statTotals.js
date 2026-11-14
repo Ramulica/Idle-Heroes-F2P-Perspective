@@ -7,7 +7,12 @@ import {
 } from "./statCalculator";
 import { computeFactionAura } from "./factionAura";
 import { monsterStatLines } from "./monsterCatalog";
-import { awakeningStatValue, imprintUnlocked } from "./heroProgress";
+import {
+  awakeningStatValue,
+  imprintUnlocked,
+  stageHeroKitSpeed,
+  stageOriginSpeed,
+} from "./heroProgress";
 import { collectInfusionStats } from "./imprintInfusion";
 import {
   cloudSpeedForFaction,
@@ -202,6 +207,8 @@ function collectHeroKit(slot) {
   if (Number.isFinite(speed) && speed !== 0) {
     addRow(map, { stat: "Speed", value: speed, unit: "" });
   }
+  const stageSpeed = stageHeroKitSpeed(slot?.progress?.stageId || "E5");
+  if (stageSpeed) addRow(map, { stat: "Speed", value: stageSpeed, unit: "" });
   // Non-transcendence kit stats (beyond Speed) land here later.
   if (Array.isArray(hero.kitStats)) addRows(map, hero.kitStats);
   return map;
@@ -211,6 +218,11 @@ function collectTreeOfOrigin(slot) {
   const map = emptyMap();
   const hero = heroOf(slot?.heroId);
   if (!hero) return map;
+  const stageId = slot?.progress?.stageId || "E5";
+  const originSpeed = stageOriginSpeed(stageId);
+  if (originSpeed) {
+    addRow(map, { stat: "Speed", value: originSpeed, unit: "" });
+  }
   const optionals = slot?.progress?.optionals || {};
   for (const row of hero.originSubs || []) {
     if (!row?.optionalId || !optionals[row.optionalId]) continue;
