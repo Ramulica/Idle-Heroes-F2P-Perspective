@@ -102,6 +102,7 @@ import {
   factionIconsFor,
   normalizeCloudIsland,
   normalizeTenants,
+  tenantSpeedFromLevel,
   tenantSpeedFromLevels,
 } from "../tenantsCloud";
 
@@ -1930,8 +1931,8 @@ export default function StatCalculator() {
       return (
         <Modal title="Tenants" onClose={() => setPicker(null)}>
           <p className="muted sc-modal-lead">
-            Levels 0–{TENANT_HOUSE_MAX}. Every 2 levels give +1 Speed (now +
-            {totalSpeed} Spd total).
+            Levels 0–{TENANT_HOUSE_MAX}. Odd levels grant +1 Speed (lv 1 →
+            +1, lv 2 → +1, lv 3 → +2; now +{totalSpeed} Spd total).
           </p>
           <div className="sc-building-row">
             {TENANT_HOUSES.map((house, index) => (
@@ -1957,7 +1958,7 @@ export default function StatCalculator() {
                 </label>
                 <img src={house.icon} alt="" className="sc-building-icon" />
                 <span className="sc-building-spd">
-                  +{Math.floor(draft[index] / 2)} Spd
+                  +{tenantSpeedFromLevel(draft[index])} Spd
                 </span>
               </div>
             ))}

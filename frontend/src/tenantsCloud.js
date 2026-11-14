@@ -13,8 +13,11 @@ export const CLOUD_ISLAND_ICON = cloudBtn;
 
 export const TENANT_HOUSE_MAX = 105;
 export const TENANT_HOUSE_DEFAULT = 0;
-/** Every 2 levels → +1 Speed. */
-export const TENANT_SPEED_PER_2_LV = 1;
+/** Speed at lv 1/2 → 1, 3/4 → 2, … (gains on odd levels). */
+export function tenantSpeedFromLevel(level) {
+  const lv = Math.max(0, Math.round(Number(level)) || 0);
+  return Math.ceil(lv / 2);
+}
 
 export const CLOUD_BUILDING_MAX = 30;
 export const CLOUD_BUILDING_DEFAULT = 30;
@@ -73,7 +76,7 @@ export function normalizeCloudIsland(raw) {
 
 export function tenantSpeedFromLevels(levels) {
   const rows = normalizeTenants(levels);
-  return rows.reduce((sum, lv) => sum + Math.floor(lv / 2) * TENANT_SPEED_PER_2_LV, 0);
+  return rows.reduce((sum, lv) => sum + tenantSpeedFromLevel(lv), 0);
 }
 
 export function cloudSpeedForFaction(levels, faction) {
