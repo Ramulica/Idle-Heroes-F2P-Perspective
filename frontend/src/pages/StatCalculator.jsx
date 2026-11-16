@@ -108,6 +108,17 @@ import {
   tenantSpeedFromLevel,
   tenantSpeedFromLevels,
 } from "../tenantsCloud";
+import {
+  SKIN_ICON,
+  SKIN_LEVELS,
+  SKIN_SLOT_COUNT,
+  SKIN_STATS,
+  defaultSkin,
+  normalizeSkin,
+  skinLevelOf,
+  skinStatValue,
+  SKIN_STAT_BY_ID,
+} from "../skins";
 import { GAME_MODES, gameModeOf } from "../gameModes";
 import {
   GUILD_TECH_CLASSES,
@@ -562,6 +573,7 @@ function HeroCard({
   onPickAwakening,
   onPickTenants,
   onPickCloudIsland,
+  onPickSkin,
 }) {
   const hero = heroOf(slot.heroId);
   const progress = slot.progress || defaultHeroProgress();
@@ -748,6 +760,16 @@ function HeroCard({
         >
           <img src={CLOUD_ISLAND_ICON} alt="" />
           <span>Cloud</span>
+        </button>
+        <button
+          type="button"
+          className="sc-extra-btn"
+          disabled={!hero}
+          onClick={onPickSkin}
+          title="Skin"
+        >
+          <img src={SKIN_ICON} alt="" />
+          <span>Skin</span>
         </button>
       </div>
     </article>
@@ -2378,6 +2400,202 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "skin") {
+      const slot = board.slots[picker.slotIndex];
+      const hero = heroOf(slot?.heroId);
+      const draft = normalizeSkin(picker.draft ?? slot?.skin);
+      const levelMeta = skinLevelOf(draft.level);
+      const panel = picker.panel || "summary";
+      const picked = Array.from(
+        { length: SKIN_SLOT_COUNT },
+        (_, i) => draft.stats?.[i] || null
+      );
+
+      if (panel === "stat") {
+        const statIndex = Math.min(
+          Math.max(0, Number(picker.statIndex) || 0),
+          SKIN_SLOT_COUNT - 1
+        );
+        return (
+          <Modal
+            title={`${slotTitle(picker.slotIndex)} · Skin stat ${statIndex + 1}`}
+            onClose={() =>
+              setPicker({
+                ...picker,
+                panel: "summary",
+                statIndex: undefined,
+              })
+            }
+          >
+            <p className="muted sc-modal-lead">
+              Pick any skin stat for slot {statIndex + 1}. Values scale with skin
+              level {draft.level}.
+            </p>
+            <div className="sc-awaken-stat-list">
+              {SKIN_STATS.map((row) => {
+                const usedElsewhere = picked.some(
+                  (id, i) => id === row.id && i !== statIndex
+                );
+                const on = picked[statIndex] === row.id;
+                const value = skinStatValue(row.id, draft.level, slot?.heroId);
+                return (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`sc-awaken-stat${on ? " selected" : ""}`}
+                    disabled={usedElsewhere}
+                    onClick={() => {
+                      const nextStats = [...picked];
+                      nextStats[statIndex] = row.id;
+                      setPicker({
+                        type: "skin",
+                        slotIndex: picker.slotIndex,
+                        panel: "summary",
+                        draft: { ...draft, stats: nextStats },
+                      });
+                    }}
+                  >
+                    {row.name}
+                    {value != null ? (
+                      <span className="sc-awaken-stat-value">
+                        {row.unit === "%" ? `+${value}%` : `+${value}`}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className="sc-awaken-stat"
+                onClick={() => {
+                  const nextStats = [...picked];
+                  nextStats[statIndex] = null;
+                  setPicker({
+                    type: "skin",
+                    slotIndex: picker.slotIndex,
+                    panel: "summary",
+                    draft: { ...draft, stats: nextStats },
+                  });
+                }}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="row-actions sc-pick-actions">
+              <button
+                className="tan-btn"
+                type="button"
+                onClick={() =>
+                  setPicker({
+                    ...picker,
+                    panel: "summary",
+                    statIndex: undefined,
+                  })
+                }
+              >
+                Back
+              </button>
+            </div>
+          </Modal>
+        );
+      }
+
+      return (
+        <Modal
+          title={`${slotTitle(picker.slotIndex)} · Skin`}
+          onClose={() => setPicker(null)}
+          className={`sc-skin-modal sc-skin-modal--${levelMeta.tone}`}
+        >
+          <div className={`sc-skin-frame sc-skin-frame--${levelMeta.tone}`}>
+            <p className="muted sc-modal-lead">
+              Choose skin level (border), then fill 1–3 stats.
+              {hero ? ` · ${hero.name}` : ""}
+            </p>
+            <div className="sc-skin-levels">
+              {SKIN_LEVELS.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  className={`sc-skin-level-chip sc-skin-level-chip--${row.tone}${
+                    row.id === draft.level ? " selected" : ""
+                  }`}
+                  onClick={() =>
+                    setPicker({
+                      ...picker,
+                      draft: { ...draft, level: row.id },
+                    })
+                  }
+                >
+                  Lv {row.id}
+                  <span>{row.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="sc-skin-stat-slots">
+              {picked.map((statId, index) => {
+                const def = SKIN_STAT_BY_ID[statId];
+                const value = def
+                  ? skinStatValue(statId, draft.level, slot?.heroId)
+                  : null;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    className={`sc-skin-stat-slot${def ? " filled" : ""}`}
+                    onClick={() =>
+                      setPicker({
+                        type: "skin",
+                        slotIndex: picker.slotIndex,
+                        panel: "stat",
+                        statIndex: index,
+                        draft,
+                      })
+                    }
+                  >
+                    {def ? (
+                      <>
+                        <span className="sc-skin-stat-name">{def.name}</span>
+                        <span className="sc-skin-stat-value">
+                          {def.unit === "%" ? `+${value}%` : `+${value}`}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="sc-skin-stat-empty">+ Stat {index + 1}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="row-actions sc-pick-actions">
+            <button
+              className="tan-btn"
+              type="button"
+              onClick={() =>
+                setPicker({ ...picker, draft: defaultSkin() })
+              }
+            >
+              Clear
+            </button>
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => {
+                updateBoard(
+                  patchSlot(board, picker.slotIndex, {
+                    skin: normalizeSkin(draft),
+                  })
+                );
+                setPicker(null);
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
+      );
+    }
+
     if (picker.type === "hero-awakening") {
       const progress =
         board.slots[picker.slotIndex]?.progress || defaultHeroProgress();
@@ -2906,6 +3124,14 @@ export default function StatCalculator() {
                   setPicker({
                     type: "cloud-island",
                     draft: normalizeCloudIsland(board.cloudIsland),
+                  })
+                }
+                onPickSkin={() =>
+                  setPicker({
+                    type: "skin",
+                    slotIndex: index,
+                    panel: "summary",
+                    draft: normalizeSkin(board.slots[index].skin),
                   })
                 }
               />

@@ -23,6 +23,7 @@ import {
   cloudSpeedForFaction,
   tenantSpeedFromLevels,
 } from "./tenantsCloud";
+import { collectSkinStatRows } from "./skins";
 import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
@@ -40,6 +41,7 @@ export const STAT_SOURCES = [
   { id: "train", label: "Train" },
   { id: "tenants", label: "Tenants" },
   { id: "cloud_island", label: "Cloud Island" },
+  { id: "skin", label: "Skin" },
   { id: "sigils", label: "Sigils" },
   { id: "awakening", label: "Awakening" },
   { id: "star_spawns", label: "Star Spawns" },
@@ -314,6 +316,24 @@ function collectCloudIsland(slot, cloudIsland) {
   return map;
 }
 
+function collectSkin(slot) {
+  const map = emptyMap();
+  const heroId = slot?.heroId;
+  if (!heroOf(heroId)) return map;
+  for (const row of collectSkinStatRows(slot?.skin, heroId)) {
+    // Skin Attack is intentional; gear ATK% stays ignored.
+    if (row.stat === "Attack") {
+      const value = Number(row.value);
+      if (!Number.isFinite(value) || value === 0) continue;
+      const key = statKey(row.stat, row.unit || "");
+      map.set(key, round1((map.get(key) || 0) + value));
+      continue;
+    }
+    addRow(map, row);
+  }
+  return map;
+}
+
 function collectAwakening(slot) {
   const map = emptyMap();
   const awakening = slot?.progress?.awakening;
@@ -388,6 +408,7 @@ export function computeHeroStatBreakdown(
     train: emptySourceMap(),
     tenants: collectTenants(slot),
     cloud_island: collectCloudIsland(slot, cloudIsland),
+    skin: collectSkin(slot),
     sigils: emptySourceMap(),
     awakening: collectAwakening(slot),
     star_spawns: emptySourceMap(),

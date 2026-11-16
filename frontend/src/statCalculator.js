@@ -629,6 +629,7 @@ import {
   normalizeCloudIsland,
   normalizeTenants,
 } from "./tenantsCloud";
+import { defaultSkin, normalizeSkin } from "./skins";
 import { normalizeGameModeId } from "./gameModes";
 import { defaultGuildTech, normalizeGuildTech } from "./guildTech";
 
@@ -648,6 +649,7 @@ export function emptySlot() {
     enables: Array(ENABLE_COUNT).fill(null),
     imprints: Array(IMPRINT_COUNT).fill(null),
     tenants: defaultTenants(),
+    skin: defaultSkin(),
     progress: defaultHeroProgress(),
   };
 }
@@ -704,6 +706,7 @@ export function cloneBoard(board) {
           return imprintOf(id) ? id : null;
         }),
         tenants: normalizeTenants(slotTenants),
+        skin: normalizeSkin(slot.skin),
         progress: normalizeHeroProgress(slot.progress),
       };
     }),
