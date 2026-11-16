@@ -321,8 +321,8 @@ function collectSkin(slot) {
   const heroId = slot?.heroId;
   if (!heroOf(heroId)) return map;
   for (const row of collectSkinStatRows(slot?.skin, heroId)) {
-    // Skin Attack is intentional; gear ATK% stays ignored.
-    if (row.stat === "Attack") {
+    // Skin Attack/HP are intentional; gear ATK%/HP% stay ignored.
+    if (row.stat === "Attack" || row.stat === "HP") {
       const value = Number(row.value);
       if (!Number.isFinite(value) || value === 0) continue;
       const key = statKey(row.stat, row.unit || "");

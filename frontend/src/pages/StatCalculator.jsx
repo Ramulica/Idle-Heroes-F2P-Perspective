@@ -111,13 +111,12 @@ import {
 import {
   SKIN_ICON,
   SKIN_LEVELS,
-  SKIN_SLOT_COUNT,
-  SKIN_STATS,
   defaultSkin,
+  formatSkinStatLine,
   normalizeSkin,
   skinLevelOf,
-  skinStatValue,
-  SKIN_STAT_BY_ID,
+  skinOf,
+  skinsForHero,
 } from "../skins";
 import { GAME_MODES, gameModeOf } from "../gameModes";
 import {
@@ -2405,100 +2404,15 @@ export default function StatCalculator() {
       const hero = heroOf(slot?.heroId);
       const draft = normalizeSkin(picker.draft ?? slot?.skin);
       const levelMeta = skinLevelOf(draft.level);
-      const panel = picker.panel || "summary";
-      const picked = Array.from(
-        { length: SKIN_SLOT_COUNT },
-        (_, i) => draft.stats?.[i] || null
-      );
-
-      if (panel === "stat") {
-        const statIndex = Math.min(
-          Math.max(0, Number(picker.statIndex) || 0),
-          SKIN_SLOT_COUNT - 1
-        );
-        return (
-          <Modal
-            title={`${slotTitle(picker.slotIndex)} · Skin stat ${statIndex + 1}`}
-            onClose={() =>
-              setPicker({
-                ...picker,
-                panel: "summary",
-                statIndex: undefined,
-              })
-            }
-          >
-            <p className="muted sc-modal-lead">
-              Pick any skin stat for slot {statIndex + 1}. Values scale with skin
-              level {draft.level}.
-            </p>
-            <div className="sc-awaken-stat-list">
-              {SKIN_STATS.map((row) => {
-                const usedElsewhere = picked.some(
-                  (id, i) => id === row.id && i !== statIndex
-                );
-                const on = picked[statIndex] === row.id;
-                const value = skinStatValue(row.id, draft.level, slot?.heroId);
-                return (
-                  <button
-                    key={row.id}
-                    type="button"
-                    className={`sc-awaken-stat${on ? " selected" : ""}`}
-                    disabled={usedElsewhere}
-                    onClick={() => {
-                      const nextStats = [...picked];
-                      nextStats[statIndex] = row.id;
-                      setPicker({
-                        type: "skin",
-                        slotIndex: picker.slotIndex,
-                        panel: "summary",
-                        draft: { ...draft, stats: nextStats },
-                      });
-                    }}
-                  >
-                    {row.name}
-                    {value != null ? (
-                      <span className="sc-awaken-stat-value">
-                        {row.unit === "%" ? `+${value}%` : `+${value}`}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                className="sc-awaken-stat"
-                onClick={() => {
-                  const nextStats = [...picked];
-                  nextStats[statIndex] = null;
-                  setPicker({
-                    type: "skin",
-                    slotIndex: picker.slotIndex,
-                    panel: "summary",
-                    draft: { ...draft, stats: nextStats },
-                  });
-                }}
-              >
-                Clear
-              </button>
-            </div>
-            <div className="row-actions sc-pick-actions">
-              <button
-                className="tan-btn"
-                type="button"
-                onClick={() =>
-                  setPicker({
-                    ...picker,
-                    panel: "summary",
-                    statIndex: undefined,
-                  })
-                }
-              >
-                Back
-              </button>
-            </div>
-          </Modal>
-        );
-      }
+      const options = skinsForHero(slot?.heroId);
+      const selected = skinOf(draft.skinId);
+      const selectedForHero =
+        selected && selected.heroId === slot?.heroId ? selected : null;
+      const statLines = selectedForHero
+        ? selectedForHero.stats
+            .map((id) => formatSkinStatLine(id, draft.level, slot?.heroId))
+            .filter(Boolean)
+        : [];
 
       return (
         <Modal
@@ -2508,7 +2422,7 @@ export default function StatCalculator() {
         >
           <div className={`sc-skin-frame sc-skin-frame--${levelMeta.tone}`}>
             <p className="muted sc-modal-lead">
-              Choose skin level (border), then fill 1–3 stats.
+              Pick a skin for this hero, then set the level.
               {hero ? ` · ${hero.name}` : ""}
             </p>
             <div className="sc-skin-levels">
@@ -2531,49 +2445,55 @@ export default function StatCalculator() {
                 </button>
               ))}
             </div>
+            {options.length === 0 ? (
+              <p className="muted sc-skin-empty">No skins listed for this hero yet.</p>
+            ) : (
+              <div className="sc-skin-grid">
+                {options.map((row) => {
+                  const on = draft.skinId === row.id;
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      className={`sc-skin-pick${on ? " selected" : ""}`}
+                      title={row.name}
+                      onClick={() =>
+                        setPicker({
+                          ...picker,
+                          draft: {
+                            ...draft,
+                            skinId: on ? null : row.id,
+                          },
+                        })
+                      }
+                    >
+                      <img src={row.icon} alt="" />
+                      <span>{row.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="sc-skin-stat-slots">
-              {picked.map((statId, index) => {
-                const def = SKIN_STAT_BY_ID[statId];
-                const value = def
-                  ? skinStatValue(statId, draft.level, slot?.heroId)
-                  : null;
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    className={`sc-skin-stat-slot${def ? " filled" : ""}`}
-                    onClick={() =>
-                      setPicker({
-                        type: "skin",
-                        slotIndex: picker.slotIndex,
-                        panel: "stat",
-                        statIndex: index,
-                        draft,
-                      })
-                    }
-                  >
-                    {def ? (
-                      <>
-                        <span className="sc-skin-stat-name">{def.name}</span>
-                        <span className="sc-skin-stat-value">
-                          {def.unit === "%" ? `+${value}%` : `+${value}`}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="sc-skin-stat-empty">+ Stat {index + 1}</span>
-                    )}
-                  </button>
-                );
-              })}
+              {statLines.length > 0 ? (
+                statLines.map((line) => (
+                  <div key={line.id} className="sc-skin-stat-slot filled">
+                    <span className="sc-skin-stat-name">{line.name}</span>
+                    <span className="sc-skin-stat-value">{line.label}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="sc-skin-stat-slot">
+                  <span className="sc-skin-stat-empty">Select a skin</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="row-actions sc-pick-actions">
             <button
               className="tan-btn"
               type="button"
-              onClick={() =>
-                setPicker({ ...picker, draft: defaultSkin() })
-              }
+              onClick={() => setPicker({ ...picker, draft: defaultSkin() })}
             >
               Clear
             </button>
@@ -3130,7 +3050,6 @@ export default function StatCalculator() {
                   setPicker({
                     type: "skin",
                     slotIndex: index,
-                    panel: "summary",
                     draft: normalizeSkin(board.slots[index].skin),
                   })
                 }

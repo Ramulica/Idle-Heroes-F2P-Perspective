@@ -5573,6 +5573,58 @@ button.sc-aura-badge:hover .sc-aura-core {
   box-shadow: 0 0 0 1px #c06098;
 }
 
+.sc-skin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.sc-skin-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 230, 200, 0.25);
+  background: rgba(10, 6, 4, 0.35);
+  color: #fff8e8;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+  text-align: center;
+}
+
+.sc-skin-pick img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #c9a882;
+  display: block;
+  background: #1a100c;
+}
+
+.sc-skin-pick.selected {
+  border-color: #f0c878;
+  background: rgba(255, 220, 140, 0.12);
+  box-shadow: 0 0 0 1px rgba(240, 200, 120, 0.45);
+}
+
+.sc-skin-pick.selected img {
+  border-color: #f0c878;
+}
+
+.sc-skin-empty {
+  text-align: center;
+  margin: 8px 0 12px;
+}
+
 .sc-skin-stat-slots {
   display: flex;
   flex-direction: column;
