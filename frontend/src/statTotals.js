@@ -297,10 +297,10 @@ function collectMonster(monster) {
   return map;
 }
 
-function collectTenants(slot, tenants) {
+function collectTenants(slot) {
   const map = emptyMap();
   if (!heroOf(slot?.heroId)) return map;
-  const speed = tenantSpeedFromLevels(tenants);
+  const speed = tenantSpeedFromLevels(slot?.tenants);
   if (speed) addRow(map, { stat: "Speed", value: speed, unit: "" });
   return map;
 }
@@ -371,7 +371,7 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, tenants, cloudIsland, gameModeId, guildTech }
+  { aura, monster, cloudIsland, gameModeId, guildTech }
 ) {
   const guild = collectGuildTech(slot, guildTech);
   const bySource = {
@@ -386,7 +386,7 @@ export function computeHeroStatBreakdown(
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
     train: emptySourceMap(),
-    tenants: collectTenants(slot, tenants),
+    tenants: collectTenants(slot),
     cloud_island: collectCloudIsland(slot, cloudIsland),
     sigils: emptySourceMap(),
     awakening: collectAwakening(slot),
@@ -457,7 +457,6 @@ export function computeHeroStatBreakdown(
 export function computeBoardStatTotals(board) {
   const aura = computeFactionAura(board?.slots, heroOf);
   const monster = board?.monster || null;
-  const tenants = board?.tenants;
   const cloudIsland = board?.cloudIsland;
   const gameModeId = board?.gameModeId || null;
   const guildTech = board?.guildTech;
@@ -465,7 +464,6 @@ export function computeBoardStatTotals(board) {
     computeHeroStatBreakdown(slot, index, {
       aura,
       monster,
-      tenants,
       cloudIsland,
       gameModeId,
       guildTech,

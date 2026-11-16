@@ -2223,13 +2223,21 @@ export default function StatCalculator() {
     }
 
     if (picker.type === "tenants") {
-      const draft = normalizeTenants(picker.draft ?? board.tenants);
+      const slot = board.slots[picker.slotIndex];
+      const draft = normalizeTenants(picker.draft ?? slot?.tenants);
       const totalSpeed = tenantSpeedFromLevels(draft);
+      const hero = heroOf(slot?.heroId);
       return (
-        <Modal title="Tenants" onClose={() => setPicker(null)}>
+        <Modal
+          title={`${slotTitle(picker.slotIndex)}${
+            hero ? ` · ${hero.name}` : ""
+          } · Tenants`}
+          onClose={() => setPicker(null)}
+        >
           <p className="muted sc-modal-lead">
-            Levels 0–{TENANT_HOUSE_MAX}. Odd levels grant +1 Speed (lv 1 →
-            +1, lv 2 → +1, lv 3 → +2; now +{totalSpeed} Spd total).
+            Per-hero houses · levels 0–{TENANT_HOUSE_MAX}. Odd levels grant +1
+            Speed (lv 1 → +1, lv 2 → +1, lv 3 → +2; now +{totalSpeed} Spd
+            total).
           </p>
           <div className="sc-building-row">
             {TENANT_HOUSES.map((house, index) => (
@@ -2274,10 +2282,11 @@ export default function StatCalculator() {
               className="gold-btn"
               type="button"
               onClick={() => {
-                updateBoard({
-                  ...board,
-                  tenants: normalizeTenants(draft),
-                });
+                updateBoard(
+                  patchSlot(board, picker.slotIndex, {
+                    tenants: normalizeTenants(draft),
+                  })
+                );
                 setPicker(null);
               }}
             >
@@ -2889,7 +2898,8 @@ export default function StatCalculator() {
                 onPickTenants={() =>
                   setPicker({
                     type: "tenants",
-                    draft: normalizeTenants(board.tenants),
+                    slotIndex: index,
+                    draft: normalizeTenants(board.slots[index].tenants),
                   })
                 }
                 onPickCloudIsland={() =>

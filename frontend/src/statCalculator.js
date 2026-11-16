@@ -647,6 +647,7 @@ export function emptySlot() {
     gear: Array(GEAR_COUNT).fill(null),
     enables: Array(ENABLE_COUNT).fill(null),
     imprints: Array(IMPRINT_COUNT).fill(null),
+    tenants: defaultTenants(),
     progress: defaultHeroProgress(),
   };
 }
@@ -654,7 +655,6 @@ export function emptySlot() {
 export function emptyBoard() {
   return {
     monster: null,
-    tenants: defaultTenants(),
     cloudIsland: defaultCloudIsland(),
     gameModeId: null,
     guildTech: defaultGuildTech(),
@@ -670,14 +670,17 @@ export function newLineupId() {
 
 export function cloneBoard(board) {
   const src = board && typeof board === "object" ? board : emptyBoard();
+  // Legacy: tenants used to be board-wide — copy onto slots that lack their own.
+  const legacyTenants = Array.isArray(src.tenants) ? src.tenants : null;
   return {
     monster: normalizeMonster(src.monster, src.monsterId),
-    tenants: normalizeTenants(src.tenants),
     cloudIsland: normalizeCloudIsland(src.cloudIsland),
     gameModeId: normalizeGameModeId(src.gameModeId),
     guildTech: normalizeGuildTech(src.guildTech),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
+      const slotTenants =
+        slot.tenants != null ? slot.tenants : legacyTenants;
       return {
         heroId: STAT_HERO_BY_ID[slot.heroId] ? slot.heroId : null,
         gear: Array.from({ length: GEAR_COUNT }, (_, i) => {
@@ -700,6 +703,7 @@ export function cloneBoard(board) {
           const id = slot.imprints?.[i] || null;
           return imprintOf(id) ? id : null;
         }),
+        tenants: normalizeTenants(slotTenants),
         progress: normalizeHeroProgress(slot.progress),
       };
     }),
