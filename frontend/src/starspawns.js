@@ -162,13 +162,13 @@ export const STARSPAWNS = [
   {
     id: "trial",
     name: "Spirit of Trial",
-    icon: iconCrystal,
+    icon: iconTrial,
     maxLevel: 180,
-    bonus: bonus("Transcendence / Rangers", 30, {
-      factions: ["Transcendence"],
-      classes: ["Ranger"],
+    bonus: bonus("Shadow / Assassins", 30, {
+      factions: ["Shadow"],
+      classes: ["Assassin"],
     }),
-    stats: [pct("All Damage Dealt", 6), pct("Precision", 18)],
+    stats: [pct("Armor Break", 18), pct("Crit Damage", 12)],
   },
   {
     id: "justice",
@@ -184,13 +184,13 @@ export const STARSPAWNS = [
   {
     id: "crystal",
     name: "Spirit of Crystal",
-    icon: iconTrial,
+    icon: iconCrystal,
     maxLevel: 180,
-    bonus: bonus("Shadow / Assassins", 30, {
-      factions: ["Shadow"],
-      classes: ["Assassin"],
+    bonus: bonus("Transcendence / Rangers", 30, {
+      factions: ["Transcendence"],
+      classes: ["Ranger"],
     }),
-    stats: [pct("Armor Break", 18), pct("Crit Damage", 12)],
+    stats: [pct("All Damage Dealt", 6), pct("Precision", 18)],
   },
   {
     id: "piety",
