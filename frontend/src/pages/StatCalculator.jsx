@@ -4129,7 +4129,7 @@ export default function StatCalculator() {
             <div className="calc-row-head sc-train-head">
               <div className="sc-train-head-title">
                 <h2>Train</h2>
-                <HelpTip message="Load Train screenshots via paste or folder (multi-select). OCR runs in your browser. Basic + matching class/faction always apply; game-mode exclusives only when that mode is selected. Multiple shots merge by exclusive." />
+                <HelpTip message="Load Train screenshots via paste or folder (multi-select). Basic + matching class/faction always apply; game-mode exclusives only when that mode is selected. Multiple shots merge by exclusive." />
               </div>
               <div className="sc-train-actions">
                 <button
