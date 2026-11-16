@@ -547,21 +547,55 @@ export const INFUSION_ROOTS = ["blue-root", "red-root", "green-root"];
 /** Map points stop accruing after this infusion level. */
 export const INFUSION_POINT_CAP_LEVEL = 40;
 
+/**
+ * Points gained when reaching each infusion level (Grimoire 2).
+ * Level 15 unlocks the map with 0 pts; points start at 16. Cap Σ = 63 at 40.
+ */
+export const INFUSION_POINTS_AT_LEVEL = {
+  16: 2,
+  17: 2,
+  18: 2,
+  19: 2,
+  20: 2,
+  21: 2,
+  22: 2,
+  23: 3,
+  24: 3,
+  25: 4,
+  26: 2,
+  27: 2,
+  28: 2,
+  29: 2,
+  30: 3,
+  31: 3,
+  32: 3,
+  33: 3,
+  34: 3,
+  35: 4,
+  36: 2,
+  37: 3,
+  38: 2,
+  39: 3,
+  40: 2,
+};
+
 export function isInfusionRoot(id) {
   return INFUSION_ROOTS.includes(id);
 }
 
 /**
- * Map points from infusion level:
- * Unlock at 15 (0 pts). 16–30 → +1 per level (15 pts at 30),
- * 31–40 → +3 per level (+30 at 40). Cap 45.
+ * Cumulative map points from infusion level (Grimoire 2 table).
+ * Unlock at 15 (0 pts). Cap 63 at level 40.
  */
 export function infusionPointBudget(level) {
   const n = Math.round(Number(level));
   if (!Number.isFinite(n) || n < 16) return 0;
-  const tier1 = Math.min(n, 30) - 15; // level 16 → 1 … 30 → 15
-  const tier2 = n >= 31 ? (Math.min(n, INFUSION_POINT_CAP_LEVEL) - 30) * 3 : 0;
-  return tier1 + tier2;
+  const max = Math.min(n, INFUSION_POINT_CAP_LEVEL);
+  let total = 0;
+  for (let lv = 16; lv <= max; lv += 1) {
+    total += INFUSION_POINTS_AT_LEVEL[lv] || 0;
+  }
+  return total;
 }
 
 export function normalizeInfusionNodes(rawIds, budget) {

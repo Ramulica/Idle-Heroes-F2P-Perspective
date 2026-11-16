@@ -2471,9 +2471,9 @@ export default function StatCalculator() {
         >
           <p className="muted sc-modal-lead">
             Set infusion level 0–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
-            Points start at 16 (1 each through 30); 31–
-            {INFUSION_POINT_CAP_LEVEL} give 3 each (now {budget} point
-            {budget === 1 ? "" : "s"}). Color start nodes are free.
+            Points start at 16 (Grimoire 2 table; now {budget} point
+            {budget === 1 ? "" : "s"}, max 63 at {INFUSION_POINT_CAP_LEVEL}).
+            Color start nodes are free.
           </p>
           <label className="sc-infusion-field-row">
             <span>Level</span>
@@ -2575,8 +2575,8 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-head">
             <p className="muted sc-modal-lead">
               Remaining points: <strong>{remaining}</strong> / {budget} (level{" "}
-              {progress.infusion}; 16–30 → 1 pt, 31–{INFUSION_POINT_CAP_LEVEL} →
-              3 pts; color starts free)
+              {progress.infusion}; Grimoire 2 table through{" "}
+              {INFUSION_POINT_CAP_LEVEL}; color starts free)
             </p>
             <button
               type="button"
@@ -3779,7 +3779,7 @@ export default function StatCalculator() {
                 title="Stat Calculator"
                 steps={[
                   "Top summary shows each position and its hero. Tap i on a card for a local breakdown.",
-                  "Under each hero name: stage star, infusion, and awakening. Infusion uses a level field; at 15+ open Imprint Infusion. Map points: 15–30 give 1 each, 31–40 give 3 each.",
+                  "Under each hero name: stage star, infusion, and awakening. Infusion uses a level field; at 15+ open Imprint Infusion. Map points follow the Grimoire 2 table from level 16 (0 at 15; 63 at 40).",
                   "Monster icon sits beside Faction Aura. Tap it to pick a monster, then Equip from the detail tab (level, P1–4, runes).",
                   "Each card: tap the portrait to pick a hero, then tap gear squares, enable circles, and imprint circles. Imprints unlock at V1 / V2 / V3 — grey slots stay out of the calc.",
                   "Gear slots are Weapon, Armor, Accessory, Boots. Artifact and Stone come later. Pick a hero first, then choose Normal or that class’s sets. Tap a piece to see stats, then Equip.",
