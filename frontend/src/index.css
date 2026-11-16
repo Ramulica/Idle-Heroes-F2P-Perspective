@@ -6142,11 +6142,14 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-starspawn-btn img {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   object-fit: cover;
+  object-position: center;
   border-radius: 50%;
   border: 2px solid #c9a46a;
+  background: #2a1540;
+  display: block;
 }
 
 .sc-starspawn-modal .sc-ss-head {
@@ -6157,12 +6160,13 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-ss-portrait {
-  width: 96px;
-  height: 96px;
+  width: 112px;
+  height: 112px;
   object-fit: cover;
+  object-position: center;
   border-radius: 50%;
   border: 3px solid #c9a46a;
-  background: #2a1a12;
+  background: #2a1540;
   flex: 0 0 auto;
 }
 
