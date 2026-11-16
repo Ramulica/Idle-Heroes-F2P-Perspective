@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
@@ -225,8 +225,21 @@ function Modal({
   footer = null,
   hideClose = false,
 }) {
+  // Only close when press+release both land on the backdrop — so selecting
+  // text in a field and dragging outside the popup does not dismiss it.
+  const backdropPressed = useRef(false);
   return (
-    <div className="modal-back" onClick={onClose}>
+    <div
+      className="modal-back"
+      onMouseDown={(event) => {
+        backdropPressed.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (backdropPressed.current && event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         className={`modal wide sc-modal${className ? ` ${className}` : ""}`}
         onClick={(event) => event.stopPropagation()}
