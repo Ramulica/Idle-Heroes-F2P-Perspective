@@ -109,6 +109,16 @@ import {
   tenantSpeedFromLevels,
 } from "../tenantsCloud";
 import { GAME_MODES, gameModeOf } from "../gameModes";
+import {
+  GUILD_TECH_CLASSES,
+  GUILD_TECH_CLASS_BY_ID,
+  GUILD_TECH_INNER_NODES,
+  guildTechNodeStats,
+  guildTechOuterNodes,
+  isGuildTechNodeEnabled,
+  normalizeGuildTech,
+  toggleGuildTechNode,
+} from "../guildTech";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -253,6 +263,141 @@ function HeroStatBreakdownTable({ breakdown }) {
           </tr>
         </tbody>
       </table>
+      {breakdown.ccImmunities?.length ? (
+        <details className="sc-ci-details">
+          <summary>
+            CI immunities
+            {breakdown.ciFromImmunities ? (
+              <span className="sc-ci-extra">
+                {" "}
+                (+{breakdown.ciFromImmunities}%)
+              </span>
+            ) : null}
+          </summary>
+          <ul>
+            {breakdown.ccImmunities.map((row) => (
+              <li key={row.key || row.stat}>
+                {row.stat} {formatStatCell(row.value, row.unit)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function SummaryStatList({ totals }) {
+  const [ciOpen, setCiOpen] = useState(false);
+  if (!totals?.length) return <span className="muted">Stats: —</span>;
+  return (
+    <ul className="sc-summary-stats">
+      {totals.map((stat) => {
+        const isCi =
+          stat.stat === "Control Immunity" && (stat.unit || "%") === "%";
+        if (isCi) {
+          const imm = stat.immunities || [];
+          return (
+            <li key={stat.key} className="sc-summary-stat-ci">
+              <button
+                type="button"
+                className="sc-ci-toggle"
+                onClick={() => setCiOpen((open) => !open)}
+              >
+                CI% {formatStatCell(stat.value, "%")}
+                {stat.ciFromImmunities ? (
+                  <span className="sc-ci-extra">
+                    (+{stat.ciFromImmunities}%)
+                  </span>
+                ) : null}
+                {imm.length ? (
+                  <span className="sc-ci-caret">{ciOpen ? "▾" : "▸"}</span>
+                ) : null}
+              </button>
+              {ciOpen && imm.length ? (
+                <ul className="sc-ci-sublist">
+                  {imm.map((row) => (
+                    <li key={row.key || row.stat}>
+                      {row.stat.replace(/ Immunity$/, "")}{" "}
+                      {formatStatCell(row.value, "%")}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          );
+        }
+        return (
+          <li key={stat.key}>
+            {stat.stat}
+            {stat.unit === "%" ? "%" : ""}{" "}
+            {formatStatCell(stat.value, stat.unit)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function GuildTechTree({ classId, guildTech, onToggle }) {
+  const def = GUILD_TECH_CLASS_BY_ID[classId];
+  if (!def) return null;
+  const color = def.color;
+  const outer = guildTechOuterNodes(classId);
+  const left = outer.filter((n) => n.side === "left");
+  const right = outer.filter((n) => n.side === "right");
+
+  const nodeStyle = (angleDeg, radiusPct) => {
+    const rad = (angleDeg * Math.PI) / 180;
+    const x = 50 + radiusPct * Math.cos(rad);
+    const y = 50 - radiusPct * Math.sin(rad);
+    return { left: `${x}%`, top: `${y}%` };
+  };
+
+  const renderNode = (node, extraClass = "") => {
+    const enabled = isGuildTechNodeEnabled(guildTech, classId, node.id);
+    const stats = guildTechNodeStats(classId, node.id);
+    const tip = stats
+      .map((s) => `${s.stat} ${s.unit === "%" ? `${s.value}%` : s.value}`)
+      .join(", ");
+    return (
+      <button
+        key={node.id}
+        type="button"
+        className={`sc-gt-node${enabled ? " on" : ""}${extraClass ? ` ${extraClass}` : ""}`}
+        style={{ "--gt-color": color }}
+        title={tip || node.label}
+        onClick={() => onToggle(node.id)}
+      >
+        <span className="sc-gt-node-short">{node.short || node.label}</span>
+        <span className="sc-gt-node-lv">{enabled ? "ON" : "OFF"}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="sc-gt-tree" style={{ "--gt-color": color }}>
+      <div className="sc-gt-ring">
+        <div className="sc-gt-center">
+          <img src={def.icon} alt="" />
+          <span>{def.name}</span>
+        </div>
+        {GUILD_TECH_INNER_NODES.map((node) => (
+          <div
+            key={node.id}
+            className="sc-gt-node-wrap"
+            style={nodeStyle(node.angle, 38)}
+          >
+            {renderNode(node)}
+          </div>
+        ))}
+      </div>
+      <div className="sc-gt-outer left">
+        {left.map((node) => renderNode(node, "outer"))}
+      </div>
+      <div className="sc-gt-outer right">
+        {right.map((node) => renderNode(node, "outer"))}
+      </div>
     </div>
   );
 }
@@ -1949,6 +2094,52 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "guild-tech") {
+      const classId = picker.classId || "Warrior";
+      const def = GUILD_TECH_CLASS_BY_ID[classId];
+      const guildTech = normalizeGuildTech(board.guildTech);
+      return (
+        <Modal
+          title={`Guild Tech · ${def?.name || classId}`}
+          onClose={() => setPicker(null)}
+          className="sc-gt-modal"
+        >
+          <p className="muted sc-modal-lead">
+            Nodes start maxed. Tap a node to turn it on or off. Applies to every
+            hero of this class (outside game modes too).
+          </p>
+          <div className="sc-gt-class-tabs">
+            {GUILD_TECH_CLASSES.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                className={`sc-gt-class-tab${
+                  row.id === classId ? " selected" : ""
+                }`}
+                style={{ "--gt-color": row.color }}
+                onClick={() =>
+                  setPicker({ type: "guild-tech", classId: row.id })
+                }
+              >
+                <img src={row.icon} alt="" />
+                <span>{row.name}</span>
+              </button>
+            ))}
+          </div>
+          <GuildTechTree
+            classId={classId}
+            guildTech={guildTech}
+            onToggle={(nodeId) =>
+              updateBoard({
+                ...board,
+                guildTech: toggleGuildTechNode(guildTech, classId, nodeId),
+              })
+            }
+          />
+        </Modal>
+      );
+    }
+
     if (picker.type === "game-mode") {
       const selected = picker.draft ?? board.gameModeId ?? null;
       return (
@@ -2521,15 +2712,7 @@ export default function StatCalculator() {
                   </span>
                   {summaryStatsOpen ? (
                     row.hero && breakdown?.totals?.length ? (
-                      <ul className="sc-summary-stats">
-                        {breakdown.totals.map((stat) => (
-                          <li key={stat.key}>
-                            {stat.stat}
-                            {stat.unit === "%" ? "%" : ""}{" "}
-                            {formatStatCell(stat.value, stat.unit)}
-                          </li>
-                        ))}
-                      </ul>
+                      <SummaryStatList totals={breakdown.totals} />
                     ) : (
                       <span className="muted">Stats: —</span>
                     )
@@ -2677,6 +2860,30 @@ export default function StatCalculator() {
               />
             ))}
           </div>
+
+          <section className="sc-guild-tech-card">
+            <div className="calc-row-head">
+              <h2>Guild Tech</h2>
+              <HelpTip message="Per-class guild tech. Tap a class icon to open the skill circle. Nodes are maxed by default — tap to enable/disable. Applies to heroes of that class." />
+            </div>
+            <div className="sc-gt-class-row">
+              {GUILD_TECH_CLASSES.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  className="sc-gt-class-btn"
+                  style={{ "--gt-color": row.color }}
+                  title={row.name}
+                  onClick={() =>
+                    setPicker({ type: "guild-tech", classId: row.id })
+                  }
+                >
+                  <img src={row.icon} alt="" />
+                  <span>{row.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         </section>
       </div>
       {renderPicker()}

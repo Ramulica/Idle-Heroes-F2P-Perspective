@@ -11,8 +11,13 @@ import {
   awakeningStatValue,
   imprintUnlocked,
   stageHeroKitSpeed,
+  stageImprintSpeed,
   stageOriginSpeed,
 } from "./heroProgress";
+import {
+  CC_IMMUNITY_STAT_SET,
+  collectGuildTechForHero,
+} from "./guildTech";
 import { collectInfusionStats } from "./imprintInfusion";
 import {
   cloudSpeedForFaction,
@@ -64,8 +69,13 @@ const STAT_SHORT = {
   "Damage Reduction": "DR",
   "All Damage Dealt": "All DMG",
   "All Damage Reduction": "All DR",
-  "Control Immunity": "Ctrl Imm",
+  "Control Immunity": "CI",
   "Control Immunity Offset": "CIO",
+  "Damage vs Warrior": "vs War",
+  "Damage vs Mage": "vs Mage",
+  "Damage vs Ranger": "vs Rang",
+  "Damage vs Assassin": "vs Asn",
+  "Damage vs Priest": "vs Priest",
   "Damage Reduction Offset": "DR Off",
   "Dodge Offset": "Dodge Off",
   "Reduces DoT received": "DoT Red",
@@ -199,6 +209,10 @@ function collectEnables(slot, gameModeId = null) {
 function collectImprints(slot) {
   const map = emptyMap();
   const stageId = slot?.progress?.stageId || "E5";
+  const imprintSpeed = stageImprintSpeed(stageId);
+  if (imprintSpeed) {
+    addRow(map, { stat: "Speed", value: imprintSpeed, unit: "" });
+  }
   (slot?.imprints || []).forEach((id, index) => {
     if (!imprintUnlocked(stageId, index)) return;
     const option = imprintOf(id);
@@ -317,6 +331,36 @@ function collectAwakening(slot) {
   return map;
 }
 
+function collectGuildTech(slot, guildTech) {
+  const map = emptyMap();
+  const immunities = [];
+  const rows = collectGuildTechForHero(slot, guildTech, heroOf);
+  for (const row of rows) {
+    if (CC_IMMUNITY_STAT_SET.has(row.stat) && (row.unit || "%") === "%") {
+      immunities.push({
+        key: `${row.stat}|%`,
+        stat: row.stat,
+        unit: "%",
+        value: Number(row.value) || 0,
+      });
+      continue;
+    }
+    addRow(map, row);
+  }
+  const ciFromImmunities =
+    immunities.length > 0
+      ? Math.min(...immunities.map((row) => row.value))
+      : 0;
+  if (ciFromImmunities) {
+    addRow(map, {
+      stat: "Control Immunity",
+      value: ciFromImmunities,
+      unit: "%",
+    });
+  }
+  return { map, immunities, ciFromImmunities };
+}
+
 function emptySourceMap() {
   return emptyMap();
 }
@@ -327,8 +371,9 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, tenants, cloudIsland, gameModeId }
+  { aura, monster, tenants, cloudIsland, gameModeId, guildTech }
 ) {
+  const guild = collectGuildTech(slot, guildTech);
   const bySource = {
     hero_kit: collectHeroKit(slot),
     gear: collectGear(slot),
@@ -346,7 +391,7 @@ export function computeHeroStatBreakdown(
     sigils: emptySourceMap(),
     awakening: collectAwakening(slot),
     star_spawns: emptySourceMap(),
-    guild_tech: emptySourceMap(),
+    guild_tech: guild.map,
   };
 
   for (const source of STAT_SOURCES) {
@@ -386,12 +431,25 @@ export function computeHeroStatBreakdown(
     totalValues[col.key] = totals.get(col.key) || 0;
   }
 
+  const totalsRows = mapToRows(totals).map((row) => {
+    if (row.stat === "Control Immunity" && row.unit === "%") {
+      return {
+        ...row,
+        ciFromImmunities: guild.ciFromImmunities || 0,
+        immunities: guild.immunities || [],
+      };
+    }
+    return row;
+  });
+
   return {
     hero: heroOf(slot?.heroId),
     columns,
     rows,
-    totals: mapToRows(totals),
+    totals: totalsRows,
     totalValues,
+    ccImmunities: guild.immunities || [],
+    ciFromImmunities: guild.ciFromImmunities || 0,
   };
 }
 
@@ -402,6 +460,7 @@ export function computeBoardStatTotals(board) {
   const tenants = board?.tenants;
   const cloudIsland = board?.cloudIsland;
   const gameModeId = board?.gameModeId || null;
+  const guildTech = board?.guildTech;
   const slots = (board?.slots || []).map((slot, index) =>
     computeHeroStatBreakdown(slot, index, {
       aura,
@@ -409,6 +468,7 @@ export function computeBoardStatTotals(board) {
       tenants,
       cloudIsland,
       gameModeId,
+      guildTech,
     })
   );
 

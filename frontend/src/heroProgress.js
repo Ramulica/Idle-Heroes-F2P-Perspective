@@ -67,12 +67,17 @@ export function tOriginSpeedSteps(stageId) {
   return match ? Number(match[1]) : 0;
 }
 
-/** Hero Kit Speed from stage (E5 +320, V4 +100). */
+/** Hero Kit Speed from stage (E5 +320). V4 +100 counts under Imprints. */
 export function stageHeroKitSpeed(stageId) {
   if (!HERO_STAGE_BY_ID[stageId]) return 0;
-  let speed = E5_KIT_SPEED;
-  if (stageRank(stageId) >= stageRank("V4")) speed += V4_KIT_SPEED;
-  return speed;
+  return E5_KIT_SPEED;
+}
+
+/** Imprint Speed from V4+ (+100). */
+export function stageImprintSpeed(stageId) {
+  if (!HERO_STAGE_BY_ID[stageId]) return 0;
+  if (stageRank(stageId) >= stageRank("V4")) return V4_KIT_SPEED;
+  return 0;
 }
 
 /** Tree of Origin Speed from T1–T5 / D (+32 per T step). */

@@ -630,6 +630,7 @@ import {
   normalizeTenants,
 } from "./tenantsCloud";
 import { normalizeGameModeId } from "./gameModes";
+import { defaultGuildTech, normalizeGuildTech } from "./guildTech";
 
 export {
   MONSTER_OPTIONS,
@@ -656,6 +657,7 @@ export function emptyBoard() {
     tenants: defaultTenants(),
     cloudIsland: defaultCloudIsland(),
     gameModeId: null,
+    guildTech: defaultGuildTech(),
     slots: Array.from({ length: SLOT_COUNT }, emptySlot),
   };
 }
@@ -673,6 +675,7 @@ export function cloneBoard(board) {
     tenants: normalizeTenants(src.tenants),
     cloudIsland: normalizeCloudIsland(src.cloudIsland),
     gameModeId: normalizeGameModeId(src.gameModeId),
+    guildTech: normalizeGuildTech(src.guildTech),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
       return {
