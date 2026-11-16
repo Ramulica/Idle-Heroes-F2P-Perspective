@@ -437,17 +437,12 @@ function collectGuildTech(slot, guildTech) {
     }
     addRow(map, row);
   }
+  // Min of individual CC immunities is shown as green (+N%) next to CI —
+  // do not fold it into the Control Immunity total.
   const ciFromImmunities =
     immunities.length > 0
       ? Math.min(...immunities.map((row) => row.value))
       : 0;
-  if (ciFromImmunities) {
-    addRow(map, {
-      stat: "Control Immunity",
-      value: ciFromImmunities,
-      unit: "%",
-    });
-  }
   return { map, immunities, ciFromImmunities };
 }
 
@@ -532,6 +527,23 @@ export function computeHeroStatBreakdown(
     }
     return row;
   });
+
+  // Immunities alone still need a CI summary line for the green (+N%).
+  if (
+    guild.ciFromImmunities &&
+    !totalsRows.some(
+      (row) => row.stat === "Control Immunity" && row.unit === "%"
+    )
+  ) {
+    totalsRows.push({
+      key: "Control Immunity|%",
+      stat: "Control Immunity",
+      unit: "%",
+      value: 0,
+      ciFromImmunities: guild.ciFromImmunities,
+      immunities: guild.immunities || [],
+    });
+  }
 
   return {
     hero: heroOf(slot?.heroId),

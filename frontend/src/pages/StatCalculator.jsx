@@ -392,9 +392,13 @@ function SummaryStatList({ totals }) {
             className="sc-ci-toggle"
             onClick={() => setCiOpen((open) => !open)}
           >
-            CI% {formatStatCell(stat.value, "%")}
+            CI%
+            {stat.value || !stat.ciFromImmunities
+              ? ` ${formatStatCell(stat.value, "%")}`
+              : ""}
             {stat.ciFromImmunities ? (
               <span className="sc-ci-extra">
+                {" "}
                 (+{stat.ciFromImmunities}%)
               </span>
             ) : null}
@@ -505,19 +509,23 @@ function GuildTechTree({ classId, guildTech, onToggle }) {
         <h4>Enabled stats</h4>
         {summary.rows.length ? (
           <ul>
-            {summary.rows.map((row) => (
-              <li key={`${row.stat}|${row.unit}`}>
-                {row.stat === "Control Immunity" ? "CI" : row.stat}
-                {row.unit === "%" ? "%" : ""}{" "}
-                {formatStatCell(row.value, row.unit)}
-                {row.ciFromImmunities ? (
-                  <span className="sc-ci-extra">
-                    {" "}
-                    (+{row.ciFromImmunities}%)
-                  </span>
-                ) : null}
-              </li>
-            ))}
+            {summary.rows.map((row) => {
+              const isCi = row.stat === "Control Immunity";
+              const showValue = !(isCi && !row.value && row.ciFromImmunities);
+              return (
+                <li key={`${row.stat}|${row.unit}`}>
+                  {isCi ? "CI" : row.stat}
+                  {row.unit === "%" ? "%" : ""}
+                  {showValue ? <> {formatStatCell(row.value, row.unit)}</> : null}
+                  {row.ciFromImmunities ? (
+                    <span className="sc-ci-extra">
+                      {" "}
+                      (+{row.ciFromImmunities}%)
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="muted">No nodes enabled.</p>

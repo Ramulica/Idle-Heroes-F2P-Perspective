@@ -315,6 +315,8 @@ export function summarizeGuildTechClass(guildTech, classId) {
       merged.set(key, prev);
     }
   }
+  // Min of individual CC immunities is shown as green (+N%) next to CI —
+  // do not fold it into the Control Immunity total.
   const ciFromImmunities =
     immunities.length > 0
       ? Math.min(...immunities.map((row) => row.value))
@@ -326,7 +328,6 @@ export function summarizeGuildTechClass(guildTech, classId) {
       unit: "%",
       value: 0,
     };
-    prev.value += ciFromImmunities;
     prev.ciFromImmunities = ciFromImmunities;
     merged.set(key, prev);
   }
@@ -369,28 +370,21 @@ export function foldControlImmunityDisplay(statRows) {
     kept.push(row);
   }
 
+  // Min of individual CC immunities is shown as green (+N%) next to CI —
+  // do not fold it into the Control Immunity total.
   const ciFromImmunities =
     immunities.length > 0
       ? Math.min(...immunities.map((row) => Number(row.value) || 0))
       : 0;
 
-  const totalCi = Math.round((ci + ciFromImmunities) * 10) / 10;
-  if (totalCi) {
+  const totalCi = Math.round(ci * 10) / 10;
+  if (totalCi || immunities.length) {
     kept.push({
       key: "Control Immunity|%",
       stat: "Control Immunity",
       unit: ciUnit,
       value: totalCi,
       ciFromImmunities,
-      immunities: immunities.sort((a, b) => a.stat.localeCompare(b.stat)),
-    });
-  } else if (immunities.length) {
-    kept.push({
-      key: "Control Immunity|%",
-      stat: "Control Immunity",
-      unit: "%",
-      value: 0,
-      ciFromImmunities: 0,
       immunities: immunities.sort((a, b) => a.stat.localeCompare(b.stat)),
     });
   }
