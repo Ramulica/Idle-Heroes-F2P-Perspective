@@ -128,7 +128,17 @@ export function normalizeSigils(raw) {
       stats,
     });
   }
-  return out;
+  // One sigil per game mode — keep the last entry for each mode.
+  const byMode = new Map();
+  const orphans = [];
+  for (const sigil of out) {
+    if (!sigil.gameModeId) {
+      orphans.push(sigil);
+      continue;
+    }
+    byMode.set(sigil.gameModeId, sigil);
+  }
+  return [...byMode.values(), ...orphans];
 }
 
 export function defaultSigils() {
@@ -136,12 +146,15 @@ export function defaultSigils() {
 }
 
 export function upsertSigil(list, draft) {
-  const next = normalizeSigils(list);
   const entry = createSigilDraft(draft);
-  const idx = next.findIndex((s) => s.id === entry.id);
-  if (idx >= 0) next[idx] = entry;
-  else next.push(entry);
-  return next;
+  // Replace same id and any other sigil already tied to this game mode.
+  const next = normalizeSigils(list).filter(
+    (s) =>
+      s.id !== entry.id &&
+      (!entry.gameModeId || s.gameModeId !== entry.gameModeId)
+  );
+  next.push(entry);
+  return normalizeSigils(next);
 }
 
 export function removeSigil(list, id) {

@@ -2420,26 +2420,47 @@ export default function StatCalculator() {
           }
         >
           <p className="muted sc-modal-lead">
-            Pick a game mode, rarity, then stats and values. This sigil only
+            One sigil per game mode. Pick rarity, then stats and values. It only
             counts when that game mode is selected on the board.
           </p>
 
           <h4 className="sc-sigil-section-title">Game mode</h4>
           <div className="sc-sigil-mode-grid">
-            {GAME_MODES.map((gm) => (
-              <button
-                key={gm.id}
-                type="button"
-                className={`sc-sigil-mode-btn${
-                  draft.gameModeId === gm.id ? " selected" : ""
-                }`}
-                title={gm.name}
-                onClick={() => patchDraft({ gameModeId: gm.id })}
-              >
-                <img src={gm.icon} alt="" />
-                <span>{gm.name}</span>
-              </button>
-            ))}
+            {GAME_MODES.map((gm) => {
+              const existing = normalizeSigils(board.sigils).find(
+                (s) => s.gameModeId === gm.id
+              );
+              const selected = draft.gameModeId === gm.id;
+              const takenByOther =
+                Boolean(existing) && existing.id !== draft.id;
+              return (
+                <button
+                  key={gm.id}
+                  type="button"
+                  className={`sc-sigil-mode-btn${
+                    selected ? " selected" : ""
+                  }${takenByOther ? " taken" : ""}`}
+                  title={
+                    takenByOther
+                      ? `${gm.name} (has a sigil — tap to edit)`
+                      : gm.name
+                  }
+                  onClick={() => {
+                    if (takenByOther) {
+                      setPicker({
+                        type: "sigil",
+                        draft: createSigilDraft(existing),
+                      });
+                      return;
+                    }
+                    patchDraft({ gameModeId: gm.id });
+                  }}
+                >
+                  <img src={gm.icon} alt="" />
+                  <span>{gm.name}</span>
+                </button>
+              );
+            })}
           </div>
 
           <h4 className="sc-sigil-section-title">Rarity</h4>
@@ -3531,7 +3552,7 @@ export default function StatCalculator() {
             <div className="calc-row-head sc-sigil-head">
               <div className="sc-sigil-head-title">
                 <h2>Sigils</h2>
-                <HelpTip message="Add sigils for specific game modes. Blue / yellow / purple / green have 1 stat; red has 2. Stats only apply when that game mode is selected on the board." />
+                <HelpTip message="One sigil per game mode. Blue / yellow / purple / green have 1 stat; red has 2. Stats only apply when that game mode is selected on the board." />
               </div>
               <button
                 type="button"

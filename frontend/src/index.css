@@ -6473,6 +6473,11 @@ button.sc-aura-badge:hover .sc-aura-core {
   box-shadow: inset 0 0 0 1px #c47a12;
 }
 
+.sc-sigil-mode-btn.taken:not(.selected) {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
 .sc-sigil-mode-btn img {
   width: 44px;
   height: 44px;
