@@ -291,7 +291,6 @@ export function suggestRulesForHero(heroId, roleId = null) {
         rule.stat === "Control Immunity"
       ) {
         rule.priority = Math.max(rule.priority, 85);
-        if (rule.stat === "All Damage Reduction") rule.underTarget = 20;
         if (rule.stat === "Block") rule.underTarget = 70;
         if (rule.stat === "Control Immunity") rule.underTarget = 50;
       }
