@@ -3079,7 +3079,6 @@ export default function StatCalculator() {
                         type="number"
                         className="sc-sigil-value-input"
                         min={0}
-                        max={999}
                         step={unit === "%" ? 0.1 : 1}
                         value={slot.value || ""}
                         onChange={(e) => {

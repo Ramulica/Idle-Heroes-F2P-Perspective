@@ -103,7 +103,7 @@ function normalizeStatSlot(raw) {
   return {
     stat: opt ? opt.stat : "",
     unit: opt ? opt.unit : "%",
-    value: Number.isFinite(n) && n > 0 ? Math.min(n, 999) : 0,
+    value: Number.isFinite(n) && n > 0 ? n : 0,
   };
 }
 
