@@ -60,6 +60,10 @@ import {
   partitionStatRows,
 } from "../statTotals";
 import {
+  analyzeHeroSuggestions,
+  suggestBoardContext,
+} from "../suggestStats";
+import {
   AWAKENING_TIERS,
   HERO_STAGE_OPTIONS,
   INFUSION_ICON,
@@ -658,6 +662,100 @@ function clampIntField(value, min, max, fallback) {
   return Math.min(max, Math.max(min, n));
 }
 
+function HeroSuggestPanel({ analysis }) {
+  if (!analysis) {
+    return <p className="muted">Select a hero to see suggestions.</p>;
+  }
+  const { over, under, swaps, notes } = analysis;
+  const empty =
+    !over.length && !under.length && !swaps.length && !notes.length;
+  return (
+    <div className="sc-suggest">
+      {empty ? (
+        <p className="muted">
+          No strong overcap or undercap signals yet. Equip more gear, then
+          check again.
+        </p>
+      ) : null}
+      {over.length ? (
+        <section className="sc-suggest-section">
+          <h4>Too much</h4>
+          <ul className="sc-suggest-list">
+            {over.map((row) => (
+              <li key={`over-${row.stat}|${row.unit}`}>
+                <strong>
+                  {row.label} {row.value}%
+                </strong>
+                <span>
+                  {" "}
+                  (cap {row.cap}) · +{row.wasted}{" "}
+                  {row.soft ? "soft waste" : "wasted"}
+                </span>
+                <div className="sc-suggest-meta">mainly {row.sourceText}</div>
+                {row.note ? (
+                  <div className="sc-suggest-note">{row.note}</div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {under.length ? (
+        <section className="sc-suggest-section">
+          <h4>Need more</h4>
+          <ul className="sc-suggest-list">
+            {under.map((row) => (
+              <li key={`under-${row.stat}|${row.unit}`}>
+                <strong>
+                  {row.label} {row.value}%
+                </strong>
+                <span>
+                  {" "}
+                  / {row.target} · missing {row.missing}
+                </span>
+                {row.note ? (
+                  <div className="sc-suggest-note">{row.note}</div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {swaps.length ? (
+        <section className="sc-suggest-section">
+          <h4>Suggested changes</h4>
+          <ul className="sc-suggest-list sc-suggest-swaps">
+            {swaps.map((row) => (
+              <li key={`${row.kind}-${row.label}`}>
+                <strong>{row.label}</strong>
+                {row.diff ? (
+                  <div className="sc-suggest-meta">{row.diff}</div>
+                ) : null}
+                {row.detail ? (
+                  <div className="sc-suggest-note">{row.detail}</div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="muted sc-suggest-hint">
+            Recommendations only — nothing is applied automatically.
+          </p>
+        </section>
+      ) : null}
+      {notes.length ? (
+        <section className="sc-suggest-section">
+          <h4>Energy / round</h4>
+          <ul className="sc-suggest-list">
+            {notes.map((row) => (
+              <li key={row.id}>{row.text}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 function HeroCard({
   index,
   slot,
@@ -667,6 +765,7 @@ function HeroCard({
   onPickEnable,
   onPickImprint,
   onInfo,
+  onSuggest,
   onPickStage,
   onPickInfusion,
   onPickAwakening,
@@ -690,6 +789,15 @@ function HeroCard({
               title="Stat breakdown"
             >
               i
+            </button>
+            <button
+              className="sc-suggest-btn"
+              type="button"
+              aria-label={`Stat suggestions for ${hero.name}`}
+              onClick={onSuggest}
+              title="Suggest"
+            >
+              S
             </button>
             <button
               className="sc-clear-btn"
@@ -1194,6 +1302,34 @@ export default function StatCalculator() {
             those systems are wired in.
           </p>
           <HeroStatBreakdownTable breakdown={breakdown} />
+        </Modal>
+      );
+    }
+
+    if (picker.type === "hero-suggest") {
+      const breakdown = boardStats.slots[picker.slotIndex];
+      const slot = board.slots[picker.slotIndex];
+      const hero = breakdown?.hero;
+      const analysis = analyzeHeroSuggestions(
+        breakdown,
+        slot,
+        suggestBoardContext(board, boardStats, picker.slotIndex)
+      );
+      return (
+        <Modal
+          title={
+            hero
+              ? `${hero.name} · Suggest`
+              : `${slotTitle(picker.slotIndex)} · Suggest`
+          }
+          onClose={() => setPicker(null)}
+          className="sc-modal-suggest"
+        >
+          <p className="muted sc-modal-lead">
+            Cap advisor from combat formulas (Precision 150, Crit Damage 150,
+            DR 75, Energy floors). Soft waste still helps vs Block.
+          </p>
+          <HeroSuggestPanel analysis={analysis} />
         </Modal>
       );
     }
@@ -3631,15 +3767,32 @@ export default function StatCalculator() {
                     )
                   ) : null}
                   {row.hero ? (
-                    <button
-                      type="button"
-                      className="sc-summary-info"
-                      onClick={() =>
-                        setPicker({ type: "hero-stats", slotIndex: row.index })
-                      }
-                    >
-                      Info
-                    </button>
+                    <div className="sc-summary-card-actions">
+                      <button
+                        type="button"
+                        className="sc-summary-info"
+                        onClick={() =>
+                          setPicker({
+                            type: "hero-stats",
+                            slotIndex: row.index,
+                          })
+                        }
+                      >
+                        Info
+                      </button>
+                      <button
+                        type="button"
+                        className="sc-summary-info sc-summary-suggest"
+                        onClick={() =>
+                          setPicker({
+                            type: "hero-suggest",
+                            slotIndex: row.index,
+                          })
+                        }
+                      >
+                        Suggest
+                      </button>
+                    </div>
                   ) : null}
                 </div>
               );
@@ -3731,6 +3884,9 @@ export default function StatCalculator() {
                 }
                 onInfo={() =>
                   setPicker({ type: "hero-stats", slotIndex: index })
+                }
+                onSuggest={() =>
+                  setPicker({ type: "hero-suggest", slotIndex: index })
                 }
                 onPickStage={() => {
                   const progress =

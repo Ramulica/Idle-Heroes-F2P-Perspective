@@ -4007,13 +4007,30 @@ input[type="range"] {
   cursor: pointer;
 }
 
+.sc-summary-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sc-summary-card-actions .sc-summary-info {
+  margin-top: 0;
+}
+
+.sc-summary-suggest {
+  background: #efe0b8;
+}
+
 .sc-hero-card-actions {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.sc-info-btn {
+.sc-info-btn,
+.sc-suggest-btn {
   width: 22px;
   height: 22px;
   border: 1px solid #8a5a2a;
@@ -4026,6 +4043,56 @@ input[type="range"] {
   line-height: 1;
   padding: 0;
   cursor: pointer;
+}
+
+.sc-suggest-btn {
+  font-style: normal;
+  font-size: 0.72rem;
+}
+
+.sc-modal-suggest {
+  max-width: min(560px, 96vw);
+}
+
+.sc-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sc-suggest-section h4 {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  color: #5a3210;
+}
+
+.sc-suggest-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #5a3210;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.sc-suggest-list li + li {
+  margin-top: 8px;
+}
+
+.sc-suggest-meta {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: #6a4420;
+}
+
+.sc-suggest-note {
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: #7a5a30;
+}
+
+.sc-suggest-hint {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
 }
 
 .sc-modal-stats {
