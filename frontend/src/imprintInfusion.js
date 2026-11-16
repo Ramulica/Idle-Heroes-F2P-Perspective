@@ -547,14 +547,19 @@ export const INFUSION_ROOTS = ["blue-root", "red-root", "green-root"];
 /** Map points stop accruing after this infusion level. */
 export const INFUSION_POINT_CAP_LEVEL = 40;
 
+export function isInfusionRoot(id) {
+  return INFUSION_ROOTS.includes(id);
+}
+
 /**
  * Map points from infusion level:
- * 15–30 → +1 per level (16 pts at 30), 31–40 → +3 per level (+30 at 40). Cap 46.
+ * Unlock at 15 (0 pts). 16–30 → +1 per level (15 pts at 30),
+ * 31–40 → +3 per level (+30 at 40). Cap 45.
  */
 export function infusionPointBudget(level) {
   const n = Math.round(Number(level));
-  if (!Number.isFinite(n) || n < INFUSION_UNLOCK_LEVEL) return 0;
-  const tier1 = Math.min(n, 30) - 14; // level 15 → 1 … 30 → 16
+  if (!Number.isFinite(n) || n < 16) return 0;
+  const tier1 = Math.min(n, 30) - 15; // level 16 → 1 … 30 → 15
   const tier2 = n >= 31 ? (Math.min(n, INFUSION_POINT_CAP_LEVEL) - 30) * 3 : 0;
   return tier1 + tier2;
 }
@@ -566,8 +571,11 @@ export function normalizeInfusionNodes(rawIds, budget) {
   for (const id of Array.isArray(rawIds) ? rawIds : []) {
     if (selected.length >= max) break;
     if (!INFUSION_NODE_BY_ID[id] || seen.has(id)) continue;
+    if (isInfusionRoot(id)) continue; // color starts are free / never stored
     const node = INFUSION_NODE_BY_ID[id];
-    if (node.parentId && !seen.has(node.parentId)) continue;
+    if (node.parentId && !seen.has(node.parentId) && !isInfusionRoot(node.parentId)) {
+      continue;
+    }
     seen.add(id);
     selected.push(id);
   }
@@ -575,16 +583,18 @@ export function normalizeInfusionNodes(rawIds, budget) {
 }
 
 /**
- * Unselected nodes from the nearest selected ancestor (or root) down to `id`,
- * ordered root→leaf so parents are selected before children.
+ * Unselected spendable nodes from the nearest free/selected ancestor down to `id`.
+ * Color roots are free gateways and are never included in the chain.
  */
 function missingPathTo(id, selectedSet) {
   const node = INFUSION_NODE_BY_ID[id];
   if (!node) return null;
+  if (isInfusionRoot(id)) return [];
   const chain = [];
   let cur = node;
   while (cur) {
     if (selectedSet.has(cur.id)) break;
+    if (isInfusionRoot(cur.id)) break; // free start — stop without costing it
     chain.push(cur.id);
     if (!cur.parentId) break;
     cur = INFUSION_NODE_BY_ID[cur.parentId];
@@ -597,10 +607,12 @@ function missingPathTo(id, selectedSet) {
 export function canSelectInfusionNode(selectedSet, id, budget) {
   const node = INFUSION_NODE_BY_ID[id];
   if (!node) return false;
+  if (isInfusionRoot(id)) return false; // always available, never bought
   if (selectedSet.has(id)) return false;
   const chain = missingPathTo(id, selectedSet);
   if (!chain?.length) return false;
-  return selectedSet.size + chain.length <= budget;
+  const spent = [...selectedSet].filter((x) => !isInfusionRoot(x)).length;
+  return spent + chain.length <= budget;
 }
 
 function descendantsOf(id) {
@@ -611,7 +623,8 @@ function descendantsOf(id) {
 }
 
 export function toggleInfusionNode(selectedIds, id, budget) {
-  const selected = [...selectedIds];
+  if (isInfusionRoot(id)) return selectedIds.filter((x) => !isInfusionRoot(x));
+  const selected = selectedIds.filter((x) => !isInfusionRoot(x));
   const set = new Set(selected);
   if (set.has(id)) {
     const drop = new Set([id, ...descendantsOf(id)]);
@@ -619,7 +632,7 @@ export function toggleInfusionNode(selectedIds, id, budget) {
   }
   const chain = missingPathTo(id, set);
   if (!chain?.length) return selected;
-  if (set.size + chain.length > budget) return selected;
+  if (selected.length + chain.length > budget) return selected;
   return [...selected, ...chain];
 }
 

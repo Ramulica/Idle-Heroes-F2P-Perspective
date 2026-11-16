@@ -677,7 +677,7 @@ const SUGGEST_HELP_ADVANCED = [
       "Precision 150% — damage multiplier 1 + Prec×0.3 caps here. Extra Precision is soft waste for damage, but still offsets Block 1:1.",
       "Crit Damage 150% — crit multiplier 1.5 + 2×CD hard-caps; excess is wasted.",
       "Damage Reduction 75% — mitigation is 1 − DR, capped at 75% (faction advantage can add +0.3 vs DR; noted in copy only).",
-      "All Damage Reduction — no hard cap; treated as more-is-better (also hits true damage).",
+      "All Damage Reduction 75% — same hard cap as DR; also cuts true damage.",
     ],
   },
   {
@@ -2471,9 +2471,9 @@ export default function StatCalculator() {
         >
           <p className="muted sc-modal-lead">
             Set infusion level 0–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
-            Levels {INFUSION_UNLOCK_LEVEL}–30 give 1 point each; 31–
+            Points start at 16 (1 each through 30); 31–
             {INFUSION_POINT_CAP_LEVEL} give 3 each (now {budget} point
-            {budget === 1 ? "" : "s"}).
+            {budget === 1 ? "" : "s"}). Color start nodes are free.
           </p>
           <label className="sc-infusion-field-row">
             <span>Level</span>
@@ -2575,8 +2575,8 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-head">
             <p className="muted sc-modal-lead">
               Remaining points: <strong>{remaining}</strong> / {budget} (level{" "}
-              {progress.infusion}; 15–30 → 1 pt, 31–{INFUSION_POINT_CAP_LEVEL} →
-              3 pts)
+              {progress.infusion}; 16–30 → 1 pt, 31–{INFUSION_POINT_CAP_LEVEL} →
+              3 pts; color starts free)
             </p>
             <button
               type="button"
@@ -2620,7 +2620,9 @@ export default function StatCalculator() {
                 const to = INFUSION_NODE_BY_ID[edge.to];
                 if (!from || !to) return null;
                 const lit =
-                  selectedSet.has(edge.from) && selectedSet.has(edge.to);
+                  (selectedSet.has(edge.from) ||
+                    INFUSION_ROOTS.includes(edge.from)) &&
+                  selectedSet.has(edge.to);
                 const color = BRANCH_META[to.branch]?.color || "#8899aa";
                 return (
                   <line
@@ -2643,19 +2645,23 @@ export default function StatCalculator() {
                 );
                 const color = BRANCH_META[node.branch]?.color || "#8899aa";
                 const isRoot = INFUSION_ROOTS.includes(node.id);
+                // Color starts are always open / free — never spend a point on them.
+                const rootOpen = isRoot;
+                const lit = on || rootOpen;
                 return (
                   <g key={node.id}>
                     <circle
                       cx={node.x}
                       cy={node.y}
-                      r={isRoot ? (on ? 22 : 18) : on ? 16 : 13}
-                      fill={on ? color : isRoot ? "#1a2438" : "#2a3344"}
-                      stroke={on ? "#fff6c8" : canOn ? color : "#667788"}
-                      strokeWidth={on || isRoot ? 3 : 1.75}
-                      className={`sc-infusion-node${on ? " on" : ""}${
+                      r={isRoot ? 20 : on ? 16 : 13}
+                      fill={lit ? color : "#2a3344"}
+                      stroke={lit ? "#fff6c8" : canOn ? color : "#667788"}
+                      strokeWidth={lit || isRoot ? 3 : 1.75}
+                      className={`sc-infusion-node${lit ? " on" : ""}${
                         canOn ? " can" : ""
                       }`}
                       onClick={() => {
+                        if (isRoot) return;
                         const next = toggleInfusionNode(draft, node.id, budget);
                         setPicker({
                           ...picker,
@@ -2663,12 +2669,16 @@ export default function StatCalculator() {
                         });
                       }}
                       style={{
-                        cursor: on || canOn ? "pointer" : "default",
+                        cursor: isRoot
+                          ? "default"
+                          : on || canOn
+                            ? "pointer"
+                            : "default",
                       }}
                     >
                       <title>
                         {isRoot
-                          ? `${BRANCH_META[node.branch]?.label || node.branch} start`
+                          ? `${BRANCH_META[node.branch]?.label || node.branch} start (free)`
                           : infusionNodeTip(node)}
                       </title>
                     </circle>

@@ -140,11 +140,11 @@ export const SUGGEST_STAT_RULES = [
   {
     stat: "All Damage Reduction",
     unit: "%",
-    cap: null,
+    cap: 75,
     softCap: false,
-    underTarget: 20,
-    priority: 70,
-    note: "Works like DR and also cuts true damage. No hard cap stated.",
+    underTarget: 75,
+    priority: 88,
+    note: "All-DR mult is 1 − All-DR, capped at 75%. Also cuts true damage.",
   },
   {
     stat: "Skill Damage",
