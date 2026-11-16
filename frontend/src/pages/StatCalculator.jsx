@@ -117,6 +117,7 @@ import {
   guildTechOuterNodes,
   isGuildTechNodeEnabled,
   normalizeGuildTech,
+  summarizeGuildTechClass,
   toggleGuildTechNode,
 } from "../guildTech";
 
@@ -346,6 +347,7 @@ function GuildTechTree({ classId, guildTech, onToggle }) {
   const outer = guildTechOuterNodes(classId);
   const left = outer.filter((n) => n.side === "left");
   const right = outer.filter((n) => n.side === "right");
+  const summary = summarizeGuildTechClass(guildTech, classId);
 
   const nodeStyle = (angleDeg, radiusPct) => {
     const rad = (angleDeg * Math.PI) / 180;
@@ -376,27 +378,66 @@ function GuildTechTree({ classId, guildTech, onToggle }) {
   };
 
   return (
-    <div className="sc-gt-tree" style={{ "--gt-color": color }}>
-      <div className="sc-gt-ring">
-        <div className="sc-gt-center">
-          <img src={def.icon} alt="" />
-          <span>{def.name}</span>
+    <div className="sc-gt-panel" style={{ "--gt-color": color }}>
+      <div className="sc-gt-tree">
+        <div className="sc-gt-outer left" aria-label="Damage vs classes">
+          <span className="sc-gt-outer-label">vs Class</span>
+          {left.map((node) => renderNode(node, "outer"))}
         </div>
-        {GUILD_TECH_INNER_NODES.map((node) => (
-          <div
-            key={node.id}
-            className="sc-gt-node-wrap"
-            style={nodeStyle(node.angle, 38)}
-          >
-            {renderNode(node)}
+        <div className="sc-gt-ring">
+          <div className="sc-gt-center">
+            <img src={def.icon} alt="" />
+            <span>{def.name}</span>
           </div>
-        ))}
+          {GUILD_TECH_INNER_NODES.map((node) => (
+            <div
+              key={node.id}
+              className="sc-gt-node-wrap"
+              style={nodeStyle(node.angle, 38)}
+            >
+              {renderNode(node)}
+            </div>
+          ))}
+        </div>
+        <div className="sc-gt-outer right" aria-label="CC immunities">
+          <span className="sc-gt-outer-label">Immunity</span>
+          {right.map((node) => renderNode(node, "outer"))}
+        </div>
       </div>
-      <div className="sc-gt-outer left">
-        {left.map((node) => renderNode(node, "outer"))}
-      </div>
-      <div className="sc-gt-outer right">
-        {right.map((node) => renderNode(node, "outer"))}
+      <div className="sc-gt-summary">
+        <h4>Enabled stats</h4>
+        {summary.rows.length ? (
+          <ul>
+            {summary.rows.map((row) => (
+              <li key={`${row.stat}|${row.unit}`}>
+                {row.stat === "Control Immunity" ? "CI" : row.stat}
+                {row.unit === "%" ? "%" : ""}{" "}
+                {formatStatCell(row.value, row.unit)}
+                {row.ciFromImmunities ? (
+                  <span className="sc-ci-extra">
+                    {" "}
+                    (+{row.ciFromImmunities}%)
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No nodes enabled.</p>
+        )}
+        {summary.immunities.length ? (
+          <details className="sc-ci-details">
+            <summary>Individual immunities</summary>
+            <ul>
+              {summary.immunities.map((row) => (
+                <li key={row.stat}>
+                  {row.stat.replace(/ Immunity$/, "")}{" "}
+                  {formatStatCell(row.value, "%")}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </div>
     </div>
   );

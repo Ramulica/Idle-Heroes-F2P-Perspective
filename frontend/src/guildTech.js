@@ -66,29 +66,32 @@ export const CC_IMMUNITY_STATS = [
 export const CC_IMMUNITY_STAT_SET = new Set(CC_IMMUNITY_STATS);
 
 /**
- * Inner ring nodes 1–8, clockwise from top-left.
+ * Inner ring nodes 1–8, counter-clockwise from top-left (ring rotated 22.5°
+ * so there is no node at exact top — two nodes flank the top).
  * HP / Attack rows are listed for completeness; calculator ignores HP & Attack.
+ *
+ * Angles: math degrees, 0 = east, CCW positive. Screen y uses −sin.
  */
 export const GUILD_TECH_INNER_NODES = [
   {
     id: "inner-1",
     label: "HP",
     short: "HP",
-    angle: 135,
+    angle: 112.5,
     statsForClass: () => [pct("HP", 30)],
   },
   {
     id: "inner-2",
     label: "Attack",
     short: "ATK",
-    angle: 90,
+    angle: 157.5,
     statsForClass: () => [pct("Attack", 25)],
   },
   {
     id: "inner-3",
     label: "Crit / Block",
     short: "CRIT",
-    angle: 45,
+    angle: 202.5,
     statsForClass: (classId) =>
       classId === "Ranger" ? [pct("Block", 20)] : [pct("Crit", 20)],
   },
@@ -96,7 +99,7 @@ export const GUILD_TECH_INNER_NODES = [
     id: "inner-4",
     label: "Defensive",
     short: "DEF",
-    angle: 0,
+    angle: 247.5,
     statsForClass: (classId) => {
       if (classId === "Warrior") return [pct("Block", 15)];
       if (classId === "Mage" || classId === "Ranger")
@@ -109,14 +112,14 @@ export const GUILD_TECH_INNER_NODES = [
     id: "inner-5",
     label: "Skill Damage",
     short: "SD",
-    angle: -45,
+    angle: 292.5,
     statsForClass: () => [pct("Skill Damage", 20)],
   },
   {
     id: "inner-6",
     label: "Speed",
     short: "SPD",
-    angle: -90,
+    angle: 337.5,
     statsForClass: (classId) => [
       flat("Speed", classId === "Priest" ? 20 : 80),
     ],
@@ -125,25 +128,25 @@ export const GUILD_TECH_INNER_NODES = [
     id: "inner-7",
     label: "ATK / HP",
     short: "A/H",
-    angle: -135,
+    angle: 22.5,
     statsForClass: () => [pct("Attack", 20), pct("HP", 20)],
   },
   {
     id: "inner-8",
     label: "HP / SD",
     short: "H/S",
-    angle: 180,
+    angle: 67.5,
     statsForClass: () => [pct("HP", 20), pct("Skill Damage", 20)],
   },
 ];
 
-/** Left outer: CC immunities, top → bottom. */
+/** Right outer: CC immunities, top → bottom. */
 export const GUILD_TECH_CC_NODES = [
   {
     id: "cc-1",
     label: "Seal / Shape Shift",
     short: "Seal",
-    side: "left",
+    side: "right",
     order: 0,
     immunities: ["Seal of Light Immunity", "Shape Shift Immunity"],
   },
@@ -151,7 +154,7 @@ export const GUILD_TECH_CC_NODES = [
     id: "cc-2",
     label: "Taunt / Dazzle",
     short: "Taunt",
-    side: "left",
+    side: "right",
     order: 1,
     immunities: ["Taunt Immunity", "Dazzle Immunity"],
   },
@@ -159,7 +162,7 @@ export const GUILD_TECH_CC_NODES = [
     id: "cc-3",
     label: "Petrify / Fear / Horrify",
     short: "Petrify",
-    side: "left",
+    side: "right",
     order: 2,
     immunities: [
       "Petrify Immunity",
@@ -171,7 +174,7 @@ export const GUILD_TECH_CC_NODES = [
     id: "cc-4",
     label: "Stun / Freeze / Silence",
     short: "Stun",
-    side: "left",
+    side: "right",
     order: 3,
     immunities: ["Stun Immunity", "Freeze Immunity", "Silence Immunity"],
   },
@@ -179,23 +182,23 @@ export const GUILD_TECH_CC_NODES = [
 
 const CLASS_ORDER = GUILD_TECH_CLASSES.map((row) => row.id);
 
-/** Right outer anti-class nodes for a guild-tech class (other classes, top→bottom). */
+/** Anti-class targets for a guild-tech class (other classes, top→bottom). */
 export function antiClassTargetsFor(classId) {
   return CLASS_ORDER.filter((id) => id !== classId);
 }
 
 export function guildTechOuterNodes(classId) {
   const targets = antiClassTargetsFor(classId);
-  const right = targets.map((targetId, order) => ({
+  const left = targets.map((targetId, order) => ({
     id: `anti-${targetId}`,
     label: `vs ${targetId}`,
     short: targetId.slice(0, 3).toUpperCase(),
-    side: "right",
+    side: "left",
     order,
     targetClassId: targetId,
     stats: [pct(`Damage vs ${targetId}`, 30)],
   }));
-  return [...GUILD_TECH_CC_NODES, ...right];
+  return [...left, ...GUILD_TECH_CC_NODES];
 }
 
 export function allGuildTechNodeIds(classId) {
@@ -275,6 +278,69 @@ export function collectGuildTechForHero(slot, guildTech, heroOf) {
     rows.push(...guildTechNodeStats(classId, id));
   }
   return rows;
+}
+
+const IGNORED_GUILD_SUMMARY = new Set(["HP", "Attack"]);
+
+/** Merged enabled stats for one class (for the guild-tech modal summary). */
+export function summarizeGuildTechClass(guildTech, classId) {
+  if (!GUILD_TECH_CLASS_BY_ID[classId]) {
+    return { rows: [], immunities: [], ciFromImmunities: 0 };
+  }
+  const merged = new Map();
+  const immunities = [];
+  for (const id of allGuildTechNodeIds(classId)) {
+    if (!isGuildTechNodeEnabled(guildTech, classId, id)) continue;
+    for (const row of guildTechNodeStats(classId, id)) {
+      if (IGNORED_GUILD_SUMMARY.has(row.stat)) continue;
+      if (CC_IMMUNITY_STAT_SET.has(row.stat) && (row.unit || "%") === "%") {
+        immunities.push({
+          stat: row.stat,
+          value: Number(row.value) || 0,
+          unit: "%",
+        });
+        continue;
+      }
+      const key = `${row.stat}|${row.unit || ""}`;
+      const prev = merged.get(key) || {
+        stat: row.stat,
+        unit: row.unit || "",
+        value: 0,
+      };
+      prev.value += Number(row.value) || 0;
+      merged.set(key, prev);
+    }
+  }
+  const ciFromImmunities =
+    immunities.length > 0
+      ? Math.min(...immunities.map((row) => row.value))
+      : 0;
+  if (ciFromImmunities) {
+    const key = "Control Immunity|%";
+    const prev = merged.get(key) || {
+      stat: "Control Immunity",
+      unit: "%",
+      value: 0,
+    };
+    prev.value += ciFromImmunities;
+    prev.ciFromImmunities = ciFromImmunities;
+    merged.set(key, prev);
+  }
+  const rows = [...merged.values()]
+    .map((row) => ({
+      ...row,
+      value: Math.round(row.value * 10) / 10,
+    }))
+    .sort((a, b) => {
+      if (a.stat === "Speed" && b.stat !== "Speed") return -1;
+      if (b.stat === "Speed" && a.stat !== "Speed") return 1;
+      return a.stat.localeCompare(b.stat);
+    });
+  return {
+    rows,
+    immunities: immunities.sort((a, b) => a.stat.localeCompare(b.stat)),
+    ciFromImmunities,
+  };
 }
 
 /**
