@@ -667,7 +667,7 @@ const SUGGEST_HELP_ADVANCED = [
   {
     heading: "What this is",
     paragraphs: [
-      "Suggest is a cap advisor, not a full damage simulator. It scores your current totals against Idle Heroes combat caps from community formulas, then ranks a few one-piece swaps (imprint, artifact, enable 1/4, soul stone). Nothing is applied automatically.",
+      "Suggest is a cap advisor, not a full damage simulator. It scores your current totals against Idle Heroes combat caps from community formulas, then ranks a few one-piece swaps (imprint, enable 1/4, soul stone). Artifacts are not suggested — you pick them for abilities. Nothing is applied automatically.",
     ],
   },
   {
@@ -683,7 +683,8 @@ const SUGGEST_HELP_ADVANCED = [
     heading: "Hero roles",
     items: [
       "Damage dealers — chase offensive floors (Precision / Crit Damage / Skill / All DMG / Holy / Crit). Defense is secondary.",
-      "Supports — do not need offensive stats; leftover offense is soft waste to reallocate into DR / All DR / Block / CI.",
+      "Supports — do not need offensive stats; leftover offense is soft waste to reallocate into Energy, DR / All DR / Block / CI.",
+      "Most supports want Energy 50+ so they open with an active.",
       "CC heroes — Control Precision and Control Immunity Offset first, then defensive stats.",
       "Wukong is all three (DD + CC + Support). Natalia is DD but Crit / Crit Damage should stay at 0.",
     ],
@@ -746,22 +747,27 @@ function HeroSuggestPanel({ analysis }) {
         <section className="sc-suggest-section">
           <h4>Too much</h4>
           <ul className="sc-suggest-list">
-            {over.map((row) => (
-              <li key={`over-${row.stat}|${row.unit}`}>
-                <strong>
-                  {row.label} {row.value}%
-                </strong>
-                <span>
-                  {" "}
-                  (cap {row.cap}) · +{row.wasted}{" "}
-                  {row.soft ? "soft waste" : "wasted"}
-                </span>
-                <div className="sc-suggest-meta">mainly {row.sourceText}</div>
-                {row.note ? (
-                  <div className="sc-suggest-note">{row.note}</div>
-                ) : null}
-              </li>
-            ))}
+            {over.map((row) => {
+              const pct = row.unit === "%" ? "%" : "";
+              return (
+                <li key={`over-${row.stat}|${row.unit}`}>
+                  <strong>
+                    {row.label} {row.value}
+                    {pct}
+                  </strong>
+                  <span>
+                    {" "}
+                    (cap {row.cap}
+                    {pct}) · +{row.wasted}
+                    {pct} {row.soft ? "soft waste" : "wasted"}
+                  </span>
+                  <div className="sc-suggest-meta">mainly {row.sourceText}</div>
+                  {row.note ? (
+                    <div className="sc-suggest-note">{row.note}</div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}
@@ -769,20 +775,26 @@ function HeroSuggestPanel({ analysis }) {
         <section className="sc-suggest-section">
           <h4>Need more</h4>
           <ul className="sc-suggest-list">
-            {under.map((row) => (
-              <li key={`under-${row.stat}|${row.unit}`}>
-                <strong>
-                  {row.label} {row.value}%
-                </strong>
-                <span>
-                  {" "}
-                  / {row.target} · missing {row.missing}
-                </span>
-                {row.note ? (
-                  <div className="sc-suggest-note">{row.note}</div>
-                ) : null}
-              </li>
-            ))}
+            {under.map((row) => {
+              const pct = row.unit === "%" ? "%" : "";
+              return (
+                <li key={`under-${row.stat}|${row.unit}`}>
+                  <strong>
+                    {row.label} {row.value}
+                    {pct}
+                  </strong>
+                  <span>
+                    {" "}
+                    / {row.target}
+                    {pct} · missing {row.missing}
+                    {pct}
+                  </span>
+                  {row.note ? (
+                    <div className="sc-suggest-note">{row.note}</div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}
@@ -1398,12 +1410,12 @@ export default function StatCalculator() {
             </p>
             <HelpTip
               title="Suggest algorithm"
-              message="Opens Too much / Need more / Suggested changes for this hero, weighted by role. Recommendations are hints only — change imprint, artifact, enable, or stone yourself."
+              message="Opens Too much / Need more / Suggested changes for this hero, weighted by role. Recommendations are hints only — change imprint, enable, or stone yourself (not artifacts)."
               steps={[
                 "Role line shows Damage dealer, Support, and/or CC for this hero.",
                 "Too much lists stats past caps (or unused offense on supports), with sources.",
-                "Need more lists role-weighted floors and missing amounts.",
-                "Suggested changes ranks one-piece swaps that cut waste or fill gaps.",
+                "Need more lists role-weighted floors (supports prioritize Energy 50+) and missing amounts.",
+                "Suggested changes ranks imprint / enable / stone swaps — artifacts are skipped (ability-first).",
                 "Energy / round notes how starting Energy interacts with Round 1.",
                 "Tap Advanced for roles, caps, and scoring math.",
               ]}

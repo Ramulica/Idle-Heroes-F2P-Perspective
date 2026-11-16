@@ -2,7 +2,6 @@
  * Cap advisor + bounded swap hints for one hero build.
  * Uses Idle Heroes combat caps from community formulas (not a full damage sim).
  */
-import { ARTIFACT_OPTIONS, artifactOf } from "./artifacts";
 import { normalizeCombatRound } from "./gameModes";
 import { imprintUnlocked } from "./heroProgress";
 import { SOUL_STONE_OPTIONS } from "./soulStones";
@@ -19,7 +18,6 @@ import {
   statKey,
 } from "./statTotals";
 
-const ARTIFACT_GEAR_INDEX = 4;
 const STONE_GEAR_INDEX = 5;
 
 const ORIGIN_ACTIVE_ENERGY = 50;
@@ -178,6 +176,14 @@ export const SUGGEST_STAT_RULES = [
     priority: 30,
     note: "Offsets enemy CI. Priority for CC heroes.",
   },
+  {
+    stat: "Energy",
+    unit: "",
+    cap: null,
+    underTarget: 50,
+    priority: 40,
+    note: "Starting Energy. 50+ opens with active; supports usually want this.",
+  },
 ];
 
 /**
@@ -244,6 +250,12 @@ export function suggestRulesForHero(heroId) {
           (rule.note ? `${rule.note} ` : "") +
           "Supports generally do not need offensive stats.";
       }
+      if (rule.stat === "Energy") {
+        rule.underTarget = 50;
+        rule.priority = 92;
+        rule.note =
+          "Most supports want Energy 50+ to open with an active on Round 1.";
+      }
       if (
         rule.stat === "Damage Reduction" ||
         rule.stat === "All Damage Reduction" ||
@@ -283,6 +295,10 @@ export function suggestRulesForHero(heroId) {
       // Hybrid (e.g. Wukong): keep offense targets + defensive floors.
       if (OFFENSIVE_STATS.has(rule.stat)) {
         rule.priority = Math.max(rule.priority, 75);
+      }
+      if (rule.stat === "Energy") {
+        rule.underTarget = 50;
+        rule.priority = Math.max(rule.priority, 80);
       }
       if (
         rule.stat === "Damage Reduction" ||
@@ -448,31 +464,7 @@ function gatherCandidates(slot) {
     }
   });
 
-  // Artifact swaps (only options with stats)
-  const artiId = slot.gear?.[ARTIFACT_GEAR_INDEX] || null;
-  for (const arti of ARTIFACT_OPTIONS) {
-    if (!arti.stats?.length) continue;
-    if (arti.id === artiId) continue;
-    const current = artifactOf(artiId);
-    out.push({
-      kind: "artifact",
-      label: current
-        ? `Swap artifact ${current.name} → ${arti.name}`
-        : `Equip artifact ${arti.name}`,
-      detail: arti.stats
-        .map((s) => `${s.stat} ${s.unit === "%" ? `+${s.value}%` : `+${s.value}`}`)
-        .join(", "),
-      apply(next) {
-        const gear = [...(next.gear || [])];
-        gear[ARTIFACT_GEAR_INDEX] = arti.id;
-        next.gear = gear;
-      },
-      touches: [
-        ...(current?.stats || []).map((s) => s.stat),
-        ...arti.stats.map((s) => s.stat),
-      ],
-    });
-  }
+  // Artifacts are chosen for abilities, not Suggest stat swaps.
 
   // Soul stone swaps — prefer stones that change Precision / Crit DMG / DR-related rolls
   const stoneId = slot.gear?.[STONE_GEAR_INDEX] || null;
@@ -563,7 +555,7 @@ function findBestSwaps(slot, boardCtx, breakdown, over, under, rules) {
   );
 
   // Bound search: prefer imprint/enable first, then arti, then stones.
-  const kindRank = { imprint: 0, enable: 1, artifact: 2, stone: 3 };
+  const kindRank = { imprint: 0, enable: 1, stone: 2 };
   candidates.sort(
     (a, b) => (kindRank[a.kind] ?? 9) - (kindRank[b.kind] ?? 9)
   );
