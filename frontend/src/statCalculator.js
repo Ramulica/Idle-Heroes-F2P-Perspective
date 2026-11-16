@@ -633,6 +633,7 @@ import { defaultSkin, normalizeSkin } from "./skins";
 import { normalizeGameModeId } from "./gameModes";
 import { defaultGuildTech, normalizeGuildTech } from "./guildTech";
 import { defaultStarspawns, normalizeStarspawns } from "./starspawns";
+import { defaultSigils, normalizeSigils } from "./sigils";
 
 export {
   MONSTER_OPTIONS,
@@ -662,6 +663,7 @@ export function emptyBoard() {
     gameModeId: null,
     guildTech: defaultGuildTech(),
     starspawns: defaultStarspawns(),
+    sigils: defaultSigils(),
     slots: Array.from({ length: SLOT_COUNT }, emptySlot),
   };
 }
@@ -682,6 +684,7 @@ export function cloneBoard(board) {
     gameModeId: normalizeGameModeId(src.gameModeId),
     guildTech: normalizeGuildTech(src.guildTech),
     starspawns: normalizeStarspawns(src.starspawns),
+    sigils: normalizeSigils(src.sigils),
     slots: Array.from({ length: SLOT_COUNT }, (_, index) => {
       const slot = src.slots?.[index] || emptySlot();
       const slotTenants =

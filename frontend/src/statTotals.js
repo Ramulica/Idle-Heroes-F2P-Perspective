@@ -25,6 +25,7 @@ import {
 } from "./tenantsCloud";
 import { collectSkinStatRows } from "./skins";
 import { collectStarspawnStatRows } from "./starspawns";
+import { collectSigilStatRows } from "./sigils";
 import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
@@ -353,6 +354,14 @@ function collectStarspawns(slot, starspawns) {
   return map;
 }
 
+function collectSigils(sigils, gameModeId) {
+  const map = emptyMap();
+  for (const row of collectSigilStatRows(sigils, gameModeId)) {
+    addRow(map, row);
+  }
+  return map;
+}
+
 function collectAwakening(slot) {
   const map = emptyMap();
   const awakening = slot?.progress?.awakening;
@@ -410,7 +419,7 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns }
+  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns, sigils }
 ) {
   const guild = collectGuildTech(slot, guildTech);
   const bySource = {
@@ -428,7 +437,7 @@ export function computeHeroStatBreakdown(
     tenants: collectTenants(slot),
     cloud_island: collectCloudIsland(slot, cloudIsland),
     skin: collectSkin(slot),
-    sigils: emptySourceMap(),
+    sigils: collectSigils(sigils, gameModeId),
     awakening: collectAwakening(slot),
     star_spawns: collectStarspawns(slot, starspawns),
     guild_tech: guild.map,
@@ -501,6 +510,7 @@ export function computeBoardStatTotals(board) {
   const gameModeId = board?.gameModeId || null;
   const guildTech = board?.guildTech;
   const starspawns = board?.starspawns;
+  const sigils = board?.sigils;
   const slots = (board?.slots || []).map((slot, index) =>
     computeHeroStatBreakdown(slot, index, {
       aura,
@@ -509,6 +519,7 @@ export function computeBoardStatTotals(board) {
       gameModeId,
       guildTech,
       starspawns,
+      sigils,
     })
   );
 

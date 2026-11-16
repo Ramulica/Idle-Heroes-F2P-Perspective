@@ -6291,6 +6291,240 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-size: 0.75rem;
 }
 
+.sc-sigil-card {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 2px solid #8a5a2a;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff6e4, #f3e2c0);
+}
+
+.sc-sigil-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sc-sigil-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-sigil-head-title h2 {
+  margin: 0;
+}
+
+.ghost-btn {
+  border: 2px solid #8a5a2a;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a5a2a;
+  font-weight: 800;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  background: #f5e6c8;
+}
+
+.sc-sigil-add {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 2px solid #8a5a2a;
+  background: #fffaf0;
+  color: #5a3210;
+  font-size: 1.4rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sc-sigil-add:hover {
+  background: #ffe8b8;
+}
+
+.sc-sigil-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-sigil-empty {
+  margin: 0;
+}
+
+.sc-sigil-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 3px solid var(--sigil-border, #888);
+  border-radius: 12px;
+  background: #fffaf0;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: #5a3210;
+  opacity: 0.72;
+}
+
+.sc-sigil-chip.active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sigil-border) 35%, transparent);
+}
+
+.sc-sigil-chip-icon {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: 2px solid var(--sigil-border, #888);
+  overflow: hidden;
+  background: #1a1028;
+  display: grid;
+  place-items: center;
+}
+
+.sc-sigil-chip-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sc-sigil-chip-missing {
+  color: #ddd;
+  font-weight: 900;
+}
+
+.sc-sigil-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sc-sigil-chip-body strong {
+  font-size: 0.82rem;
+  color: var(--sigil-color, #5a3210);
+}
+
+.sc-sigil-chip-body span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.sc-sigil-section-title {
+  margin: 14px 0 8px;
+  font-size: 0.9rem;
+  color: #5a3210;
+}
+
+.sc-sigil-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.sc-sigil-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  background: #fffaf0;
+  padding: 6px;
+  cursor: pointer;
+  color: #5a3210;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.sc-sigil-mode-btn.selected {
+  border-color: #c47a12;
+  background: #ffe4a8;
+  box-shadow: inset 0 0 0 1px #c47a12;
+}
+
+.sc-sigil-mode-btn img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.sc-sigil-rarity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sc-sigil-rarity-btn {
+  border: 3px solid var(--sigil-border, #888);
+  border-radius: 999px;
+  background: #fffaf0;
+  color: var(--sigil-color, #5a3210);
+  font-weight: 800;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.sc-sigil-rarity-btn.selected {
+  background: color-mix(in srgb, var(--sigil-border) 28%, #fffaf0);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sigil-border) 40%, transparent);
+}
+
+.sc-sigil-stat-block {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid #c9a46a;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.sc-sigil-stat-label {
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: #5a3210;
+}
+
+.sc-sigil-select,
+.sc-sigil-value-input {
+  border: 2px solid #8a5a2a;
+  border-radius: 8px;
+  background: #fff;
+  color: #5a3210;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+
+.sc-sigil-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-sigil-value-input {
+  width: 7.5rem;
+}
+
+.sc-sigil-preview {
+  margin: 10px 0 0;
+}
+
 @media (max-width: 720px) {
   .sc-gt-inline-row {
     flex-direction: column;

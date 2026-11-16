@@ -139,6 +139,17 @@ import {
   starspawnEffectiveValue,
   starspawnOf,
 } from "../starspawns";
+import {
+  SIGIL_RARITIES,
+  SIGIL_STAT_OPTIONS,
+  createSigilDraft,
+  formatSigilStat,
+  normalizeSigils,
+  removeSigil,
+  sigilRarityOf,
+  statSlotsForRarity,
+  upsertSigil,
+} from "../sigils";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -2336,6 +2347,194 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "sigil") {
+      const draft = createSigilDraft(picker.draft || {});
+      const rarity = sigilRarityOf(draft.rarity);
+      const slots = statSlotsForRarity(draft.rarity);
+      const mode = gameModeOf(draft.gameModeId);
+      const showStatPick =
+        draft.rarity === "purple" ||
+        draft.rarity === "green" ||
+        draft.rarity === "red" ||
+        draft.rarity === "blue" ||
+        draft.rarity === "yellow";
+      const canSave =
+        Boolean(draft.gameModeId) &&
+        draft.stats.slice(0, slots).every((s) => s.stat && Number(s.value) > 0);
+
+      const patchDraft = (patch) => {
+        let next = { ...draft, ...patch };
+        if (patch.rarity) {
+          const n = statSlotsForRarity(patch.rarity);
+          next.stats = Array.from({ length: n }, (_, i) =>
+            next.stats?.[i]
+              ? { ...next.stats[i] }
+              : { stat: "", unit: "%", value: 0 }
+          );
+        }
+        setPicker({ type: "sigil", draft: next });
+      };
+
+      return (
+        <Modal
+          title={picker.draft?.id ? "Edit sigil" : "Add sigil"}
+          onClose={() => setPicker(null)}
+          className="sc-sigil-modal"
+          footer={
+            <>
+              {picker.draft?.id ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => {
+                    updateBoard({
+                      ...board,
+                      sigils: removeSigil(board.sigils, draft.id),
+                    });
+                    setPicker(null);
+                  }}
+                >
+                  Delete
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="gold-btn"
+                disabled={!canSave}
+                onClick={() => {
+                  updateBoard({
+                    ...board,
+                    sigils: upsertSigil(board.sigils, draft),
+                  });
+                  setPicker(null);
+                }}
+              >
+                Save
+              </button>
+            </>
+          }
+        >
+          <p className="muted sc-modal-lead">
+            Pick a game mode, rarity, then stats and values. This sigil only
+            counts when that game mode is selected on the board.
+          </p>
+
+          <h4 className="sc-sigil-section-title">Game mode</h4>
+          <div className="sc-sigil-mode-grid">
+            {GAME_MODES.map((gm) => (
+              <button
+                key={gm.id}
+                type="button"
+                className={`sc-sigil-mode-btn${
+                  draft.gameModeId === gm.id ? " selected" : ""
+                }`}
+                title={gm.name}
+                onClick={() => patchDraft({ gameModeId: gm.id })}
+              >
+                <img src={gm.icon} alt="" />
+                <span>{gm.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <h4 className="sc-sigil-section-title">Rarity</h4>
+          <div className="sc-sigil-rarity-row">
+            {SIGIL_RARITIES.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                className={`sc-sigil-rarity-btn${
+                  draft.rarity === row.id ? " selected" : ""
+                }`}
+                style={{ "--sigil-border": row.border, "--sigil-color": row.color }}
+                onClick={() => patchDraft({ rarity: row.id })}
+              >
+                {row.name}
+              </button>
+            ))}
+          </div>
+
+          {showStatPick ? (
+            <>
+              <h4 className="sc-sigil-section-title">
+                Stats{rarity?.statSlots === 2 ? " (2)" : ""}
+              </h4>
+              {Array.from({ length: slots }, (_, index) => {
+                const slot = draft.stats[index] || {
+                  stat: "",
+                  unit: "%",
+                  value: 0,
+                };
+                return (
+                  <div key={index} className="sc-sigil-stat-block">
+                    <label className="sc-sigil-stat-label">
+                      Stat {slots > 1 ? index + 1 : ""}
+                    </label>
+                    <select
+                      className="sc-sigil-select"
+                      value={slot.stat ? `${slot.stat}|${slot.unit || ""}` : ""}
+                      onChange={(e) => {
+                        const [stat, unit = "%"] = e.target.value.split("|");
+                        const stats = draft.stats.map((s, i) =>
+                          i === index
+                            ? { ...s, stat: stat || "", unit: unit || "%" }
+                            : s
+                        );
+                        patchDraft({ stats });
+                      }}
+                    >
+                      <option value="">Select stat…</option>
+                      {SIGIL_STAT_OPTIONS.map((opt) => (
+                        <option
+                          key={`${opt.stat}|${opt.unit || ""}`}
+                          value={`${opt.stat}|${opt.unit || ""}`}
+                        >
+                          {opt.stat}
+                          {opt.unit === "%" ? " %" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="sc-sigil-stat-label">Value</label>
+                    <div className="sc-sigil-value-row">
+                      <input
+                        type="number"
+                        className="sc-sigil-value-input"
+                        min={0}
+                        max={999}
+                        step={slot.unit === "%" ? 0.1 : 1}
+                        value={slot.value || ""}
+                        onChange={(e) => {
+                          const stats = draft.stats.map((s, i) =>
+                            i === index
+                              ? { ...s, value: e.target.value }
+                              : s
+                          );
+                          patchDraft({ stats });
+                        }}
+                      />
+                      <span>{slot.unit === "%" ? "%" : ""}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          ) : null}
+
+          {mode ? (
+            <p className="muted sc-sigil-preview">
+              Active in <strong>{mode.name}</strong>
+              {rarity ? (
+                <>
+                  {" "}
+                  · <strong style={{ color: rarity.color }}>{rarity.name}</strong>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </Modal>
+      );
+    }
+
     if (picker.type === "star-destiny") {
       const spawnId = picker.spawnId;
       const def = starspawnOf(spawnId);
@@ -3299,6 +3498,76 @@ export default function StatCalculator() {
                   </button>
                 );
               })}
+            </div>
+          </section>
+
+          <section className="sc-sigil-card">
+            <div className="calc-row-head sc-sigil-head">
+              <div className="sc-sigil-head-title">
+                <h2>Sigils</h2>
+                <HelpTip message="Add sigils for specific game modes. Blue / yellow / purple / green have 1 stat; red has 2. Stats only apply when that game mode is selected on the board." />
+              </div>
+              <button
+                type="button"
+                className="sc-sigil-add"
+                title="Add sigil"
+                onClick={() =>
+                  setPicker({ type: "sigil", draft: createSigilDraft() })
+                }
+              >
+                +
+              </button>
+            </div>
+            <div className="sc-sigil-list">
+              {normalizeSigils(board.sigils).length === 0 ? (
+                <p className="muted sc-sigil-empty">
+                  No sigils yet. Tap + to add one for a game mode.
+                </p>
+              ) : (
+                normalizeSigils(board.sigils).map((sigil) => {
+                  const rarity = sigilRarityOf(sigil.rarity);
+                  const mode = gameModeOf(sigil.gameModeId);
+                  const active =
+                    Boolean(board.gameModeId) &&
+                    board.gameModeId === sigil.gameModeId;
+                  return (
+                    <button
+                      key={sigil.id}
+                      type="button"
+                      className={`sc-sigil-chip${active ? " active" : ""}`}
+                      style={{
+                        "--sigil-border": rarity?.border || "#888",
+                        "--sigil-color": rarity?.color || "#666",
+                      }}
+                      onClick={() =>
+                        setPicker({
+                          type: "sigil",
+                          draft: createSigilDraft(sigil),
+                        })
+                      }
+                    >
+                      <span className="sc-sigil-chip-icon">
+                        {mode ? (
+                          <img src={mode.icon} alt="" />
+                        ) : (
+                          <span className="sc-sigil-chip-missing">?</span>
+                        )}
+                      </span>
+                      <span className="sc-sigil-chip-body">
+                        <strong>
+                          {mode?.name || "No mode"} · {rarity?.name || "?"}
+                        </strong>
+                        <span>
+                          {sigil.stats
+                            .map((s) => formatSigilStat(s))
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </section>
         </section>
