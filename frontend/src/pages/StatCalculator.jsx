@@ -61,6 +61,7 @@ import {
 } from "../statTotals";
 import {
   analyzeHeroSuggestions,
+  formatHeroRoles,
   suggestBoardContext,
 } from "../suggestStats";
 import {
@@ -679,9 +680,18 @@ const SUGGEST_HELP_ADVANCED = [
     ],
   },
   {
+    heading: "Hero roles",
+    items: [
+      "Damage dealers — chase offensive floors (Precision / Crit Damage / Skill / All DMG / Holy / Crit). Defense is secondary.",
+      "Supports — do not need offensive stats; leftover offense is soft waste to reallocate into DR / All DR / Block / CI.",
+      "CC heroes — Control Precision and Control Immunity Offset first, then defensive stats.",
+      "Wukong is all three (DD + CC + Support). Natalia is DD but Crit / Crit Damage should stay at 0.",
+    ],
+  },
+  {
     heading: "Soft floors (Need more)",
     paragraphs: [
-      "Stats without a hard cap get soft targets so empty builds get nudged: Skill Damage, All Damage Dealt, Holy, Crit, Block, Control Immunity, Control Precision, and All DR. Priority when reallocating waste: Precision → Crit Damage → DR → Skill / All DMG / Holy / Crit / Energy → CI.",
+      "Targets and priorities are role-weighted from the lists above. Caps still apply for Precision 150, Crit Damage 150, and DR 75.",
     ],
   },
   {
@@ -696,7 +706,7 @@ const SUGGEST_HELP_ADVANCED = [
   {
     heading: "How swaps are scored",
     paragraphs: [
-      "For each candidate, the slot is cloned, one piece is swapped, and totals are recomputed. Score favors cutting hard overcap, then soft Precision waste, then closing undercap gaps — and penalizes creating new hard overcap. Top unique suggestions (up to 5) are shown with the expected stat deltas.",
+      "For each candidate, the slot is cloned, one piece is swapped, and totals are recomputed with that hero’s role rules. Score favors cutting hard overcap, then soft waste, then closing undercap gaps — and penalizes creating new hard overcap. Top unique suggestions (up to 5) are shown with the expected stat deltas.",
     ],
     formula:
       "score ≈ 3×ΔhardWaste + 1.2×ΔsoftWaste + 2×ΔunderGap − 4×newHardOvercap",
@@ -707,7 +717,6 @@ const SUGGEST_HELP_ADVANCED = [
       "Per-hit damage (Armor×level, DoT Skill Damage formula, true damage lists, round-15 ramp).",
       "HP / Attack / EHP stacking.",
       "Auto-apply or full 6-hero lineup optimizer.",
-      "Role profiles (tank vs carry) — universal caps for now.",
     ],
   },
 ];
@@ -716,11 +725,17 @@ function HeroSuggestPanel({ analysis }) {
   if (!analysis) {
     return <p className="muted">Select a hero to see suggestions.</p>;
   }
-  const { over, under, swaps, notes } = analysis;
+  const { over, under, swaps, notes, profile } = analysis;
   const empty =
     !over.length && !under.length && !swaps.length && !notes.length;
   return (
     <div className="sc-suggest">
+      {profile ? (
+        <p className="sc-suggest-role">
+          {formatHeroRoles(profile.roles)}
+          {profile.flags?.noCrit ? " · no Crit / Crit Damage" : ""}
+        </p>
+      ) : null}
       {empty ? (
         <p className="muted">
           No strong overcap or undercap signals yet. Equip more gear, then
@@ -1377,18 +1392,20 @@ export default function StatCalculator() {
         >
           <div className="sc-suggest-lead">
             <p className="muted sc-modal-lead">
-              Cap advisor from combat formulas (Precision 150, Crit Damage 150,
-              DR 75, Energy floors). Soft waste still helps vs Block.
+              Role-aware cap advisor (DD / support / CC). Precision 150, Crit
+              Damage 150, DR 75 still apply. Soft waste still helps vs Block on
+              DDs.
             </p>
             <HelpTip
               title="Suggest algorithm"
-              message="Opens Too much / Need more / Suggested changes for this hero. Recommendations are hints only — change imprint, artifact, enable, or stone yourself."
+              message="Opens Too much / Need more / Suggested changes for this hero, weighted by role. Recommendations are hints only — change imprint, artifact, enable, or stone yourself."
               steps={[
-                "Too much lists stats past combat caps, with which sources add the waste.",
-                "Need more lists soft floors and missing amounts toward targets.",
+                "Role line shows Damage dealer, Support, and/or CC for this hero.",
+                "Too much lists stats past caps (or unused offense on supports), with sources.",
+                "Need more lists role-weighted floors and missing amounts.",
                 "Suggested changes ranks one-piece swaps that cut waste or fill gaps.",
                 "Energy / round notes how starting Energy interacts with Round 1.",
-                "Tap Advanced in this tip for the scoring math and formula sources.",
+                "Tap Advanced for roles, caps, and scoring math.",
               ]}
               advanced={SUGGEST_HELP_ADVANCED}
             />

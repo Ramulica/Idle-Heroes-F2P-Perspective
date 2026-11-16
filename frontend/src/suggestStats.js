@@ -25,7 +25,65 @@ const STONE_GEAR_INDEX = 5;
 const ORIGIN_ACTIVE_ENERGY = 50;
 const ENERGY_OVERFLOW = 100;
 
-/** Hard / soft combat targets used by the advisor. */
+const OFFENSIVE_STATS = new Set([
+  "Precision",
+  "Crit Damage",
+  "Crit",
+  "Skill Damage",
+  "All Damage Dealt",
+  "Holy Damage",
+  "Armor Break",
+]);
+
+/**
+ * Hero roles for Suggest weighting.
+ * Default (missing id) = support. Wukong is dd + cc + support.
+ */
+export const HERO_SUGGEST_PROFILES = {
+  // Damage dealers
+  "hero-01": { roles: ["dd"], label: "SFX" }, // Sword Flash - Xia
+  "hero-03": { roles: ["dd"], label: "Asmodel" },
+  "hero-06": { roles: ["dd"], label: "Aspen" },
+  "hero-10": { roles: ["dd"], label: "Mockman" },
+  "hero-11": { roles: ["dd"], label: "Azrael" },
+  "hero-13": { roles: ["dd"], label: "Vulkan" },
+  "hero-17": { roles: ["dd"], label: "Natalia", flags: { noCrit: true } },
+  "hero-21": { roles: ["dd"], label: "Patricia" },
+  "hero-22": { roles: ["dd"], label: "Alikita" },
+  "hero-24": { roles: ["dd"], label: "Williams" },
+  "hero-26": { roles: ["dd", "cc", "support"], label: "Wukong" },
+  "hero-27": { roles: ["dd"], label: "Finn" },
+  "hero-31": { roles: ["dd"], label: "Basilisk" },
+  "hero-35": { roles: ["dd"], label: "Umbrion" },
+  "hero-36": { roles: ["dd"], label: "Erskor" },
+  // CC heroes (also support-weighted)
+  "hero-04": { roles: ["cc", "support"], label: "Jahra" },
+  "hero-08": { roles: ["cc", "support"], label: "Holmes Young" },
+  "hero-18": { roles: ["cc", "support"], label: "Betty" },
+  "hero-33": { roles: ["cc", "support"], label: "Oscar" },
+  "hero-34": { roles: ["cc", "support"], label: "Mareia" },
+};
+
+export function heroSuggestProfile(heroId) {
+  return (
+    HERO_SUGGEST_PROFILES[heroId] || {
+      roles: ["support"],
+      label: "Support",
+      flags: {},
+    }
+  );
+}
+
+export function formatHeroRoles(roles) {
+  const order = ["dd", "cc", "support"];
+  const labels = { dd: "Damage dealer", cc: "CC", support: "Support" };
+  return order
+    .filter((id) => (roles || []).includes(id))
+    .map((id) => labels[id])
+    .join(" · ");
+}
+
+/** Base combat targets (before role weighting). */
 export const SUGGEST_STAT_RULES = [
   {
     stat: "Precision",
@@ -112,11 +170,133 @@ export const SUGGEST_STAT_RULES = [
     underTarget: 15,
     priority: 25,
   },
+  {
+    stat: "Control Immunity Offset",
+    unit: "%",
+    cap: null,
+    underTarget: 12,
+    priority: 30,
+    note: "Offsets enemy CI. Priority for CC heroes.",
+  },
 ];
 
-const RULE_BY_KEY = Object.fromEntries(
-  SUGGEST_STAT_RULES.map((r) => [statKey(r.stat, r.unit), r])
-);
+/**
+ * Role-tuned rule set for one hero.
+ * DD → offensive floors; support → defensive (+ dump unused offense);
+ * CC → Control Precision / CIO first, then defense.
+ */
+export function suggestRulesForHero(heroId) {
+  const profile = heroSuggestProfile(heroId);
+  const roles = new Set(profile.roles || ["support"]);
+  const isDd = roles.has("dd");
+  const isCc = roles.has("cc");
+  const isSup = roles.has("support") || (!isDd && !isCc);
+  const noCrit = Boolean(profile.flags?.noCrit);
+
+  return SUGGEST_STAT_RULES.map((base) => {
+    const rule = { ...base };
+
+    if (noCrit && (rule.stat === "Crit" || rule.stat === "Crit Damage")) {
+      rule.underTarget = null;
+      rule.cap = 0;
+      rule.softCap = true;
+      rule.priority = 5;
+      rule.note =
+        "Natalia does not crit — Crit / Crit Damage should stay at 0.";
+      return rule;
+    }
+
+    if (isDd && !isSup) {
+      // Pure DD: offense first, defense secondary, CC stats low.
+      if (OFFENSIVE_STATS.has(rule.stat)) {
+        rule.priority = Math.max(rule.priority, 70);
+      }
+      if (
+        rule.stat === "Damage Reduction" ||
+        rule.stat === "All Damage Reduction" ||
+        rule.stat === "Block" ||
+        rule.stat === "Control Immunity"
+      ) {
+        rule.priority = Math.min(rule.priority, 55);
+        if (rule.stat === "Block") rule.underTarget = 40;
+        if (rule.stat === "Control Immunity") rule.underTarget = 25;
+      }
+      if (
+        rule.stat === "Control Precision" ||
+        rule.stat === "Control Immunity Offset"
+      ) {
+        rule.underTarget = null;
+        rule.priority = 10;
+      }
+    }
+
+    if (isSup && !isDd) {
+      // Pure support (incl. CC supports): do not chase offense.
+      if (OFFENSIVE_STATS.has(rule.stat)) {
+        rule.underTarget = null;
+        // Any offensive stack is soft waste to reallocate.
+        if (rule.cap == null || rule.cap > 0) {
+          rule.cap = 0;
+          rule.softCap = true;
+        }
+        rule.priority = 20;
+        rule.note =
+          (rule.note ? `${rule.note} ` : "") +
+          "Supports generally do not need offensive stats.";
+      }
+      if (
+        rule.stat === "Damage Reduction" ||
+        rule.stat === "All Damage Reduction" ||
+        rule.stat === "Block" ||
+        rule.stat === "Control Immunity"
+      ) {
+        rule.priority = Math.max(rule.priority, 85);
+        if (rule.stat === "All Damage Reduction") rule.underTarget = 20;
+        if (rule.stat === "Block") rule.underTarget = 70;
+        if (rule.stat === "Control Immunity") rule.underTarget = 50;
+      }
+    }
+
+    if (isCc) {
+      if (rule.stat === "Control Precision") {
+        rule.underTarget = 50;
+        rule.priority = 100;
+        rule.note =
+          "CC chance × (1 + Control Precision%). Priority for CC heroes.";
+      }
+      if (rule.stat === "Control Immunity Offset") {
+        rule.underTarget = 15;
+        rule.priority = 95;
+        rule.note = "Offsets enemy CI — priority for CC heroes.";
+      }
+      if (
+        rule.stat === "Damage Reduction" ||
+        rule.stat === "All Damage Reduction" ||
+        rule.stat === "Block" ||
+        rule.stat === "Control Immunity"
+      ) {
+        rule.priority = Math.max(rule.priority, 80);
+      }
+    }
+
+    if (isDd && isSup) {
+      // Hybrid (e.g. Wukong): keep offense targets + defensive floors.
+      if (OFFENSIVE_STATS.has(rule.stat)) {
+        rule.priority = Math.max(rule.priority, 75);
+      }
+      if (
+        rule.stat === "Damage Reduction" ||
+        rule.stat === "All Damage Reduction" ||
+        rule.stat === "Block" ||
+        rule.stat === "Control Immunity"
+      ) {
+        rule.priority = Math.max(rule.priority, 70);
+      }
+    }
+
+    return rule;
+  });
+}
 
 function round1(n) {
   return Math.round(Number(n) * 10) / 10;
@@ -151,10 +331,10 @@ function formatSourceList(contribs, unit = "%", limit = 2) {
     .join(", ");
 }
 
-function wasteMetrics(totalValues) {
+function wasteMetrics(totalValues, rules) {
   let hard = 0;
   let soft = 0;
-  for (const rule of SUGGEST_STAT_RULES) {
+  for (const rule of rules || SUGGEST_STAT_RULES) {
     if (rule.cap == null) continue;
     const value = totalOf(totalValues, rule.stat, rule.unit);
     const over = Math.max(0, value - rule.cap);
@@ -165,13 +345,10 @@ function wasteMetrics(totalValues) {
   return { hard: round1(hard), soft: round1(soft) };
 }
 
-function underMetrics(totalValues) {
+function underMetrics(totalValues, rules) {
   let missing = 0;
-  for (const rule of SUGGEST_STAT_RULES) {
+  for (const rule of rules || SUGGEST_STAT_RULES) {
     if (rule.underTarget == null) continue;
-    if (rule.cap != null && !rule.softCap) {
-      // hard-capped stats: only count missing toward cap
-    }
     const value = totalOf(totalValues, rule.stat, rule.unit);
     const gap = Math.max(0, rule.underTarget - value);
     if (!gap) continue;
@@ -204,11 +381,11 @@ function buildCtx(boardCtx) {
   };
 }
 
-function scoreSwap(beforeTotals, afterTotals) {
-  const w0 = wasteMetrics(beforeTotals);
-  const w1 = wasteMetrics(afterTotals);
-  const u0 = underMetrics(beforeTotals);
-  const u1 = underMetrics(afterTotals);
+function scoreSwap(beforeTotals, afterTotals, rules) {
+  const w0 = wasteMetrics(beforeTotals, rules);
+  const w1 = wasteMetrics(afterTotals, rules);
+  const u0 = underMetrics(beforeTotals, rules);
+  const u1 = underMetrics(afterTotals, rules);
   const hardDelta = w0.hard - w1.hard;
   const softDelta = w0.soft - w1.soft;
   const underDelta = u0 - u1;
@@ -217,15 +394,15 @@ function scoreSwap(beforeTotals, afterTotals) {
   return hardDelta * 3 + softDelta * 1.2 + underDelta * 2 - newHard * 4;
 }
 
-function describeDiff(beforeTotals, afterTotals) {
+function describeDiff(beforeTotals, afterTotals, rules) {
   const parts = [];
   const keys = new Set([
     ...Object.keys(beforeTotals || {}),
     ...Object.keys(afterTotals || {}),
   ]);
-  const interesting = SUGGEST_STAT_RULES.map((r) =>
-    statKey(r.stat, r.unit)
-  ).concat([statKey("Energy", "")]);
+  const interesting = (rules || SUGGEST_STAT_RULES)
+    .map((r) => statKey(r.stat, r.unit))
+    .concat([statKey("Energy", "")]);
   for (const key of interesting) {
     if (!keys.has(key) && !(beforeTotals?.[key] || afterTotals?.[key])) continue;
     const a = Number(beforeTotals?.[key] || 0);
@@ -307,6 +484,8 @@ function gatherCandidates(slot) {
     "Holy Damage",
     "Block",
     "Armor Break",
+    "Control Precision",
+    "Control Immunity Offset",
   ]);
   let stoneCount = 0;
   for (const stone of SOUL_STONE_OPTIONS) {
@@ -375,7 +554,7 @@ function relevantCandidate(candidate, over, under) {
   return candidate.touches.some((stat) => focus.has(stat));
 }
 
-function findBestSwaps(slot, boardCtx, breakdown, over, under) {
+function findBestSwaps(slot, boardCtx, breakdown, over, under, rules) {
   const beforeTotals = breakdown.totalValues || {};
   const ctx = buildCtx(boardCtx);
   const slotIndex = boardCtx?.slotIndex ?? 0;
@@ -395,14 +574,14 @@ function findBestSwaps(slot, boardCtx, breakdown, over, under) {
     const nextSlot = cloneSlot(slot);
     cand.apply(nextSlot);
     const after = computeHeroStatBreakdown(nextSlot, slotIndex, ctx);
-    const score = scoreSwap(beforeTotals, after.totalValues || {});
+    const score = scoreSwap(beforeTotals, after.totalValues || {}, rules);
     if (score <= 0.15) continue;
     scored.push({
       kind: cand.kind,
       label: cand.label,
       detail: cand.detail,
       score: round1(score),
-      diff: describeDiff(beforeTotals, after.totalValues || {}),
+      diff: describeDiff(beforeTotals, after.totalValues || {}, rules),
     });
   }
 
@@ -454,24 +633,31 @@ function buildEnergyNotes(totalValues, combatRound) {
 
 /**
  * Analyze one hero breakdown and propose bounded equipment swaps.
- * @returns {{ over: object[], under: object[], swaps: object[], notes: object[] }}
+ * @returns {{ over: object[], under: object[], swaps: object[], notes: object[], profile: object }}
  */
 export function analyzeHeroSuggestions(breakdown, slot, boardCtx = {}) {
   if (!breakdown?.hero || !slot?.heroId) {
-    return { over: [], under: [], swaps: [], notes: [] };
+    return { over: [], under: [], swaps: [], notes: [], profile: null };
   }
 
+  const profile = heroSuggestProfile(slot.heroId);
+  const rules = suggestRulesForHero(slot.heroId);
+  const rulePriority = Object.fromEntries(
+    rules.map((r) => [statKey(r.stat, r.unit), r.priority || 0])
+  );
   const totalValues = breakdown.totalValues || {};
   const over = [];
   const under = [];
 
-  for (const rule of SUGGEST_STAT_RULES) {
+  for (const rule of rules) {
     const value = totalOf(totalValues, rule.stat, rule.unit);
     const contribs = sourceContributions(breakdown, rule.stat, rule.unit);
     const label = formatStatColumnLabel(rule.stat, rule.unit);
 
     if (rule.cap != null && value > rule.cap) {
       const wasted = round1(value - rule.cap);
+      // Skip tiny role-waste noise (e.g. 0.1% leftover).
+      if (wasted < 0.5) continue;
       over.push({
         stat: rule.stat,
         unit: rule.unit,
@@ -490,8 +676,6 @@ export function analyzeHeroSuggestions(breakdown, slot, boardCtx = {}) {
     }
 
     if (rule.underTarget != null && value < rule.underTarget) {
-      // Don't nag All DR / soft floors when deeply incomplete builds have 0 everywhere —
-      // still list capped targets always; soft floors only if some gear exists or gap is large.
       const missing = round1(rule.underTarget - value);
       const isSoftFloor = rule.cap == null;
       if (isSoftFloor && value === 0 && missing < 40 && rule.priority < 50) {
@@ -514,15 +698,21 @@ export function analyzeHeroSuggestions(breakdown, slot, boardCtx = {}) {
 
   over.sort((a, b) => b.wasted - a.wasted || b.value - a.value);
   under.sort((a, b) => {
-    const pa = RULE_BY_KEY[statKey(a.stat, a.unit)]?.priority || 0;
-    const pb = RULE_BY_KEY[statKey(b.stat, b.unit)]?.priority || 0;
+    const pa = rulePriority[statKey(a.stat, a.unit)] || 0;
+    const pb = rulePriority[statKey(b.stat, b.unit)] || 0;
     return pb - pa || b.missing - a.missing;
   });
 
   const notes = buildEnergyNotes(totalValues, boardCtx.combatRound);
-  const swaps = findBestSwaps(slot, boardCtx, breakdown, over, under);
+  notes.unshift({
+    id: "role",
+    text: `Role: ${formatHeroRoles(profile.roles)}${
+      profile.flags?.noCrit ? " · no Crit / Crit Damage" : ""
+    }.`,
+  });
+  const swaps = findBestSwaps(slot, boardCtx, breakdown, over, under, rules);
 
-  return { over, under, swaps, notes };
+  return { over, under, swaps, notes, profile };
 }
 
 /** Board context helper for the Suggest modal. */
