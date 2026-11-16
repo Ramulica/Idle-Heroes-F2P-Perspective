@@ -147,6 +147,7 @@ import {
   normalizeSigils,
   removeSigil,
   sigilRarityOf,
+  sigilStatOptionOf,
   statSlotsForRarity,
   upsertSigil,
 } from "../sigils";
@@ -2348,7 +2349,9 @@ export default function StatCalculator() {
     }
 
     if (picker.type === "sigil") {
-      const draft = createSigilDraft(picker.draft || {});
+      // Use picker.draft as-is while editing — do not re-normalize every render
+      // (that was wiping Speed when unit encoding was wrong).
+      const draft = picker.draft || createSigilDraft();
       const rarity = sigilRarityOf(draft.rarity);
       const slots = statSlotsForRarity(draft.rarity);
       const mode = gameModeOf(draft.gameModeId);
@@ -2360,7 +2363,9 @@ export default function StatCalculator() {
         draft.rarity === "yellow";
       const canSave =
         Boolean(draft.gameModeId) &&
-        draft.stats.slice(0, slots).every((s) => s.stat && Number(s.value) > 0);
+        (draft.stats || [])
+          .slice(0, slots)
+          .every((s) => s.stat && Number(s.value) > 0);
 
       const patchDraft = (patch) => {
         let next = { ...draft, ...patch };
@@ -2460,11 +2465,14 @@ export default function StatCalculator() {
                 Stats{rarity?.statSlots === 2 ? " (2)" : ""}
               </h4>
               {Array.from({ length: slots }, (_, index) => {
-                const slot = draft.stats[index] || {
+                const slot = (draft.stats && draft.stats[index]) || {
                   stat: "",
                   unit: "%",
                   value: 0,
                 };
+                const unit =
+                  sigilStatOptionOf(slot.stat)?.unit ??
+                  (slot.unit === "" ? "" : "%");
                 return (
                   <div key={index} className="sc-sigil-stat-block">
                     <label className="sc-sigil-stat-label">
@@ -2472,23 +2480,31 @@ export default function StatCalculator() {
                     </label>
                     <select
                       className="sc-sigil-select"
-                      value={slot.stat ? `${slot.stat}|${slot.unit || ""}` : ""}
+                      value={slot.stat || ""}
                       onChange={(e) => {
-                        const [stat, unit = "%"] = e.target.value.split("|");
-                        const stats = draft.stats.map((s, i) =>
-                          i === index
-                            ? { ...s, stat: stat || "", unit: unit || "%" }
-                            : s
-                        );
+                        const opt = sigilStatOptionOf(e.target.value);
+                        const base = Array.isArray(draft.stats)
+                          ? draft.stats
+                          : [];
+                        const stats = Array.from({ length: slots }, (_, i) => {
+                          const cur = base[i] || {
+                            stat: "",
+                            unit: "%",
+                            value: 0,
+                          };
+                          if (i !== index) return cur;
+                          return {
+                            ...cur,
+                            stat: opt?.stat || "",
+                            unit: opt ? opt.unit : "%",
+                          };
+                        });
                         patchDraft({ stats });
                       }}
                     >
                       <option value="">Select stat…</option>
                       {SIGIL_STAT_OPTIONS.map((opt) => (
-                        <option
-                          key={`${opt.stat}|${opt.unit || ""}`}
-                          value={`${opt.stat}|${opt.unit || ""}`}
-                        >
+                        <option key={opt.stat} value={opt.stat}>
                           {opt.stat}
                           {opt.unit === "%" ? " %" : ""}
                         </option>
@@ -2501,18 +2517,28 @@ export default function StatCalculator() {
                         className="sc-sigil-value-input"
                         min={0}
                         max={999}
-                        step={slot.unit === "%" ? 0.1 : 1}
+                        step={unit === "%" ? 0.1 : 1}
                         value={slot.value || ""}
                         onChange={(e) => {
-                          const stats = draft.stats.map((s, i) =>
-                            i === index
-                              ? { ...s, value: e.target.value }
-                              : s
+                          const base = Array.isArray(draft.stats)
+                            ? draft.stats
+                            : [];
+                          const stats = Array.from(
+                            { length: slots },
+                            (_, i) => {
+                              const cur = base[i] || {
+                                stat: "",
+                                unit: "%",
+                                value: 0,
+                              };
+                              if (i !== index) return cur;
+                              return { ...cur, value: e.target.value };
+                            }
                           );
                           patchDraft({ stats });
                         }}
                       />
-                      <span>{slot.unit === "%" ? "%" : ""}</span>
+                      <span>{unit === "%" ? "%" : ""}</span>
                     </div>
                   </div>
                 );

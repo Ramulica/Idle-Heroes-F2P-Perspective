@@ -24,6 +24,7 @@ export const SIGIL_RARITY_BY_ID = Object.fromEntries(
 
 /** Stats players can roll on purple+ (and we allow on blue/yellow too). */
 export const SIGIL_STAT_OPTIONS = [
+  { stat: "Speed", unit: "" },
   { stat: "Armor Break", unit: "%" },
   { stat: "Precision", unit: "%" },
   { stat: "Crit", unit: "%" },
@@ -44,12 +45,12 @@ export const SIGIL_STAT_OPTIONS = [
   { stat: "Heal Effect", unit: "%" },
   { stat: "Effect of Being Healed", unit: "%" },
   { stat: "Maim", unit: "%" },
-  { stat: "Speed", unit: "" },
 ];
 
-const STAT_OPTION_KEYS = new Set(
-  SIGIL_STAT_OPTIONS.map((s) => `${s.stat}|${s.unit || ""}`)
-);
+export function sigilStatOptionOf(stat) {
+  if (!stat) return null;
+  return SIGIL_STAT_OPTIONS.find((row) => row.stat === stat) || null;
+}
 
 export function sigilRarityOf(id) {
   return SIGIL_RARITY_BY_ID[id] || null;
@@ -94,14 +95,14 @@ export function createSigilDraft(partial = {}) {
 }
 
 function normalizeStatSlot(raw) {
-  const stat = typeof raw?.stat === "string" ? raw.stat : "";
-  const unit = raw?.unit === "" ? "" : "%";
-  const key = `${stat}|${unit}`;
-  const valid = STAT_OPTION_KEYS.has(key);
+  const name = typeof raw?.stat === "string" ? raw.stat.trim() : "";
+  // Resolve by stat name so flat Speed (unit "") is never dropped when unit
+  // was wrongly stored as "%" from an older picker encode.
+  const opt = sigilStatOptionOf(name);
   const n = Number(raw?.value);
   return {
-    stat: valid ? stat : "",
-    unit: valid ? unit : "%",
+    stat: opt ? opt.stat : "",
+    unit: opt ? opt.unit : "%",
     value: Number.isFinite(n) && n > 0 ? Math.min(n, 999) : 0,
   };
 }
