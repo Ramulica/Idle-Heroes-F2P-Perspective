@@ -661,6 +661,16 @@ export async function ocrTrainImage(fileOrBlob, onProgress) {
   }
 }
 
+/** Void Campaign train exclusives also count in Void Invasion. */
+function trainGameModeApplies(sectionModeId, boardModeId) {
+  if (!boardModeId || !sectionModeId) return false;
+  if (boardModeId === sectionModeId) return true;
+  if (boardModeId === "void-invasion" && sectionModeId === "void-campaign") {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Collect train rows that apply to this hero / game mode.
  */
@@ -687,7 +697,7 @@ export function collectTrainStatRows(train, hero, gameModeId) {
       }
     } else if (section.kind === "gamemode") {
       const modeId = gameModeIdForTarget(section.target);
-      if (!gameModeId || !modeId || gameModeId !== modeId) continue;
+      if (!trainGameModeApplies(modeId, gameModeId)) continue;
     } else {
       continue;
     }

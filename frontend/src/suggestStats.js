@@ -72,6 +72,27 @@ export function heroSuggestProfile(heroId) {
   );
 }
 
+/** Manual role choice in the Suggest popup. */
+export const SUGGEST_ROLE_OPTIONS = [
+  { id: "dd", label: "Damage dealer" },
+  { id: "support", label: "Support" },
+  { id: "cc", label: "CC" },
+];
+
+export function defaultSuggestRole(heroId) {
+  const roles = heroSuggestProfile(heroId).roles || [];
+  if (roles.includes("dd")) return "dd";
+  if (roles.includes("cc")) return "cc";
+  return "support";
+}
+
+/** Map a single UI choice to the weighting role set. */
+export function rolesForSuggestChoice(roleId) {
+  if (roleId === "dd") return ["dd"];
+  if (roleId === "cc") return ["cc", "support"];
+  return ["support"];
+}
+
 export function formatHeroRoles(roles) {
   const order = ["dd", "cc", "support"];
   const labels = { dd: "Damage dealer", cc: "CC", support: "Support" };
@@ -79,6 +100,12 @@ export function formatHeroRoles(roles) {
     .filter((id) => (roles || []).includes(id))
     .map((id) => labels[id])
     .join(" · ");
+}
+
+export function formatSuggestRole(roleId) {
+  return (
+    SUGGEST_ROLE_OPTIONS.find((row) => row.id === roleId)?.label || "Support"
+  );
 }
 
 /** Base combat targets (before role weighting). */
@@ -191,9 +218,10 @@ export const SUGGEST_STAT_RULES = [
  * DD → offensive floors; support → defensive (+ dump unused offense);
  * CC → Control Precision / CIO first, then defense.
  */
-export function suggestRulesForHero(heroId) {
+export function suggestRulesForHero(heroId, roleId = null) {
   const profile = heroSuggestProfile(heroId);
-  const roles = new Set(profile.roles || ["support"]);
+  const chosen = roleId || defaultSuggestRole(heroId);
+  const roles = new Set(rolesForSuggestChoice(chosen));
   const isDd = roles.has("dd");
   const isCc = roles.has("cc");
   const isSup = roles.has("support") || (!isDd && !isCc);
@@ -632,8 +660,14 @@ export function analyzeHeroSuggestions(breakdown, slot, boardCtx = {}) {
     return { over: [], under: [], swaps: [], notes: [], profile: null };
   }
 
-  const profile = heroSuggestProfile(slot.heroId);
-  const rules = suggestRulesForHero(slot.heroId);
+  const baseProfile = heroSuggestProfile(slot.heroId);
+  const roleId = boardCtx.suggestRole || defaultSuggestRole(slot.heroId);
+  const profile = {
+    ...baseProfile,
+    chosenRole: roleId,
+    roles: rolesForSuggestChoice(roleId),
+  };
+  const rules = suggestRulesForHero(slot.heroId, roleId);
   const rulePriority = Object.fromEntries(
     rules.map((r) => [statKey(r.stat, r.unit), r.priority || 0])
   );
@@ -698,13 +732,13 @@ export function analyzeHeroSuggestions(breakdown, slot, boardCtx = {}) {
   const notes = buildEnergyNotes(totalValues, boardCtx.combatRound);
   notes.unshift({
     id: "role",
-    text: `Role: ${formatHeroRoles(profile.roles)}${
+    text: `Role: ${formatSuggestRole(roleId)}${
       profile.flags?.noCrit ? " · no Crit / Crit Damage" : ""
     }.`,
   });
   const swaps = findBestSwaps(slot, boardCtx, breakdown, over, under, rules);
 
-  return { over, under, swaps, notes, profile };
+  return { over, under, swaps, notes, profile, roleId };
 }
 
 /** Board context helper for the Suggest modal. */

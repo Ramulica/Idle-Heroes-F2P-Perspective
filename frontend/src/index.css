@@ -4077,10 +4077,33 @@ input[type="range"] {
   gap: 14px;
 }
 
-.sc-suggest-role {
-  margin: 0;
-  font-size: 0.82rem;
+.sc-suggest-role-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-suggest-role-label {
+  font-size: 0.78rem;
   font-weight: 800;
+  color: #5a3210;
+}
+
+.sc-suggest-role-select {
+  border: 1px solid #8a5a2a;
+  border-radius: 8px;
+  background: #f3e2c0;
+  color: #5a3210;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.sc-suggest-role-flag {
+  font-size: 0.74rem;
+  font-weight: 700;
   color: #6a4420;
 }
 

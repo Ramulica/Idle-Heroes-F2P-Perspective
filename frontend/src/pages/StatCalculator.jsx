@@ -60,8 +60,9 @@ import {
   partitionStatRows,
 } from "../statTotals";
 import {
+  SUGGEST_ROLE_OPTIONS,
   analyzeHeroSuggestions,
-  formatHeroRoles,
+  defaultSuggestRole,
   suggestBoardContext,
 } from "../suggestStats";
 import {
@@ -682,11 +683,12 @@ const SUGGEST_HELP_ADVANCED = [
   {
     heading: "Hero roles",
     items: [
+      "Pick Damage dealer, Support, or CC in the Suggest popup — weighting follows your choice (defaults from a built-in hero hint).",
       "Damage dealers — chase offensive floors (Precision / Crit Damage / Skill / All DMG / Holy / Crit). Defense is secondary.",
       "Supports — do not need offensive stats; leftover offense is soft waste to reallocate into Energy, DR / All DR / Block / CI.",
       "Most supports want Energy 50+ so they open with an active.",
-      "CC heroes — Control Precision and Control Immunity Offset first, then defensive stats.",
-      "Wukong is all three (DD + CC + Support). Natalia is DD but Crit / Crit Damage should stay at 0.",
+      "CC — Control Precision and Control Immunity Offset first, then defensive / Energy like a support.",
+      "Natalia keeps no Crit / Crit Damage even if you switch roles.",
     ],
   },
   {
@@ -722,7 +724,60 @@ const SUGGEST_HELP_ADVANCED = [
   },
 ];
 
-function HeroSuggestPanel({ analysis }) {
+function HeroSuggestModal({ slotIndex, board, boardStats, onClose }) {
+  const breakdown = boardStats.slots[slotIndex];
+  const slot = board.slots[slotIndex];
+  const hero = breakdown?.hero;
+  const [roleId, setRoleId] = useState(() =>
+    defaultSuggestRole(slot?.heroId)
+  );
+  const analysis = analyzeHeroSuggestions(
+    breakdown,
+    slot,
+    {
+      ...suggestBoardContext(board, boardStats, slotIndex),
+      suggestRole: roleId,
+    }
+  );
+  return (
+    <Modal
+      title={
+        hero
+          ? `${hero.name} · Suggest`
+          : `${slotTitle(slotIndex)} · Suggest`
+      }
+      onClose={onClose}
+      className="sc-modal-suggest"
+    >
+      <div className="sc-suggest-lead">
+        <p className="muted sc-modal-lead">
+          Choose DD / Support / CC, then review caps and swap hints. Precision
+          150, Crit Damage 150, DR 75 still apply.
+        </p>
+        <HelpTip
+          title="Suggest algorithm"
+          message="Opens Too much / Need more / Suggested changes for this hero, weighted by the hero type you pick. Recommendations are hints only — change imprint, enable, or stone yourself (not artifacts)."
+          steps={[
+            "Pick Damage dealer, Support, or CC — defaults from a hero hint.",
+            "Too much lists stats past caps (or unused offense on supports), with sources.",
+            "Need more lists role-weighted floors (supports prioritize Energy 50+) and missing amounts.",
+            "Suggested changes ranks imprint / enable / stone swaps — artifacts are skipped (ability-first).",
+            "Energy / round notes how starting Energy interacts with Round 1.",
+            "Tap Advanced for roles, caps, and scoring math.",
+          ]}
+          advanced={SUGGEST_HELP_ADVANCED}
+        />
+      </div>
+      <HeroSuggestPanel
+        analysis={analysis}
+        roleId={roleId}
+        onRoleChange={setRoleId}
+      />
+    </Modal>
+  );
+}
+
+function HeroSuggestPanel({ analysis, roleId, onRoleChange }) {
   if (!analysis) {
     return <p className="muted">Select a hero to see suggestions.</p>;
   }
@@ -731,12 +786,26 @@ function HeroSuggestPanel({ analysis }) {
     !over.length && !under.length && !swaps.length && !notes.length;
   return (
     <div className="sc-suggest">
-      {profile ? (
-        <p className="sc-suggest-role">
-          {formatHeroRoles(profile.roles)}
-          {profile.flags?.noCrit ? " · no Crit / Crit Damage" : ""}
-        </p>
-      ) : null}
+      <div className="sc-suggest-role-row">
+        <label className="sc-suggest-role-label" htmlFor="sc-suggest-role">
+          Hero type
+        </label>
+        <select
+          id="sc-suggest-role"
+          className="sc-suggest-role-select"
+          value={roleId}
+          onChange={(e) => onRoleChange?.(e.target.value)}
+        >
+          {SUGGEST_ROLE_OPTIONS.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.label}
+            </option>
+          ))}
+        </select>
+        {profile?.flags?.noCrit ? (
+          <span className="sc-suggest-role-flag">no Crit / Crit Damage</span>
+        ) : null}
+      </div>
       {empty ? (
         <p className="muted">
           No strong overcap or undercap signals yet. Equip more gear, then
@@ -1384,46 +1453,13 @@ export default function StatCalculator() {
     }
 
     if (picker.type === "hero-suggest") {
-      const breakdown = boardStats.slots[picker.slotIndex];
-      const slot = board.slots[picker.slotIndex];
-      const hero = breakdown?.hero;
-      const analysis = analyzeHeroSuggestions(
-        breakdown,
-        slot,
-        suggestBoardContext(board, boardStats, picker.slotIndex)
-      );
       return (
-        <Modal
-          title={
-            hero
-              ? `${hero.name} · Suggest`
-              : `${slotTitle(picker.slotIndex)} · Suggest`
-          }
+        <HeroSuggestModal
+          slotIndex={picker.slotIndex}
+          board={board}
+          boardStats={boardStats}
           onClose={() => setPicker(null)}
-          className="sc-modal-suggest"
-        >
-          <div className="sc-suggest-lead">
-            <p className="muted sc-modal-lead">
-              Role-aware cap advisor (DD / support / CC). Precision 150, Crit
-              Damage 150, DR 75 still apply. Soft waste still helps vs Block on
-              DDs.
-            </p>
-            <HelpTip
-              title="Suggest algorithm"
-              message="Opens Too much / Need more / Suggested changes for this hero, weighted by role. Recommendations are hints only — change imprint, enable, or stone yourself (not artifacts)."
-              steps={[
-                "Role line shows Damage dealer, Support, and/or CC for this hero.",
-                "Too much lists stats past caps (or unused offense on supports), with sources.",
-                "Need more lists role-weighted floors (supports prioritize Energy 50+) and missing amounts.",
-                "Suggested changes ranks imprint / enable / stone swaps — artifacts are skipped (ability-first).",
-                "Energy / round notes how starting Energy interacts with Round 1.",
-                "Tap Advanced for roles, caps, and scoring math.",
-              ]}
-              advanced={SUGGEST_HELP_ADVANCED}
-            />
-          </div>
-          <HeroSuggestPanel analysis={analysis} />
-        </Modal>
+        />
       );
     }
 
@@ -4158,7 +4194,7 @@ export default function StatCalculator() {
             <div className="calc-row-head sc-train-head">
               <div className="sc-train-head-title">
                 <h2>Train</h2>
-                <HelpTip message="Load Train screenshots via paste or folder (multi-select). Basic + matching class/faction always apply; game-mode exclusives only when that mode is selected. Multiple shots merge by exclusive." />
+                <HelpTip message="Load Train screenshots via paste or folder (multi-select). Basic + matching class/faction always apply; game-mode exclusives only when that mode is selected (Void Campaign also applies in Void Invasion). Multiple shots merge by exclusive." />
               </div>
               <div className="sc-train-actions">
                 <button
