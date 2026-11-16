@@ -130,6 +130,15 @@ import {
   summarizeGuildTechClass,
   toggleGuildTechNode,
 } from "../guildTech";
+import {
+  STAR_DESTINY_ICON,
+  STARSPAWNS,
+  formatStarspawnStatValue,
+  normalizeStarspawns,
+  patchStarspawn,
+  starspawnEffectiveValue,
+  starspawnOf,
+} from "../starspawns";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -2202,6 +2211,164 @@ export default function StatCalculator() {
       );
     }
 
+    if (picker.type === "starspawn") {
+      const spawnId = picker.spawnId;
+      const def = starspawnOf(spawnId);
+      const starspawns = normalizeStarspawns(board.starspawns);
+      const entry = starspawns[spawnId];
+      if (!def || !entry) return null;
+      const enabled = entry.enabled !== false;
+      return (
+        <Modal
+          title={def.name}
+          onClose={() => setPicker(null)}
+          className="sc-starspawn-modal"
+        >
+          <div className="sc-ss-head">
+            <img className="sc-ss-portrait" src={def.icon} alt="" />
+            <div className="sc-ss-head-meta">
+              <div className="sc-ss-destiny-row">
+                <span>Star Destiny</span>
+                <button
+                  type="button"
+                  className="sc-ss-destiny-btn"
+                  title="Edit Star Destiny multipliers"
+                  onClick={() =>
+                    setPicker({ type: "star-destiny", spawnId })
+                  }
+                >
+                  <img src={STAR_DESTINY_ICON} alt="" />
+                </button>
+              </div>
+              <p className="muted sc-ss-bonus">
+                Stat Bonus for {def.bonus.label}: +50%
+              </p>
+              <button
+                type="button"
+                className={`sc-ss-toggle${enabled ? " on" : ""}`}
+                onClick={() =>
+                  updateBoard({
+                    ...board,
+                    starspawns: patchStarspawn(starspawns, spawnId, {
+                      enabled: !enabled,
+                    }),
+                  })
+                }
+              >
+                {enabled ? "Leveled up" : "Not leveled up"}
+              </button>
+            </div>
+          </div>
+          <div className="sc-ss-stat-list">
+            {def.stats.map((stat) => {
+              const key = `${stat.stat}|${stat.unit || ""}`;
+              const base = entry.values[key] ?? stat.value;
+              const destiny = entry.destiny[key] ?? 100;
+              const effective = starspawnEffectiveValue(base, destiny);
+              return (
+                <div key={key} className="sc-ss-stat-row">
+                  <label className="sc-ss-stat-label">{stat.stat}</label>
+                  <div className="sc-ss-stat-flow">
+                    <input
+                      type="number"
+                      className="sc-ss-stat-input"
+                      min={0}
+                      max={stat.value}
+                      step={stat.unit === "%" ? 0.1 : 1}
+                      value={base}
+                      disabled={!enabled}
+                      onChange={(e) =>
+                        updateBoard({
+                          ...board,
+                          starspawns: patchStarspawn(starspawns, spawnId, {
+                            values: { [key]: e.target.value },
+                          }),
+                        })
+                      }
+                    />
+                    <span className="sc-ss-unit">
+                      {stat.unit === "%" ? "%" : ""}
+                    </span>
+                    <span className="sc-ss-arrow" aria-hidden>
+                      →
+                    </span>
+                    <strong className="sc-ss-effective">
+                      {formatStarspawnStatValue(effective, stat.unit)}
+                    </strong>
+                    <span className="muted sc-ss-mult">
+                      ×{destiny}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="muted sc-modal-lead">
+            Defaults are max level. Lower a base value anytime. Star Destiny
+            multiplies each stat (150% turns 12% into 18%).
+          </p>
+        </Modal>
+      );
+    }
+
+    if (picker.type === "star-destiny") {
+      const spawnId = picker.spawnId;
+      const def = starspawnOf(spawnId);
+      const starspawns = normalizeStarspawns(board.starspawns);
+      const entry = starspawns[spawnId];
+      if (!def || !entry) return null;
+      return (
+        <Modal
+          title={`Star Destiny · ${def.name}`}
+          onClose={() => setPicker({ type: "starspawn", spawnId })}
+          className="sc-starspawn-modal"
+        >
+          <p className="muted sc-modal-lead">
+            One multiplier per stat (percent). 100% = no change. Example: 12%
+            base × 150% → 18%.
+          </p>
+          <div className="sc-ss-stat-list">
+            {def.stats.map((stat) => {
+              const key = `${stat.stat}|${stat.unit || ""}`;
+              const destiny = entry.destiny[key] ?? 100;
+              return (
+                <div key={key} className="sc-ss-stat-row">
+                  <label className="sc-ss-stat-label">{stat.stat}</label>
+                  <div className="sc-ss-stat-flow">
+                    <input
+                      type="number"
+                      className="sc-ss-stat-input"
+                      min={0}
+                      step={1}
+                      value={destiny}
+                      onChange={(e) =>
+                        updateBoard({
+                          ...board,
+                          starspawns: patchStarspawn(starspawns, spawnId, {
+                            destiny: { [key]: e.target.value },
+                          }),
+                        })
+                      }
+                    />
+                    <span className="sc-ss-unit">%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="sc-modal-actions">
+            <button
+              className="gold-btn"
+              type="button"
+              onClick={() => setPicker({ type: "starspawn", spawnId })}
+            >
+              Done
+            </button>
+          </div>
+        </Modal>
+      );
+    }
+
     if (picker.type === "game-mode") {
       const selected = picker.draft ?? board.gameModeId ?? null;
       return (
@@ -3058,26 +3225,55 @@ export default function StatCalculator() {
           </div>
 
           <section className="sc-guild-tech-card">
-            <div className="calc-row-head">
-              <h2>Guild Tech</h2>
-              <HelpTip message="Per-class guild tech. Tap a class icon to open the skill circle. Nodes are maxed by default — tap to enable/disable. Applies to heroes of that class." />
+            <div className="sc-gt-inline-row">
+              <div className="sc-gt-inline-title">
+                <h2>Guild Tech</h2>
+                <HelpTip message="Per-class guild tech. Tap a class icon to open the skill circle. Nodes are maxed by default — tap to enable/disable. Applies to heroes of that class." />
+              </div>
+              <div className="sc-gt-class-row">
+                {GUILD_TECH_CLASSES.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className="sc-gt-class-btn"
+                    style={{ "--gt-color": row.color }}
+                    title={row.name}
+                    onClick={() =>
+                      setPicker({ type: "guild-tech", classId: row.id })
+                    }
+                  >
+                    <img src={row.icon} alt="" />
+                    <span>{row.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="sc-gt-class-row">
-              {GUILD_TECH_CLASSES.map((row) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  className="sc-gt-class-btn"
-                  style={{ "--gt-color": row.color }}
-                  title={row.name}
-                  onClick={() =>
-                    setPicker({ type: "guild-tech", classId: row.id })
-                  }
-                >
-                  <img src={row.icon} alt="" />
-                  <span>{row.name}</span>
-                </button>
-              ))}
+          </section>
+
+          <section className="sc-starspawn-card">
+            <div className="calc-row-head">
+              <h2>Starspawns</h2>
+              <HelpTip message="Board-wide starspawn buffs at max level by default. Tap a spirit to edit base values, Star Destiny multipliers, or turn it off. Matching faction/class heroes get +50% of that spirit." />
+            </div>
+            <div className="sc-starspawn-grid">
+              {STARSPAWNS.map((row) => {
+                const entry = normalizeStarspawns(board.starspawns)[row.id];
+                const on = entry?.enabled !== false;
+                return (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`sc-starspawn-btn${on ? "" : " off"}`}
+                    title={row.name}
+                    onClick={() =>
+                      setPicker({ type: "starspawn", spawnId: row.id })
+                    }
+                  >
+                    <img src={row.icon} alt="" />
+                    <span>{row.name.replace(/^Spirit of /, "")}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
         </section>

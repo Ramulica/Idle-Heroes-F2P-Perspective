@@ -24,6 +24,7 @@ import {
   tenantSpeedFromLevels,
 } from "./tenantsCloud";
 import { collectSkinStatRows } from "./skins";
+import { collectStarspawnStatRows } from "./starspawns";
 import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
@@ -80,6 +81,11 @@ const STAT_SHORT = {
   "Damage vs Priest": "vs Priest",
   "Damage Reduction Offset": "DR Off",
   "Dodge Offset": "Dodge Off",
+  "Crit Damage Offset": "CD Off",
+  "Fixed Attack": "Fix ATK",
+  "Fixed HP": "Fix HP",
+  Maim: "Maim",
+  "Effect Part Increase": "Eff Part",
   "Reduces DoT received": "DoT Red",
   Dodge: "Dodge",
 };
@@ -334,6 +340,22 @@ function collectSkin(slot) {
   return map;
 }
 
+function collectStarspawns(slot, starspawns) {
+  const map = emptyMap();
+  for (const row of collectStarspawnStatRows(slot, starspawns, heroOf)) {
+    // Starspawn Attack%/HP% and Fixed Attack/HP are intentional.
+    if (row.stat === "Attack" || row.stat === "HP") {
+      const value = Number(row.value);
+      if (!Number.isFinite(value) || value === 0) continue;
+      const key = statKey(row.stat, row.unit || "");
+      map.set(key, round1((map.get(key) || 0) + value));
+      continue;
+    }
+    addRow(map, row);
+  }
+  return map;
+}
+
 function collectAwakening(slot) {
   const map = emptyMap();
   const awakening = slot?.progress?.awakening;
@@ -391,7 +413,7 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, cloudIsland, gameModeId, guildTech }
+  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns }
 ) {
   const guild = collectGuildTech(slot, guildTech);
   const bySource = {
@@ -411,7 +433,7 @@ export function computeHeroStatBreakdown(
     skin: collectSkin(slot),
     sigils: emptySourceMap(),
     awakening: collectAwakening(slot),
-    star_spawns: emptySourceMap(),
+    star_spawns: collectStarspawns(slot, starspawns),
     guild_tech: guild.map,
   };
 
@@ -481,6 +503,7 @@ export function computeBoardStatTotals(board) {
   const cloudIsland = board?.cloudIsland;
   const gameModeId = board?.gameModeId || null;
   const guildTech = board?.guildTech;
+  const starspawns = board?.starspawns;
   const slots = (board?.slots || []).map((slot, index) =>
     computeHeroStatBreakdown(slot, index, {
       aura,
@@ -488,6 +511,7 @@ export function computeBoardStatTotals(board) {
       cloudIsland,
       gameModeId,
       guildTech,
+      starspawns,
     })
   );
 
