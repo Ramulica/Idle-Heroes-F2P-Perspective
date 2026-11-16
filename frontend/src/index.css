@@ -6206,18 +6206,25 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-ss-toggle {
-  align-self: flex-start;
   border: 2px solid #8a5a2a;
   border-radius: 999px;
   background: #efe0c4;
   color: #5a3210;
   font-weight: 800;
-  padding: 6px 14px;
+  padding: 8px 16px;
   cursor: pointer;
 }
 
 .sc-ss-toggle.on {
   background: linear-gradient(180deg, #ffe08a, #e0a84a);
+}
+
+.sc-starspawn-modal .sc-pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .sc-ss-stat-list {

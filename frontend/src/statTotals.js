@@ -82,10 +82,7 @@ const STAT_SHORT = {
   "Damage Reduction Offset": "DR Off",
   "Dodge Offset": "Dodge Off",
   "Crit Damage Offset": "CD Off",
-  "Fixed Attack": "Fix ATK",
-  "Fixed HP": "Fix HP",
   Maim: "Maim",
-  "Effect Part Increase": "Eff Part",
   "Reduces DoT received": "DoT Red",
   Dodge: "Dodge",
 };

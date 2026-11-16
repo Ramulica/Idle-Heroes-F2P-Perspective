@@ -20,10 +20,6 @@ import starDestinyIcon from "./assets/stats/starspawns/star-destiny.png";
 
 export const STAR_DESTINY_ICON = starDestinyIcon;
 
-function flat(stat, value) {
-  return { stat, value, unit: "" };
-}
-
 function pct(stat, value) {
   return { stat, value, unit: "%" };
 }
@@ -32,9 +28,12 @@ function statKey(stat, unit = "") {
   return `${stat}|${unit || ""}`;
 }
 
+function bonus(label, percent, { factions = [], classes = [] } = {}) {
+  return { label, percent, factions, classes };
+}
+
 /**
- * Bonus targets: hero matches if faction OR heroClass is listed.
- * @typedef {{ factions?: string[], classes?: string[], label: string }} StarspawnBonus
+ * @typedef {{ factions?: string[], classes?: string[], label: string, percent: number }} StarspawnBonus
  * @typedef {{ id: string, name: string, icon: string, maxLevel: number, bonus: StarspawnBonus, stats: { stat: string, value: number, unit: string }[] }} StarspawnDef
  */
 
@@ -45,216 +44,164 @@ export const STARSPAWNS = [
     name: "Spirit of Wraith",
     icon: iconWraith,
     maxLevel: 140,
-    bonus: { factions: ["Shadow"], label: "Shadow Heroes" },
-    stats: [flat("Fixed Attack", 23397), pct("Armor Break", 30)],
+    bonus: bonus("Shadow Heroes", 50, { factions: ["Shadow"] }),
+    stats: [pct("Armor Break", 30)],
   },
   {
     id: "honor",
     name: "Spirit of Honor",
     icon: iconHonor,
     maxLevel: 140,
-    bonus: { factions: ["Fortress"], label: "Fortress Heroes" },
-    stats: [flat("Fixed HP", 1496165), pct("Block", 30)],
+    bonus: bonus("Fortress Heroes", 50, { factions: ["Fortress"] }),
+    stats: [pct("Block", 30)],
   },
   {
     id: "fervor",
     name: "Spirit of Fervor",
     icon: iconFervor,
     maxLevel: 140,
-    bonus: { factions: ["Abyss"], label: "Abyss Heroes" },
-    stats: [flat("Fixed Attack", 25867), pct("Attack", 9)],
+    bonus: bonus("Abyss Heroes", 50, { factions: ["Abyss"] }),
+    stats: [pct("Attack", 9)],
   },
   {
     id: "nature",
     name: "Spirit of Nature",
     icon: iconNature,
     maxLevel: 140,
-    bonus: { factions: ["Forest"], label: "Forest Heroes" },
-    stats: [flat("Fixed HP", 1423177), pct("HP", 12)],
+    bonus: bonus("Forest Heroes", 50, { factions: ["Forest"] }),
+    stats: [pct("HP", 12)],
   },
   {
     id: "twilight",
     name: "Spirit of Twilight",
     icon: iconTwilight,
     maxLevel: 140,
-    bonus: { factions: ["Dark"], label: "Dark Heroes" },
-    stats: [
-      flat("Fixed HP", 693315),
-      flat("Fixed Attack", 12282),
-      pct("Skill Damage", 60),
-    ],
+    bonus: bonus("Dark Heroes", 50, { factions: ["Dark"] }),
+    stats: [pct("Skill Damage", 60)],
   },
   {
     id: "splendor",
     name: "Spirit of Splendor",
     icon: iconSplendor,
     maxLevel: 140,
-    bonus: { factions: ["Light"], label: "Light Heroes" },
-    stats: [
-      flat("Fixed HP", 766293),
-      flat("Fixed Attack", 11664),
-      pct("Holy Damage", 18),
-    ],
+    bonus: bonus("Light Heroes", 50, { factions: ["Light"] }),
+    stats: [pct("Holy Damage", 18)],
   },
   {
     id: "transcendence",
     name: "Spirit of Transcendence",
     icon: iconTranscendence,
     maxLevel: 140,
-    bonus: { factions: ["Transcendence"], label: "Transcendence Heroes" },
-    stats: [
-      flat("Fixed HP", 729799),
-      flat("Fixed Attack", 12898),
-      pct("All Damage Dealt", 9),
-    ],
+    bonus: bonus("Transcendence Heroes", 50, {
+      factions: ["Transcendence"],
+    }),
+    stats: [pct("All Damage Dealt", 9)],
   },
   {
     id: "valor",
     name: "Spirit of Valor",
     icon: iconValor,
     maxLevel: 140,
-    bonus: { classes: ["Warrior"], label: "Warriors" },
-    // Guide shows −Crit Damage; treat as Crit Damage Offset.
-    stats: [flat("Fixed HP", 1569151), pct("Crit Damage Offset", 18)],
+    bonus: bonus("Warriors", 50, { classes: ["Warrior"] }),
+    stats: [pct("Crit Damage Offset", 18)],
   },
   {
     id: "wisdom",
     name: "Spirit of Wisdom",
     icon: iconWisdom,
     maxLevel: 140,
-    bonus: { classes: ["Mage"], label: "Mages" },
-    stats: [
-      flat("Fixed Attack", 24633),
-      pct("Control Immunity Offset", 12),
-    ],
+    bonus: bonus("Mages", 50, { classes: ["Mage"] }),
+    stats: [pct("Control Immunity Offset", 12)],
   },
   {
     id: "freedom",
     name: "Spirit of Freedom",
     icon: iconFreedom,
     maxLevel: 140,
-    bonus: { classes: ["Ranger"], label: "Rangers" },
-    stats: [flat("Fixed Attack", 22163), pct("Dodge Offset", 12)],
+    bonus: bonus("Rangers", 50, { classes: ["Ranger"] }),
+    stats: [pct("Dodge Offset", 12)],
   },
   {
     id: "coldblood",
     name: "Spirit of Coldblood",
     icon: iconColdblood,
     maxLevel: 140,
-    bonus: { classes: ["Assassin"], label: "Assassins" },
-    stats: [flat("Fixed Attack", 27102), pct("Maim", 18)],
+    bonus: bonus("Assassins", 50, { classes: ["Assassin"] }),
+    stats: [pct("Maim", 18)],
   },
   {
     id: "prayer",
     name: "Spirit of Prayer",
     icon: iconPrayer,
     maxLevel: 140,
-    bonus: { classes: ["Priest"], label: "Priests" },
-    stats: [flat("Fixed HP", 1350189), pct("Heal Effect", 12)],
+    bonus: bonus("Priests", 50, { classes: ["Priest"] }),
+    stats: [pct("Heal Effect", 12)],
   },
-  // Glorious (img 3 order)
+  // Glorious — Effect Part Increase is the bonus %, not a combat stat
   {
     id: "grace",
     name: "Spirit of Grace",
     icon: iconGrace,
     maxLevel: 180,
-    bonus: {
-      factions: ["Dark", "Light"],
-      label: "Dark / Light Heroes",
-    },
-    stats: [
-      flat("Fixed Attack", 18600),
-      flat("Fixed HP", 1835600),
-      pct("Holy Damage", 6),
-      pct("Control Immunity", 8),
-      pct("Effect Part Increase", 30),
-    ],
+    bonus: bonus("Light / Dark Heroes", 30, {
+      factions: ["Light", "Dark"],
+    }),
+    stats: [pct("Holy Damage", 6), pct("Control Immunity", 8)],
   },
   {
     id: "bravery",
     name: "Spirit of Bravery",
     icon: iconBravery,
     maxLevel: 180,
-    bonus: {
+    bonus: bonus("Fortress / Warriors", 30, {
       factions: ["Fortress"],
       classes: ["Warrior"],
-      label: "Fortress / Warriors",
-    },
-    stats: [
-      flat("Fixed HP", 3321000),
-      pct("Block", 18),
-      pct("Armor", 30),
-      pct("Effect Part Increase", 30),
-    ],
+    }),
+    stats: [pct("Block", 18), pct("Armor", 30)],
   },
   {
     id: "trial",
     name: "Spirit of Trial",
-    icon: iconTrial,
+    icon: iconCrystal,
     maxLevel: 180,
-    bonus: {
-      factions: ["Shadow"],
-      classes: ["Assassin"],
-      label: "Shadow / Assassins",
-    },
-    stats: [
-      flat("Fixed Attack", 43790),
-      pct("Armor Break", 18),
-      pct("Crit Damage", 12),
-      pct("Effect Part Increase", 30),
-    ],
+    bonus: bonus("Transcendence / Rangers", 30, {
+      factions: ["Transcendence"],
+      classes: ["Ranger"],
+    }),
+    stats: [pct("All Damage Dealt", 6), pct("Precision", 18)],
   },
   {
     id: "justice",
     name: "Spirit of Justice",
     icon: iconJustice,
     maxLevel: 180,
-    bonus: {
+    bonus: bonus("Abyss / Mages", 30, {
       factions: ["Abyss"],
       classes: ["Mage"],
-      label: "Abyss / Mages",
-    },
-    stats: [
-      flat("Fixed Attack", 40160),
-      pct("Attack", 6),
-      pct("Control Immunity Offset", 8),
-      pct("Effect Part Increase", 30),
-    ],
+    }),
+    stats: [pct("Attack", 6), pct("Control Immunity Offset", 8)],
   },
   {
     id: "crystal",
     name: "Spirit of Crystal",
-    icon: iconCrystal,
+    icon: iconTrial,
     maxLevel: 180,
-    bonus: {
-      factions: ["Transcendence"],
-      classes: ["Ranger"],
-      label: "Transcendence / Rangers",
-    },
-    stats: [
-      flat("Fixed Attack", 21460),
-      flat("Fixed HP", 1504000),
-      pct("All Damage Dealt", 6),
-      pct("Precision", 18),
-      pct("Effect Part Increase", 30),
-    ],
+    bonus: bonus("Shadow / Assassins", 30, {
+      factions: ["Shadow"],
+      classes: ["Assassin"],
+    }),
+    stats: [pct("Armor Break", 18), pct("Crit Damage", 12)],
   },
   {
     id: "piety",
     name: "Spirit of Piety",
     icon: iconPiety,
     maxLevel: 180,
-    bonus: {
+    bonus: bonus("Forest / Priests", 30, {
       factions: ["Forest"],
       classes: ["Priest"],
-      label: "Forest / Priests",
-    },
-    stats: [
-      flat("Fixed HP", 3346000),
-      pct("HP", 10),
-      pct("Damage Reduction", 8),
-      pct("Effect Part Increase", 30),
-    ],
+    }),
+    stats: [pct("HP", 10), pct("Damage Reduction", 8)],
   },
 ];
 
@@ -274,7 +221,7 @@ export function defaultStarspawnEntry(def) {
     values[key] = row.value;
     destiny[key] = 100;
   }
-  return { enabled: true, values, destiny };
+  return { enabled: false, values, destiny };
 }
 
 export function defaultStarspawns() {
@@ -320,7 +267,7 @@ export function normalizeStarspawns(raw) {
       }
     }
     out[def.id] = {
-      enabled: cur.enabled !== false,
+      enabled: Boolean(cur.enabled),
       values,
       destiny,
     };
@@ -332,7 +279,9 @@ export function formatStarspawnStatValue(value, unit = "") {
   const n = Number(value);
   if (!Number.isFinite(n)) return "—";
   if (unit === "%") {
-    const shown = Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
+    const shown = Number.isInteger(n)
+      ? String(n)
+      : String(Math.round(n * 10) / 10);
     return `+${shown}%`;
   }
   return `+${Math.round(n).toLocaleString("en-US")}`;
@@ -356,7 +305,7 @@ export function heroMatchesStarspawnBonus(hero, bonus) {
 
 /**
  * Collect effective starspawn rows for one hero (enabled only).
- * Matching bonus heroes get +50% (1.5×) on the spirit's stats.
+ * Matching bonus heroes get bonus.percent extra (e.g. 50 → 1.5×, 30 → 1.3×).
  */
 export function collectStarspawnStatRows(slot, starspawns, heroOf) {
   const hero = heroOf?.(slot?.heroId);
@@ -366,7 +315,10 @@ export function collectStarspawnStatRows(slot, starspawns, heroOf) {
   for (const def of STARSPAWNS) {
     const entry = state[def.id];
     if (!entry?.enabled) continue;
-    const bonusMult = heroMatchesStarspawnBonus(hero, def.bonus) ? 1.5 : 1;
+    const pctBonus = Number(def.bonus?.percent) || 0;
+    const bonusMult = heroMatchesStarspawnBonus(hero, def.bonus)
+      ? 1 + pctBonus / 100
+      : 1;
     for (const stat of def.stats) {
       const key = statKey(stat.stat, stat.unit);
       const base = entry.values[key] ?? stat.value;

@@ -217,7 +217,14 @@ function StatLines({ stats, compact = false, colored = false }) {
   );
 }
 
-function Modal({ title, children, onClose, className = "" }) {
+function Modal({
+  title,
+  children,
+  onClose,
+  className = "",
+  footer = null,
+  hideClose = false,
+}) {
   return (
     <div className="modal-back" onClick={onClose}>
       <div
@@ -227,9 +234,12 @@ function Modal({ title, children, onClose, className = "" }) {
         <h3>{title}</h3>
         {children}
         <div className="row-actions sc-pick-actions">
-          <button className="gold-btn" type="button" onClick={onClose}>
-            Close
-          </button>
+          {footer}
+          {hideClose ? null : (
+            <button className="gold-btn" type="button" onClick={onClose}>
+              Close
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -2217,12 +2227,29 @@ export default function StatCalculator() {
       const starspawns = normalizeStarspawns(board.starspawns);
       const entry = starspawns[spawnId];
       if (!def || !entry) return null;
-      const enabled = entry.enabled !== false;
+      const enabled = Boolean(entry.enabled);
+      const bonusPct = def.bonus?.percent ?? 50;
       return (
         <Modal
           title={def.name}
           onClose={() => setPicker(null)}
           className="sc-starspawn-modal"
+          footer={
+            <button
+              type="button"
+              className={`sc-ss-toggle${enabled ? " on" : ""}`}
+              onClick={() =>
+                updateBoard({
+                  ...board,
+                  starspawns: patchStarspawn(starspawns, spawnId, {
+                    enabled: !enabled,
+                  }),
+                })
+              }
+            >
+              {enabled ? "Leveled up" : "Not leveled up"}
+            </button>
+          }
         >
           <div className="sc-ss-head">
             <img className="sc-ss-portrait" src={def.icon} alt="" />
@@ -2241,22 +2268,8 @@ export default function StatCalculator() {
                 </button>
               </div>
               <p className="muted sc-ss-bonus">
-                Stat Bonus for {def.bonus.label}: +50%
+                Stat Bonus for {def.bonus.label}: +{bonusPct}%
               </p>
-              <button
-                type="button"
-                className={`sc-ss-toggle${enabled ? " on" : ""}`}
-                onClick={() =>
-                  updateBoard({
-                    ...board,
-                    starspawns: patchStarspawn(starspawns, spawnId, {
-                      enabled: !enabled,
-                    }),
-                  })
-                }
-              >
-                {enabled ? "Leveled up" : "Not leveled up"}
-              </button>
             </div>
           </div>
           <div className="sc-ss-stat-list">
@@ -2295,17 +2308,16 @@ export default function StatCalculator() {
                     <strong className="sc-ss-effective">
                       {formatStarspawnStatValue(effective, stat.unit)}
                     </strong>
-                    <span className="muted sc-ss-mult">
-                      ×{destiny}%
-                    </span>
+                    <span className="muted sc-ss-mult">×{destiny}%</span>
                   </div>
                 </div>
               );
             })}
           </div>
           <p className="muted sc-modal-lead">
-            Defaults are max level. Lower a base value anytime. Star Destiny
-            multiplies each stat (150% turns 12% into 18%).
+            Stats start at max. Lower a value anytime. Star Destiny multiplies
+            each stat (150% turns 12% into 18%). Off by default until leveled
+            up.
           </p>
         </Modal>
       );
@@ -3253,12 +3265,12 @@ export default function StatCalculator() {
           <section className="sc-starspawn-card">
             <div className="calc-row-head">
               <h2>Starspawns</h2>
-              <HelpTip message="Board-wide starspawn buffs at max level by default. Tap a spirit to edit base values, Star Destiny multipliers, or turn it off. Matching faction/class heroes get +50% of that spirit." />
+              <HelpTip message="Board-wide starspawn buffs. Spirits start off — level one up in its popup. Edit base values and Star Destiny multipliers there. Matching faction/class heroes get the spirit’s bonus percent." />
             </div>
             <div className="sc-starspawn-grid">
               {STARSPAWNS.map((row) => {
                 const entry = normalizeStarspawns(board.starspawns)[row.id];
-                const on = entry?.enabled !== false;
+                const on = Boolean(entry?.enabled);
                 return (
                   <button
                     key={row.id}
