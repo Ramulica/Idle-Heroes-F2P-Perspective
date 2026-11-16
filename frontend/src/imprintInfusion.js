@@ -52,8 +52,29 @@ function rotCCW(vx, vy, deg) {
 }
 
 function pushNode(list, byId, node) {
-  list.push(node);
-  byId[node.id] = node;
+  const next = {
+    cost: 1,
+    ...node,
+  };
+  list.push(next);
+  byId[next.id] = next;
+}
+
+/** Path tips (no children) cost 2; roots free; everything else 1. */
+function assignNodeCosts(list) {
+  const hasChild = new Set();
+  for (const n of list) {
+    if (n.parentId) hasChild.add(n.parentId);
+  }
+  for (const n of list) {
+    if (!n.parentId) {
+      n.cost = 0;
+    } else if (!hasChild.has(n.id)) {
+      n.cost = 2; // last note on each Grimoire 2 path
+    } else {
+      n.cost = 1;
+    }
+  }
 }
 
 /**
@@ -527,6 +548,7 @@ function buildTree() {
   buildBlue(list, byId, blue[0], blue[1]);
   buildRed(list, byId, red[0], red[1]);
   buildGreen(list, byId, green[0], green[1]);
+  assignNodeCosts(list);
 
   return { list, byId };
 }
@@ -583,6 +605,23 @@ export function isInfusionRoot(id) {
   return INFUSION_ROOTS.includes(id);
 }
 
+export function infusionNodeCost(id) {
+  if (isInfusionRoot(id)) return 0;
+  const node = INFUSION_NODE_BY_ID[id];
+  if (!node) return 0;
+  const n = Number(node.cost);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+export function infusionSpentPoints(selectedIds) {
+  let sum = 0;
+  for (const id of selectedIds || []) {
+    if (isInfusionRoot(id)) continue;
+    sum += infusionNodeCost(id);
+  }
+  return sum;
+}
+
 /**
  * Cumulative map points from infusion level (Grimoire 2 table).
  * Unlock at 15 (0 pts). Cap 63 at level 40.
@@ -602,16 +641,19 @@ export function normalizeInfusionNodes(rawIds, budget) {
   const selected = [];
   const seen = new Set();
   const max = Math.max(0, Number(budget) || 0);
+  let spent = 0;
   for (const id of Array.isArray(rawIds) ? rawIds : []) {
-    if (selected.length >= max) break;
     if (!INFUSION_NODE_BY_ID[id] || seen.has(id)) continue;
     if (isInfusionRoot(id)) continue; // color starts are free / never stored
     const node = INFUSION_NODE_BY_ID[id];
     if (node.parentId && !seen.has(node.parentId) && !isInfusionRoot(node.parentId)) {
       continue;
     }
+    const cost = infusionNodeCost(id);
+    if (spent + cost > max) break;
     seen.add(id);
     selected.push(id);
+    spent += cost;
   }
   return selected;
 }
@@ -645,8 +687,9 @@ export function canSelectInfusionNode(selectedSet, id, budget) {
   if (selectedSet.has(id)) return false;
   const chain = missingPathTo(id, selectedSet);
   if (!chain?.length) return false;
-  const spent = [...selectedSet].filter((x) => !isInfusionRoot(x)).length;
-  return spent + chain.length <= budget;
+  const spent = infusionSpentPoints([...selectedSet]);
+  const need = chain.reduce((sum, nid) => sum + infusionNodeCost(nid), 0);
+  return spent + need <= budget;
 }
 
 function descendantsOf(id) {
@@ -666,7 +709,9 @@ export function toggleInfusionNode(selectedIds, id, budget) {
   }
   const chain = missingPathTo(id, set);
   if (!chain?.length) return selected;
-  if (selected.length + chain.length > budget) return selected;
+  const spent = infusionSpentPoints(selected);
+  const need = chain.reduce((sum, nid) => sum + infusionNodeCost(nid), 0);
+  if (spent + need > budget) return selected;
   return [...selected, ...chain];
 }
 
@@ -701,6 +746,8 @@ export function formatInfusionStatLine(row) {
 
 export function infusionNodeTip(node) {
   if (!node) return "";
-  if (!node.stats?.length) return "Path node";
-  return node.stats.map(formatInfusionStatLine).join(" · ");
+  const cost = infusionNodeCost(node.id);
+  const costLabel = cost === 1 ? "1 pt" : `${cost} pts`;
+  if (!node.stats?.length) return `Path node · ${costLabel}`;
+  return `${node.stats.map(formatInfusionStatLine).join(" · ")} · ${costLabel}`;
 }

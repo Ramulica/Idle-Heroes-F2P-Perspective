@@ -94,8 +94,10 @@ import {
   INFUSION_UNLOCK_LEVEL,
   canSelectInfusionNode,
   formatInfusionStatLine,
+  infusionNodeCost,
   infusionNodeTip,
   infusionPointBudget,
+  infusionSpentPoints,
   normalizeInfusionNodes,
   summarizeInfusionStats,
   toggleInfusionNode,
@@ -171,7 +173,9 @@ import {
   normalizeTrain,
   ocrTrainImage,
   removeTrainSection,
+  trainExampleSections,
 } from "../trainStats";
+import trainExampleImage from "../assets/stats/train/example-feature-exclusives.png";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -1403,6 +1407,56 @@ export default function StatCalculator() {
             </div>
           )}
 
+          {!busy ? (
+            <div className="sc-train-example">
+              <img
+                src={trainExampleImage}
+                alt="Example Train Feature exclusives"
+                className="sc-train-example-img"
+              />
+              <div className="sc-train-example-body">
+                <p className="muted">
+                  Example: Star Expedition, Ethereal Realm, and Forbidden Zone
+                  Feature exclusives.
+                </p>
+                <button
+                  type="button"
+                  className="tan-btn"
+                  onClick={() => {
+                    const example = trainExampleSections();
+                    setState((current) => ({
+                      ...current,
+                      board: cloneBoard({
+                        ...current.board,
+                        train: mergeTrainSections(
+                          current.board.train,
+                          example
+                        ),
+                      }),
+                    }));
+                    setTrainOcr({
+                      status: "done",
+                      fileIndex: 1,
+                      fileTotal: 1,
+                      progress: 100,
+                      fileName: "",
+                      results: [
+                        {
+                          name: "example-feature-exclusives.png",
+                          ok: true,
+                          sections: example.sections.length,
+                        },
+                      ],
+                      error: null,
+                    });
+                  }}
+                >
+                  Load example
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {trainOcr?.error ? (
             <p className="muted sc-train-error">{trainOcr.error}</p>
           ) : null}
@@ -2463,7 +2517,7 @@ export default function StatCalculator() {
       );
       const unlocked = current >= INFUSION_UNLOCK_LEVEL;
       const budget = infusionPointBudget(current);
-      const selectedCount = (progress.infusionNodes || []).length;
+      const spent = infusionSpentPoints(progress.infusionNodes || []);
       return (
         <Modal
           title={`${slotTitle(picker.slotIndex)} · Infusion`}
@@ -2473,7 +2527,7 @@ export default function StatCalculator() {
             Set infusion level 0–60. Map unlocks at {INFUSION_UNLOCK_LEVEL}+.
             Points start at 16 (Grimoire 2 table; now {budget} point
             {budget === 1 ? "" : "s"}, max 63 at {INFUSION_POINT_CAP_LEVEL}).
-            Color start nodes are free.
+            Color starts free; path tips cost 2.
           </p>
           <label className="sc-infusion-field-row">
             <span>Level</span>
@@ -2545,7 +2599,7 @@ export default function StatCalculator() {
             </button>
             <p className="muted">
               {unlocked
-                ? `${selectedCount}/${budget} nodes spent`
+                ? `${spent}/${budget} points spent`
                 : `Greyed out until infusion ${INFUSION_UNLOCK_LEVEL}`}
             </p>
           </div>
@@ -2562,7 +2616,8 @@ export default function StatCalculator() {
         budget
       );
       const selectedSet = new Set(draft);
-      const remaining = Math.max(0, budget - draft.length);
+      const spent = infusionSpentPoints(draft);
+      const remaining = Math.max(0, budget - spent);
       const draftStats = summarizeInfusionStats(draft);
       const mapW = 1120;
       const mapH = 1180;
@@ -2575,8 +2630,7 @@ export default function StatCalculator() {
           <div className="sc-infusion-map-head">
             <p className="muted sc-modal-lead">
               Remaining points: <strong>{remaining}</strong> / {budget} (level{" "}
-              {progress.infusion}; Grimoire 2 table through{" "}
-              {INFUSION_POINT_CAP_LEVEL}; color starts free)
+              {progress.infusion}; tips cost 2; color starts free)
             </p>
             <button
               type="button"
@@ -2691,7 +2745,9 @@ export default function StatCalculator() {
                         fontSize="11"
                         pointerEvents="none"
                       >
-                        +
+                        {infusionNodeCost(node.id) > 1
+                          ? infusionNodeCost(node.id)
+                          : "+"}
                       </text>
                     ) : null}
                   </g>

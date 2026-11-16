@@ -6988,6 +6988,42 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-size: 1rem;
 }
 
+.sc-train-example {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #c9a46a;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.sc-train-example-img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+  border: 1px solid #d6b07a;
+}
+
+.sc-train-example-body {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.sc-train-example-body .muted {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 560px) {
+  .sc-train-example {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sc-train-progress {
   display: grid;
   gap: 8px;

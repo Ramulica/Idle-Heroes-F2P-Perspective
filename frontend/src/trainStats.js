@@ -62,7 +62,8 @@ const GAME_MODE_ALIASES = [
   [/^inter[-\s]?dimensional\s+arena$/i, "Interdimensional Arena"],
   [/^trial\s+of\s+the\s+champion$/i, "Trial of the Champion"],
   [/^free\s+team[-\s]?up\s+arena$/i, "Free Team-up Arena"],
-  [/^forbidden\s+zone(?:\s+showdown)?$/i, "Forbidden Zone"],
+  // Train often says "Forbidden Zone"; board mode is Forbidden Zone Showdown.
+  [/^forbidden\s+zone(?:\s+showdown)?$/i, "Forbidden Zone Showdown"],
   [/^void\s+campaign$/i, "Void Campaign"],
 ];
 
@@ -94,6 +95,8 @@ const KNOWN_STATS = [
   "Effect of Being Healed",
   "Maim",
   "Damage Reduction by Attack",
+  "Reduces DoT received",
+  "Dodge Rate",
   "HP",
   "Attack",
   "Fixed HP",
@@ -125,6 +128,8 @@ const STAT_ALIASES = [
   [/^control\s*immunity$/i, "Control Immunity"],
   [/^control\s*precision$/i, "Control Precision"],
   [/^dodge\s*offset$/i, "Dodge Offset"],
+  [/^dodge\s*rate$/i, "Dodge"],
+  [/^reduces?\s*dot\s*received$/i, "Reduces DoT received"],
   [/^effect\s*of\s*being\s*healed$/i, "Effect of Being Healed"],
   [/^heal\s*effect$/i, "Heal Effect"],
   [/^skill\s*damage$/i, "Skill Damage"],
@@ -668,7 +673,81 @@ function trainGameModeApplies(sectionModeId, boardModeId) {
   if (boardModeId === "void-invasion" && sectionModeId === "void-campaign") {
     return true;
   }
+  if (
+    boardModeId === "forbidden-zone-showdown" &&
+    (sectionModeId === "forbidden-zone" ||
+      sectionModeId === "forbidden-zone-showdown")
+  ) {
+    return true;
+  }
   return false;
+}
+
+const trainPct = (stat, value) => ({ stat, value, unit: "%" });
+const trainFlat = (stat, value) => ({ stat, value, unit: "" });
+
+/** Star Expedition / Ethereal Realm share this Feature exclusive block. */
+const TRAIN_EXAMPLE_STAR_ETHEREAL = [
+  trainPct("Attack", 11.5),
+  trainPct("Armor Break", 10.5),
+  trainFlat("Speed", 100),
+  trainPct("Heal Effect", 10),
+  trainPct("HP", 14.5),
+  trainPct("Reduces DoT received", 12),
+  trainPct("Holy Damage", 18.5),
+  trainPct("Maim", 7),
+  trainPct("Damage Reduction by Attack", 45),
+  trainPct("Control Precision", 10.5),
+  trainPct("Dodge", 2),
+  trainPct("Crit Damage Reduction", 7.5),
+  trainPct("All Damage Dealt", 7),
+  trainPct("Crit Damage", 31.5),
+  trainPct("Dodge Offset", 2.5),
+  trainPct("All Damage Reduction", 7.5),
+];
+
+const TRAIN_EXAMPLE_FORBIDDEN_ZONE = [
+  trainPct("Attack", 7.5),
+  trainFlat("Speed", 100),
+  trainPct("Crit Damage", 22.5),
+  trainPct("HP", 10.5),
+  trainPct("Reduces DoT received", 12),
+  trainPct("Holy Damage", 9),
+  trainPct("Maim", 7),
+  trainPct("Heal Effect", 10),
+  trainPct("Control Precision", 7.5),
+  trainPct("Dodge", 2),
+  trainPct("Crit Damage Reduction", 7.5),
+  trainPct("All Damage Dealt", 3),
+  trainPct("Damage Reduction by Attack", 45),
+  trainPct("Dodge Offset", 2.5),
+  trainPct("All Damage Reduction", 7.5),
+];
+
+/**
+ * Example Feature exclusives from a Train screenshot
+ * (Star Expedition, Ethereal Realm, Forbidden Zone).
+ */
+export function trainExampleSections() {
+  return normalizeTrain({
+    sections: [
+      {
+        kind: "gamemode",
+        target: "Star Expedition",
+        stats: TRAIN_EXAMPLE_STAR_ETHEREAL,
+      },
+      {
+        kind: "gamemode",
+        target: "Ethereal Realm",
+        stats: TRAIN_EXAMPLE_STAR_ETHEREAL,
+      },
+      {
+        kind: "gamemode",
+        target: "Forbidden Zone Showdown",
+        stats: TRAIN_EXAMPLE_FORBIDDEN_ZONE,
+      },
+    ],
+  });
 }
 
 /**
