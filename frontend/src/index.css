@@ -3929,6 +3929,10 @@ input[type="range"] {
   line-height: 1.2;
 }
 
+.sc-summary-stats-wrap {
+  width: 100%;
+}
+
 .sc-summary-stats {
   margin: 4px 0 0;
   padding: 0;
@@ -3942,6 +3946,41 @@ input[type="range"] {
 
 .sc-summary-stats li {
   white-space: nowrap;
+}
+
+.sc-stat-more-details {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #5a3210;
+}
+
+.sc-stat-more-details > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #6a4420;
+  user-select: none;
+}
+
+.sc-stat-more-details > summary:hover {
+  color: #8a5a2a;
+}
+
+.sc-stat-more-details .sc-stat-table {
+  margin-top: 8px;
+}
+
+.sc-summary-more-details {
+  margin-top: 4px;
+  font-size: 0.66rem;
+}
+
+.sc-summary-more-details > summary {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sc-summary-more-details .sc-summary-stats {
+  margin-top: 2px;
 }
 
 .sc-summary-info {

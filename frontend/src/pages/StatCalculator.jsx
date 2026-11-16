@@ -56,6 +56,8 @@ import {
 import {
   computeBoardStatTotals,
   formatStatCell,
+  isDetailStat,
+  partitionStatRows,
 } from "../statTotals";
 import {
   AWAKENING_TIERS,
@@ -279,6 +281,44 @@ function Modal({
   );
 }
 
+function StatBreakdownGrid({ columns, rows, totalValues }) {
+  if (!columns.length) return null;
+  return (
+    <table className="sc-stat-table">
+      <thead>
+        <tr>
+          <th scope="col">Source</th>
+          {columns.map((col) => (
+            <th key={col.key} scope="col">
+              {col.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.id}>
+            <th scope="row">{row.label}</th>
+            {columns.map((col) => (
+              <td key={col.key}>
+                {formatStatCell(row.values[col.key], col.unit)}
+              </td>
+            ))}
+          </tr>
+        ))}
+        <tr className="sc-stat-table-total">
+          <th scope="row">Total</th>
+          {columns.map((col) => (
+            <td key={col.key}>
+              {formatStatCell(totalValues[col.key], col.unit)}
+            </td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 function HeroStatBreakdownTable({ breakdown }) {
   if (!breakdown?.hero) {
     return <p className="muted">Select a hero to see the stat breakdown.</p>;
@@ -292,40 +332,25 @@ function HeroStatBreakdownTable({ breakdown }) {
       </p>
     );
   }
+  const mainColumns = columns.filter((col) => !isDetailStat(col.stat));
+  const detailColumns = columns.filter((col) => isDetailStat(col.stat));
   return (
     <div className="sc-stat-table-wrap">
-      <table className="sc-stat-table">
-        <thead>
-          <tr>
-            <th scope="col">Source</th>
-            {columns.map((col) => (
-              <th key={col.key} scope="col">
-                {col.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <th scope="row">{row.label}</th>
-              {columns.map((col) => (
-                <td key={col.key}>
-                  {formatStatCell(row.values[col.key], col.unit)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          <tr className="sc-stat-table-total">
-            <th scope="row">Total</th>
-            {columns.map((col) => (
-              <td key={col.key}>
-                {formatStatCell(totalValues[col.key], col.unit)}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+      <StatBreakdownGrid
+        columns={mainColumns}
+        rows={rows}
+        totalValues={totalValues}
+      />
+      {detailColumns.length ? (
+        <details className="sc-stat-more-details">
+          <summary>More details ({detailColumns.length})</summary>
+          <StatBreakdownGrid
+            columns={detailColumns}
+            rows={rows}
+            totalValues={totalValues}
+          />
+        </details>
+      ) : null}
       {breakdown.ccImmunities?.length ? (
         <details className="sc-ci-details">
           <summary>
@@ -353,52 +378,62 @@ function HeroStatBreakdownTable({ breakdown }) {
 function SummaryStatList({ totals }) {
   const [ciOpen, setCiOpen] = useState(false);
   if (!totals?.length) return <span className="muted">Stats: —</span>;
+  const { main, detail } = partitionStatRows(totals);
+
+  function renderStatItem(stat) {
+    const isCi =
+      stat.stat === "Control Immunity" && (stat.unit || "%") === "%";
+    if (isCi) {
+      const imm = stat.immunities || [];
+      return (
+        <li key={stat.key} className="sc-summary-stat-ci">
+          <button
+            type="button"
+            className="sc-ci-toggle"
+            onClick={() => setCiOpen((open) => !open)}
+          >
+            CI% {formatStatCell(stat.value, "%")}
+            {stat.ciFromImmunities ? (
+              <span className="sc-ci-extra">
+                (+{stat.ciFromImmunities}%)
+              </span>
+            ) : null}
+            {imm.length ? (
+              <span className="sc-ci-caret">{ciOpen ? "▾" : "▸"}</span>
+            ) : null}
+          </button>
+          {ciOpen && imm.length ? (
+            <ul className="sc-ci-sublist">
+              {imm.map((row) => (
+                <li key={row.key || row.stat}>
+                  {row.stat.replace(/ Immunity$/, "")}{" "}
+                  {formatStatCell(row.value, "%")}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </li>
+      );
+    }
+    return (
+      <li key={stat.key}>
+        {stat.stat}
+        {stat.unit === "%" ? "%" : ""}{" "}
+        {formatStatCell(stat.value, stat.unit)}
+      </li>
+    );
+  }
+
   return (
-    <ul className="sc-summary-stats">
-      {totals.map((stat) => {
-        const isCi =
-          stat.stat === "Control Immunity" && (stat.unit || "%") === "%";
-        if (isCi) {
-          const imm = stat.immunities || [];
-          return (
-            <li key={stat.key} className="sc-summary-stat-ci">
-              <button
-                type="button"
-                className="sc-ci-toggle"
-                onClick={() => setCiOpen((open) => !open)}
-              >
-                CI% {formatStatCell(stat.value, "%")}
-                {stat.ciFromImmunities ? (
-                  <span className="sc-ci-extra">
-                    (+{stat.ciFromImmunities}%)
-                  </span>
-                ) : null}
-                {imm.length ? (
-                  <span className="sc-ci-caret">{ciOpen ? "▾" : "▸"}</span>
-                ) : null}
-              </button>
-              {ciOpen && imm.length ? (
-                <ul className="sc-ci-sublist">
-                  {imm.map((row) => (
-                    <li key={row.key || row.stat}>
-                      {row.stat.replace(/ Immunity$/, "")}{" "}
-                      {formatStatCell(row.value, "%")}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          );
-        }
-        return (
-          <li key={stat.key}>
-            {stat.stat}
-            {stat.unit === "%" ? "%" : ""}{" "}
-            {formatStatCell(stat.value, stat.unit)}
-          </li>
-        );
-      })}
-    </ul>
+    <div className="sc-summary-stats-wrap">
+      <ul className="sc-summary-stats">{main.map(renderStatItem)}</ul>
+      {detail.length ? (
+        <details className="sc-stat-more-details sc-summary-more-details">
+          <summary>More details ({detail.length})</summary>
+          <ul className="sc-summary-stats">{detail.map(renderStatItem)}</ul>
+        </details>
+      ) : null}
+    </div>
   );
 }
 

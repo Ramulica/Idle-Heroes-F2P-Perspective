@@ -56,6 +56,37 @@ const GEAR_BODY_SLOTS = new Set(["weapon", "armor", "accessory", "boots"]);
 /** Stats ignored in calculator totals / breakdown (tracked elsewhere). */
 const IGNORED_STATS = new Set(["HP", "Attack", "Fixed HP", "Fixed Attack"]);
 
+/**
+ * Situational / niche stats — shown under “More details”, not in the main
+ * summary list or primary breakdown columns.
+ */
+const DETAIL_STAT_EXACT = new Set([
+  "Damage Reduction",
+  "Damage Reduction Offset",
+  "Damage Reduction by Attack",
+]);
+
+export function isDetailStat(stat) {
+  const name = String(stat || "").trim();
+  if (!name) return false;
+  if (DETAIL_STAT_EXACT.has(name)) return true;
+  if (/^Damage against\b/i.test(name)) return true;
+  if (/^Damage vs\b/i.test(name)) return true;
+  if (/^Reduce Damage dealt by\b/i.test(name)) return true;
+  return false;
+}
+
+/** Split total rows into main vs more-details buckets (order preserved). */
+export function partitionStatRows(rows) {
+  const main = [];
+  const detail = [];
+  for (const row of rows || []) {
+    if (isDetailStat(row.stat)) detail.push(row);
+    else main.push(row);
+  }
+  return { main, detail };
+}
+
 const STAT_SHORT = {
   Speed: "Spd",
   Energy: "Energy",
