@@ -6793,12 +6793,74 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .sc-train-error {
   color: #9b1c1c;
-  margin-bottom: 8px;
+  margin: 8px 0 0;
+}
+
+.sc-train-paste {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 140px;
+  padding: 16px;
+  border: 2px dashed #8a5a2a;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #5a3210;
+  text-align: center;
+  cursor: text;
+  outline: none;
+}
+
+.sc-train-paste:focus {
+  border-color: #c47a12;
+  background: #fff3d6;
+  box-shadow: inset 0 0 0 1px #c47a12;
+}
+
+.sc-train-paste strong {
+  font-size: 1rem;
+}
+
+.sc-train-progress {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #c9a46a;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #5a3210;
+}
+
+.sc-train-progress p {
+  margin: 0;
+}
+
+.sc-train-progress-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: #e8d2a8;
+  overflow: hidden;
+}
+
+.sc-train-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #c47a12, #e2a33a);
+  transition: width 0.15s ease;
+}
+
+.sc-train-ocr-log {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: #5a3210;
+  font-size: 0.82rem;
 }
 
 .sc-train-table-wrap {
   overflow: auto;
-  max-height: 320px;
+  max-height: 420px;
   border: 1px solid #c9a46a;
   border-radius: 10px;
   background: #fffaf0;
@@ -6816,7 +6878,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   padding: 8px 10px;
   border-bottom: 1px solid #e2c896;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .sc-train-table th {
@@ -6827,15 +6889,37 @@ button.sc-aura-badge:hover .sc-aura-core {
   z-index: 1;
 }
 
-.sc-train-table td:last-child,
-.sc-train-table th:last-child {
-  width: 36px;
-  text-align: center;
+.sc-train-table-stats tbody tr:nth-child(even) {
+  background: color-mix(in srgb, #f3e2c0 55%, #fffaf0);
 }
 
-.sc-train-table strong {
+.sc-train-exclusive {
+  background: #f7ebcf;
+  border-right: 1px solid #e2c896;
+  min-width: 120px;
+  max-width: 160px;
+  vertical-align: top;
+}
+
+.sc-train-exclusive strong {
   color: #7a3f12;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.sc-train-col-value {
+  width: 88px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
   white-space: nowrap;
+}
+
+.sc-train-actions-cell,
+.sc-train-table th:last-child {
+  width: 40px;
+  text-align: center;
 }
 
 .sc-train-remove {
