@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
 import HeroStageBadge from "../components/HeroStageBadge.jsx";
@@ -174,6 +174,7 @@ import {
   ocrTrainImage,
   removeTrainSection,
   trainExampleSections,
+  warmTrainOcr,
 } from "../trainStats";
 import trainExampleImage from "../assets/stats/train/example-feature-exclusives.png";
 
@@ -1140,12 +1141,32 @@ export default function StatCalculator() {
   const [saveName, setSaveName] = useState("");
   const [summaryStatsOpen, setSummaryStatsOpen] = useState(false);
   const [trainOcr, setTrainOcr] = useState(null);
+  const [trainExampleReady, setTrainExampleReady] = useState(false);
   const trainFileRef = useRef(null);
 
   const board = state.board;
   const monster = board.monster;
   const train = normalizeTrain(board.train);
   const trainMatrix = useMemo(() => buildTrainMatrix(train), [train]);
+
+  // Preload Train example + warm OCR so Load screenshot feels instant.
+  useEffect(() => {
+    let cancelled = false;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => {
+      if (!cancelled) setTrainExampleReady(true);
+    };
+    img.onerror = () => {
+      if (!cancelled) setTrainExampleReady(true);
+    };
+    img.src = trainExampleImage;
+    if (img.complete) setTrainExampleReady(true);
+    warmTrainOcr();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function runTrainOcrOnFiles(fileList) {
     const files = Array.from(fileList || []).filter(
@@ -1367,7 +1388,12 @@ export default function StatCalculator() {
           />
 
           {busy ? (
-            <div className="sc-train-progress">
+            <div className="sc-train-progress sc-train-progress-live">
+              <div className="sc-train-progress-pulse" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
               <p>
                 Reading <strong>{trainOcr.fileName}</strong> (
                 {trainOcr.fileIndex}/{trainOcr.fileTotal})
@@ -1408,12 +1434,22 @@ export default function StatCalculator() {
           )}
 
           {!busy ? (
-            <div className="sc-train-example">
-              <img
-                src={trainExampleImage}
-                alt="Example Train Feature exclusives"
-                className="sc-train-example-img"
-              />
+            <div
+              className={`sc-train-example${
+                trainExampleReady ? " is-ready" : " is-loading"
+              }`}
+            >
+              <div className="sc-train-example-frame">
+                {!trainExampleReady ? (
+                  <div className="sc-train-example-shimmer" aria-hidden="true" />
+                ) : null}
+                <img
+                  src={trainExampleImage}
+                  alt="Example Train Feature exclusives"
+                  className="sc-train-example-img"
+                  onLoad={() => setTrainExampleReady(true)}
+                />
+              </div>
               <div className="sc-train-example-body">
                 <p className="muted">
                   Example: Star Expedition, Ethereal Realm, and Forbidden Zone

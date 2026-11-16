@@ -639,30 +639,59 @@ export function preprocessTrainImage(source) {
   });
 }
 
+/** Shared OCR worker — warm once so later loads feel near-instant. */
+let trainOcrWorkerPromise = null;
+let trainOcrProgressHandler = null;
+
+async function getTrainOcrWorker() {
+  if (!trainOcrWorkerPromise) {
+    trainOcrWorkerPromise = (async () => {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng", 1, {
+        logger: (m) => {
+          if (
+            typeof trainOcrProgressHandler === "function" &&
+            m?.status === "recognizing text"
+          ) {
+            trainOcrProgressHandler(Math.round((m.progress || 0) * 100));
+          }
+        },
+      });
+      await worker.setParameters({
+        tessedit_pageseg_mode: "6", // assume a uniform block of text
+        preserve_interword_spaces: "1",
+      });
+      return worker;
+    })().catch((err) => {
+      trainOcrWorkerPromise = null;
+      throw err;
+    });
+  }
+  return trainOcrWorkerPromise;
+}
+
+/** Kick off Tesseract download/init in the background (safe to call often). */
+export function warmTrainOcr() {
+  if (typeof window === "undefined") return;
+  void getTrainOcrWorker().catch(() => {});
+}
+
 /**
  * Lazy OCR via tesseract.js — runs entirely in the browser.
+ * Reuses a warmed worker when available.
  */
 export async function ocrTrainImage(fileOrBlob, onProgress) {
   const canvas = await preprocessTrainImage(fileOrBlob);
-  const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("eng", 1, {
-    logger: (m) => {
-      if (typeof onProgress === "function" && m?.status === "recognizing text") {
-        onProgress(Math.round((m.progress || 0) * 100));
-      }
-    },
-  });
+  trainOcrProgressHandler =
+    typeof onProgress === "function" ? onProgress : null;
   try {
-    await worker.setParameters({
-      tessedit_pageseg_mode: "6", // assume a uniform block of text
-      preserve_interword_spaces: "1",
-    });
+    const worker = await getTrainOcrWorker();
     const {
       data: { text },
     } = await worker.recognize(canvas);
     return parseTrainText(text);
   } finally {
-    await worker.terminate();
+    trainOcrProgressHandler = null;
   }
 }
 
