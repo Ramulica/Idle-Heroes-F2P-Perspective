@@ -407,6 +407,10 @@ export function buildTrainMatrix(train) {
   return { columns, rows };
 }
 
+/** In-game exclusive type group for Train headers (OCR may say Feature). */
+const EXCLUSIVE_TYPE =
+  "Faction|Class|Feature|Game\\s*Mode|Gamemode|Mode";
+
 /**
  * Parse OCR / pasted Train text into sections.
  */
@@ -417,25 +421,27 @@ export function parseTrainText(text) {
     .replace(/\u00a0/g, " ");
   if (!raw.trim()) return defaultTrain();
 
-  // Force headers onto their own lines (OCR often glues them to prior text).
+  // Force headers onto their own lines (OCR often glues them onto the next stat).
+  // Example: "Exclusive for (Feature): [Void Campaign] Skill Damage +52.5%"
+  const exclusiveHeader =
+    `Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[[^\\]]+\\]`;
   const flat = raw
+    .replace(/\s*(Basic\s+Attribute\s+Bonus)/gi, "\n$1\n")
+    .replace(new RegExp(`\\s*(${exclusiveHeader})`, "gi"), "\n$1\n")
     .replace(
-      /\s*(Basic\s+Attribute\s+Bonus)/gi,
-      "\n$1\n"
-    )
-    .replace(
-      /\s*(Exclusive\s+for\s*\(\s*(?:Faction|Class|Game\s*Mode|Gamemode|Mode)\s*\)\s*:\s*\[[^\]]+\])/gi,
-      "\n$1\n"
-    )
-    .replace(
-      /\s*(Exclusive\s+for\s*\(\s*(?:Faction|Class|Game\s*Mode|Gamemode|Mode)\s*\)\s*:\s*[^\n,]+)/gi,
+      new RegExp(
+        `\\s*(Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*[^\\n\\[]+)`,
+        "gi"
+      ),
       "\n$1\n"
     )
     .replace(/\n+/g, "\n")
     .trim();
 
-  const headerRe =
-    /(?:^|\n)\s*(Basic\s+Attribute\s+Bonus|Exclusive\s+for\s*\(\s*(Faction|Class|Game\s*Mode|Gamemode|Mode)\s*\)\s*:\s*\[?\s*([^\n\]]+?)\s*\]?)\s*(?=\n|$)/gi;
+  const headerRe = new RegExp(
+    `(?:^|\\n)\\s*(Basic\\s+Attribute\\s+Bonus|Exclusive\\s+for\\s*\\(\\s*(${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[?\\s*([^\\n\\]]+?)\\s*\\]?)\\s*(?=\\n|$)`,
+    "gi"
+  );
 
   const matches = [...flat.matchAll(headerRe)];
   if (matches.length === 0) {
@@ -459,11 +465,11 @@ export function parseTrainText(text) {
     if (/^Basic/i.test(header)) {
       kind = "basic";
     } else {
-      const type = String(m[2] || "").toLowerCase();
+      const type = String(m[2] || "").toLowerCase().replace(/\s+/g, " ");
       target = String(m[3] || "").replace(/[\]\[]/g, "").trim();
       if (type.startsWith("faction")) kind = "faction";
       else if (type.startsWith("class")) kind = "class";
-      else kind = "gamemode";
+      else kind = "gamemode"; // Feature / Game Mode / Mode
     }
     const stats = splitStatBody(body);
     sections.push({ kind, target, stats });
@@ -473,6 +479,14 @@ export function parseTrainText(text) {
 
 function splitStatBody(body) {
   const cleaned = String(body || "")
+    // Drop any exclusive header fragments that leaked into the body.
+    .replace(
+      new RegExp(
+        `Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[[^\\]]*\\]`,
+        "gi"
+      ),
+      " "
+    )
     .replace(/\n+/g, " ")
     .replace(/\s+/g, " ")
     .trim();

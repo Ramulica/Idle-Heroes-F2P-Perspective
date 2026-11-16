@@ -1052,9 +1052,10 @@ export default function StatCalculator() {
             multiple
             className="sc-train-file"
             onChange={(e) => {
-              const list = e.target.files;
+              // Copy first — clearing the input empties a live FileList.
+              const list = Array.from(e.target.files || []);
               e.target.value = "";
-              if (!list?.length) return;
+              if (!list.length) return;
               void runTrainOcrOnFiles(list);
             }}
           />
