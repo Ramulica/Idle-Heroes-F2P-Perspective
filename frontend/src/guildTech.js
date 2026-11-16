@@ -82,10 +82,14 @@ export const GUILD_TECH_INNER_NODES = [
   },
   {
     id: "inner-2",
-    label: "Attack",
+    label: "Attack / Block / CD",
     short: "ATK",
     angle: 157.5,
-    statsForClass: () => [pct("Attack", 25)],
+    statsForClass: (classId) => {
+      if (classId === "Priest") return [pct("Block", 25)];
+      if (classId === "Assassin") return [pct("Crit Damage", 25)];
+      return [pct("Attack", 25)];
+    },
   },
   {
     id: "inner-3",
