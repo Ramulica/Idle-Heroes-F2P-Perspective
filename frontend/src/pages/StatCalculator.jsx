@@ -3580,8 +3580,8 @@ export default function StatCalculator() {
                         )}
                       </span>
                       <span className="sc-sigil-chip-body">
-                        <strong>
-                          {mode?.name || "No mode"} · {rarity?.name || "?"}
+                        <strong title={mode?.name || "No mode"}>
+                          {mode?.name || "No mode"}
                         </strong>
                         <span>
                           {sigil.stats

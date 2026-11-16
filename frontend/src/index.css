@@ -6349,27 +6349,30 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .sc-sigil-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
 }
 
 .sc-sigil-empty {
   margin: 0;
+  grid-column: 1 / -1;
 }
 
 .sc-sigil-chip {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  text-align: left;
+  gap: 6px;
+  text-align: center;
   border: 3px solid var(--sigil-border, #888);
   border-radius: 12px;
   background: #fffaf0;
-  padding: 8px 10px;
+  padding: 8px 6px;
   cursor: pointer;
   color: #5a3210;
   opacity: 0.72;
+  min-width: 0;
 }
 
 .sc-sigil-chip.active {
@@ -6379,8 +6382,8 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .sc-sigil-chip-icon {
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 10px;
   border: 2px solid var(--sigil-border, #888);
   overflow: hidden;
@@ -6404,19 +6407,33 @@ button.sc-aura-badge:hover .sc-aura-core {
 .sc-sigil-chip-body {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
   min-width: 0;
+  width: 100%;
 }
 
 .sc-sigil-chip-body strong {
-  font-size: 0.82rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
   color: var(--sigil-color, #5a3210);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .sc-sigil-chip-body span {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
+  line-height: 1.2;
   font-weight: 700;
-  opacity: 0.85;
+  opacity: 0.9;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .sc-sigil-section-title {
