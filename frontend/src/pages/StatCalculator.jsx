@@ -662,6 +662,56 @@ function clampIntField(value, min, max, fallback) {
   return Math.min(max, Math.max(min, n));
 }
 
+const SUGGEST_HELP_ADVANCED = [
+  {
+    heading: "What this is",
+    paragraphs: [
+      "Suggest is a cap advisor, not a full damage simulator. It scores your current totals against Idle Heroes combat caps from community formulas, then ranks a few one-piece swaps (imprint, artifact, enable 1/4, soul stone). Nothing is applied automatically.",
+    ],
+  },
+  {
+    heading: "Hard / soft caps",
+    items: [
+      "Precision 150% — damage multiplier 1 + Prec×0.3 caps here. Extra Precision is soft waste for damage, but still offsets Block 1:1.",
+      "Crit Damage 150% — crit multiplier 1.5 + 2×CD hard-caps; excess is wasted.",
+      "Damage Reduction 75% — mitigation is 1 − DR, capped at 75% (faction advantage can add +0.3 vs DR; noted in copy only).",
+      "All Damage Reduction — no hard cap; treated as more-is-better (also hits true damage).",
+    ],
+  },
+  {
+    heading: "Soft floors (Need more)",
+    paragraphs: [
+      "Stats without a hard cap get soft targets so empty builds get nudged: Skill Damage, All Damage Dealt, Holy, Crit, Block, Control Immunity, Control Precision, and All DR. Priority when reallocating waste: Precision → Crit Damage → DR → Skill / All DMG / Holy / Crit / Energy → CI.",
+    ],
+  },
+  {
+    heading: "Energy & combat round",
+    items: [
+      "Energy < 50 — will not open with an active on Round 1 (T3 / basic branch).",
+      "Energy 50–99 — opens with active; no overflow Skill Damage.",
+      "Energy ≥ 100 — overflow converts 1:1 into Skill Damage on the next active.",
+      "Game start hides T2/T3 origin combat stats; Round 1 applies T2 if Energy ≥ 50, else T3.",
+    ],
+  },
+  {
+    heading: "How swaps are scored",
+    paragraphs: [
+      "For each candidate, the slot is cloned, one piece is swapped, and totals are recomputed. Score favors cutting hard overcap, then soft Precision waste, then closing undercap gaps — and penalizes creating new hard overcap. Top unique suggestions (up to 5) are shown with the expected stat deltas.",
+    ],
+    formula:
+      "score ≈ 3×ΔhardWaste + 1.2×ΔsoftWaste + 2×ΔunderGap − 4×newHardOvercap",
+  },
+  {
+    heading: "Out of scope",
+    items: [
+      "Per-hit damage (Armor×level, DoT Skill Damage formula, true damage lists, round-15 ramp).",
+      "HP / Attack / EHP stacking.",
+      "Auto-apply or full 6-hero lineup optimizer.",
+      "Role profiles (tank vs carry) — universal caps for now.",
+    ],
+  },
+];
+
 function HeroSuggestPanel({ analysis }) {
   if (!analysis) {
     return <p className="muted">Select a hero to see suggestions.</p>;
@@ -1325,10 +1375,24 @@ export default function StatCalculator() {
           onClose={() => setPicker(null)}
           className="sc-modal-suggest"
         >
-          <p className="muted sc-modal-lead">
-            Cap advisor from combat formulas (Precision 150, Crit Damage 150,
-            DR 75, Energy floors). Soft waste still helps vs Block.
-          </p>
+          <div className="sc-suggest-lead">
+            <p className="muted sc-modal-lead">
+              Cap advisor from combat formulas (Precision 150, Crit Damage 150,
+              DR 75, Energy floors). Soft waste still helps vs Block.
+            </p>
+            <HelpTip
+              title="Suggest algorithm"
+              message="Opens Too much / Need more / Suggested changes for this hero. Recommendations are hints only — change imprint, artifact, enable, or stone yourself."
+              steps={[
+                "Too much lists stats past combat caps, with which sources add the waste.",
+                "Need more lists soft floors and missing amounts toward targets.",
+                "Suggested changes ranks one-piece swaps that cut waste or fill gaps.",
+                "Energy / round notes how starting Energy interacts with Round 1.",
+                "Tap Advanced in this tip for the scoring math and formula sources.",
+              ]}
+              advanced={SUGGEST_HELP_ADVANCED}
+            />
+          </div>
           <HeroSuggestPanel analysis={analysis} />
         </Modal>
       );

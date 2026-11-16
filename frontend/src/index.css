@@ -4054,6 +4054,23 @@ input[type="range"] {
   max-width: min(560px, 96vw);
 }
 
+.sc-suggest-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sc-suggest-lead .sc-modal-lead {
+  flex: 1;
+  margin: 0;
+}
+
+.sc-suggest-lead .info-btn {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .sc-suggest {
   display: flex;
   flex-direction: column;
