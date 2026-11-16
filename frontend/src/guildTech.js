@@ -105,7 +105,7 @@ export const GUILD_TECH_INNER_NODES = [
       if (classId === "Mage" || classId === "Ranger")
         return [pct("Precision", 15)];
       if (classId === "Assassin") return [pct("Armor Break", 15)];
-      return [flat("Speed", 40)];
+      return [flat("Speed", 60)];
     },
   },
   {
