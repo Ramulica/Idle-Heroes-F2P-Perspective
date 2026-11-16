@@ -50,6 +50,20 @@ const GAME_MODE_TARGETS = [
   { id: "star-expedition", name: "Star Expedition" },
   { id: "aurora-sanctuary", name: "Aurora Sanctuary" },
   { id: "forbidden-zone-showdown", name: "Forbidden Zone Showdown" },
+  // Train "Feature" labels that may not match board mode ids 1:1
+  { id: "campaign", name: "Campaign" },
+  { id: "ethereal-realm", name: "Ethereal Realm" },
+  { id: "void-ark", name: "Void Ark" },
+  { id: "tower-of-oblivion", name: "Tower of Oblivion" },
+  { id: "forbidden-zone", name: "Forbidden Zone" },
+];
+
+const GAME_MODE_ALIASES = [
+  [/^inter[-\s]?dimensional\s+arena$/i, "Interdimensional Arena"],
+  [/^trial\s+of\s+the\s+champion$/i, "Trial of the Champion"],
+  [/^free\s+team[-\s]?up\s+arena$/i, "Free Team-up Arena"],
+  [/^forbidden\s+zone(?:\s+showdown)?$/i, "Forbidden Zone"],
+  [/^void\s+campaign$/i, "Void Campaign"],
 ];
 
 /** Known / common Train stat names for OCR cleanup. */
@@ -211,8 +225,14 @@ function resolveClass(raw) {
 }
 
 function resolveGameModeTarget(raw) {
-  const t = String(raw || "").trim();
+  let t = String(raw || "").trim();
   if (!t) return null;
+  for (const [re, canon] of GAME_MODE_ALIASES) {
+    if (re.test(t)) {
+      t = canon;
+      break;
+    }
+  }
   const lower = t.toLowerCase();
   const byName = GAME_MODE_TARGETS.find((g) => g.name.toLowerCase() === lower);
   if (byName) return byName.name;
@@ -220,6 +240,7 @@ function resolveGameModeTarget(raw) {
   if (byId) return byId.name;
   const fuzzy = GAME_MODE_TARGETS.find(
     (g) =>
+      g.name.toLowerCase() === lower ||
       g.name.toLowerCase().includes(lower) ||
       lower.includes(g.name.toLowerCase())
   );
@@ -408,44 +429,28 @@ export function buildTrainMatrix(train) {
 }
 
 /** In-game exclusive type group for Train headers (OCR may say Feature). */
-const EXCLUSIVE_TYPE =
-  "Faction|Class|Feature|Game\\s*Mode|Gamemode|Mode";
+const EXCLUSIVE_TYPE_RE =
+  /Faction|Class|Feature|Game\s*Mode|Gamemode|Mode/i;
 
 /**
  * Parse OCR / pasted Train text into sections.
+ * Multi-feature screenshots often come back as one long line; we scan for
+ * every Exclusive/Basic marker instead of relying on newlines.
  */
 export function parseTrainText(text) {
   const raw = String(text || "")
     .replace(/\r/g, "\n")
     .replace(/[|]/g, "I")
+    .replace(/[“”"']/g, "")
+    .replace(/[【〔［]/g, "[")
+    .replace(/[】〕］]/g, "]")
     .replace(/\u00a0/g, " ");
   if (!raw.trim()) return defaultTrain();
 
-  // Force headers onto their own lines (OCR often glues them onto the next stat).
-  // Example: "Exclusive for (Feature): [Void Campaign] Skill Damage +52.5%"
-  const exclusiveHeader =
-    `Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[[^\\]]+\\]`;
-  const flat = raw
-    .replace(/\s*(Basic\s+Attribute\s+Bonus)/gi, "\n$1\n")
-    .replace(new RegExp(`\\s*(${exclusiveHeader})`, "gi"), "\n$1\n")
-    .replace(
-      new RegExp(
-        `\\s*(Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*[^\\n\\[]+)`,
-        "gi"
-      ),
-      "\n$1\n"
-    )
-    .replace(/\n+/g, "\n")
-    .trim();
+  const flat = raw.replace(/[ \t]+/g, " ").replace(/\n+/g, "\n").trim();
 
-  const headerRe = new RegExp(
-    `(?:^|\\n)\\s*(Basic\\s+Attribute\\s+Bonus|Exclusive\\s+for\\s*\\(\\s*(${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[?\\s*([^\\n\\]]+?)\\s*\\]?)\\s*(?=\\n|$)`,
-    "gi"
-  );
-
-  const matches = [...flat.matchAll(headerRe)];
-  if (matches.length === 0) {
-    // Fallback: try whole blob as basic stats
+  const markers = findTrainMarkers(flat);
+  if (markers.length === 0) {
     const stats = splitStatBody(flat);
     if (!stats.length) return defaultTrain();
     return normalizeTrain({
@@ -454,46 +459,126 @@ export function parseTrainText(text) {
   }
 
   const sections = [];
-  for (let i = 0; i < matches.length; i++) {
-    const m = matches[i];
-    const start = m.index + m[0].length;
-    const end = i + 1 < matches.length ? matches[i + 1].index : flat.length;
-    const body = flat.slice(start, end);
-    const header = m[1] || "";
-    let kind = "basic";
-    let target = null;
-    if (/^Basic/i.test(header)) {
-      kind = "basic";
-    } else {
-      const type = String(m[2] || "").toLowerCase().replace(/\s+/g, " ");
-      target = String(m[3] || "").replace(/[\]\[]/g, "").trim();
-      if (type.startsWith("faction")) kind = "faction";
-      else if (type.startsWith("class")) kind = "class";
-      else kind = "gamemode"; // Feature / Game Mode / Mode
-    }
-    const stats = splitStatBody(body);
-    sections.push({ kind, target, stats });
+  for (let i = 0; i < markers.length; i++) {
+    const marker = markers[i];
+    const end = i + 1 < markers.length ? markers[i + 1].index : flat.length;
+    const body = flat.slice(marker.bodyStart, end);
+    sections.push({
+      kind: marker.kind,
+      target: marker.target,
+      stats: splitStatBody(body),
+    });
   }
   return normalizeTrain({ sections });
 }
 
+const KNOWN_EXCLUSIVE_TARGETS = [
+  ...GAME_MODE_TARGETS.map((g) => g.name),
+  ...FACTIONS,
+  ...CLASSES,
+].sort((a, b) => b.length - a.length);
+
+function extractExclusiveTarget(afterColon) {
+  const slice = String(afterColon || "").replace(/^\s+/, "");
+  const bracket = slice.match(/^\[([^\]]+)\]/);
+  if (bracket) {
+    return { raw: bracket[1].trim(), consumed: bracket[0].length };
+  }
+  for (const name of KNOWN_EXCLUSIVE_TARGETS) {
+    const re = new RegExp(
+      `^(${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})(?=\\s|[.,]|$)`,
+      "i"
+    );
+    const hit = slice.match(re);
+    if (hit) {
+      return { raw: hit[1], consumed: hit[0].length };
+    }
+  }
+  // Fallback: take title-case words until a "Stat +value" pattern begins.
+  const fallback = slice.match(
+    /^([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,4})(?=\s+[A-Z][A-Za-z].*?\+)/
+  );
+  if (fallback) {
+    return { raw: fallback[1].trim(), consumed: fallback[1].length };
+  }
+  return null;
+}
+
+function findTrainMarkers(text) {
+  const markers = [];
+  const basicRe = /Basic\s+Attribute\s+Bonus/gi;
+  let m;
+  while ((m = basicRe.exec(text)) !== null) {
+    markers.push({
+      index: m.index,
+      bodyStart: m.index + m[0].length,
+      kind: "basic",
+      target: null,
+    });
+  }
+
+  const exclusiveHeadRe = /Exclusive\s+for\s*\(\s*([^)]+?)\s*\)\s*:/gi;
+  while ((m = exclusiveHeadRe.exec(text)) !== null) {
+    const typeRaw = String(m[1] || "").trim();
+    if (!EXCLUSIVE_TYPE_RE.test(typeRaw)) continue;
+    const after = text.slice(m.index + m[0].length);
+    const extracted = extractExclusiveTarget(after);
+    if (!extracted?.raw) continue;
+    const type = typeRaw.toLowerCase().replace(/\s+/g, " ");
+    let kind = "gamemode";
+    let target = extracted.raw;
+    if (type.startsWith("faction")) {
+      kind = "faction";
+      target = resolveFaction(extracted.raw);
+    } else if (type.startsWith("class")) {
+      kind = "class";
+      target = resolveClass(extracted.raw);
+    } else {
+      target = resolveGameModeTarget(extracted.raw);
+    }
+    markers.push({
+      index: m.index,
+      bodyStart: m.index + m[0].length + extracted.consumed,
+      kind,
+      target,
+    });
+  }
+
+  markers.sort((a, b) => a.index - b.index);
+  const out = [];
+  let lastBody = -1;
+  for (const marker of markers) {
+    if (marker.index < lastBody) continue;
+    out.push(marker);
+    lastBody = marker.bodyStart;
+  }
+  return out;
+}
+
 function splitStatBody(body) {
   const cleaned = String(body || "")
-    // Drop any exclusive header fragments that leaked into the body.
     .replace(
-      new RegExp(
-        `Exclusive\\s+for\\s*\\(\\s*(?:${EXCLUSIVE_TYPE})\\s*\\)\\s*:\\s*\\[[^\\]]*\\]`,
-        "gi"
-      ),
+      /Exclusive\s+for\s*\(\s*[^)]+?\s*\)\s*:\s*(?:\[[^\]]*\]|[A-Za-z][A-Za-z0-9 \-']*)/gi,
       " "
     )
+    .replace(/Basic\s+Attribute\s+Bonus/gi, " ")
     .replace(/\n+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (!cleaned) return [];
-  // Split on commas that precede a new stat (letter after comma)
-  const parts = cleaned.split(/,(?=\s*[A-Za-z])/);
+
+  // Global "Stat +value" matches — commas are often lost by OCR on dense blocks.
+  const tokenRe =
+    /([A-Za-z][A-Za-z][A-Za-z0-9\-]*(?:\s+(?:of|by|for|and|the|vs|against|[A-Za-z][A-Za-z0-9\-]*)){0,6})\s*\+\s*(-?[\d,]+(?:\.\d+)?)\s*(%)?/gi;
   const stats = [];
+  let m;
+  while ((m = tokenRe.exec(cleaned)) !== null) {
+    const row = parseStatToken(`${m[1]} +${m[2]}${m[3] || ""}`);
+    if (row) stats.push(row);
+  }
+  if (stats.length) return stats;
+
+  const parts = cleaned.split(/,(?=\s*[A-Za-z])/);
   for (const part of parts) {
     const row = parseStatToken(part);
     if (row) stats.push(row);
@@ -524,11 +609,12 @@ export function preprocessTrainImage(source) {
           const r = d[i];
           const g = d[i + 1];
           const b = d[i + 2];
-          // Prefer green channel (stat text), boost contrast, invert for dark UI
-          let y = 0.15 * r + 0.7 * g + 0.15 * b;
-          y = (y - 90) * 1.55 + 90;
+          // Keep both white headers and green stats bright before invert.
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          let y = Math.max(luma, g);
+          y = (y - 70) * 1.7 + 70;
           y = 255 - y;
-          const v = y < 110 ? 0 : y > 170 ? 255 : y;
+          const v = y < 120 ? 0 : y > 180 ? 255 : y;
           d[i] = d[i + 1] = d[i + 2] = v;
         }
         ctx.putImageData(imageData, 0, 0);
@@ -562,6 +648,10 @@ export async function ocrTrainImage(fileOrBlob, onProgress) {
     },
   });
   try {
+    await worker.setParameters({
+      tessedit_pageseg_mode: "6", // assume a uniform block of text
+      preserve_interword_spaces: "1",
+    });
     const {
       data: { text },
     } = await worker.recognize(canvas);
