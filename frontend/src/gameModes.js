@@ -77,6 +77,22 @@ export function normalizeGameModeId(raw) {
   return GAME_MODE_BY_ID[raw] ? raw : null;
 }
 
+/** Board combat timing for attack/ability-triggered stats (T2/T3 origin). */
+export const COMBAT_ROUNDS = [
+  { id: "start", label: "Game start" },
+  { id: "round1", label: "Round 1" },
+];
+
+export const DEFAULT_COMBAT_ROUND = "start";
+
+export function normalizeCombatRound(raw) {
+  return raw === "round1" ? "round1" : DEFAULT_COMBAT_ROUND;
+}
+
+export function combatRoundOf(id) {
+  return COMBAT_ROUNDS.find((row) => row.id === id) || COMBAT_ROUNDS[0];
+}
+
 /** Whether a breakdown source applies under the current game mode. */
 export function sourceAllowedInGameMode(sourceId, gameModeId) {
   if (!GAME_MODE_ONLY_SOURCES.has(sourceId)) return true;

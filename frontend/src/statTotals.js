@@ -27,7 +27,14 @@ import { collectSkinStatRows } from "./skins";
 import { collectStarspawnStatRows } from "./starspawns";
 import { collectSigilStatRows } from "./sigils";
 import { collectTrainStatRows } from "./trainStats";
-import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
+import {
+  gameModeOf,
+  normalizeCombatRound,
+  sourceAllowedInGameMode,
+} from "./gameModes";
+
+/** Starting Energy needed to open with active (T2 / subActive) on Round 1. */
+const ORIGIN_ACTIVE_ENERGY = 50;
 
 /** Source rows for the hero breakdown table (id = first column). */
 export const STAT_SOURCES = [
@@ -279,7 +286,12 @@ function collectHeroKit(slot) {
   return map;
 }
 
-function collectTreeOfOrigin(slot) {
+/**
+ * Tree of Origin: always apply Speed.
+ * T2 (subActive) / T3 (subP1) combat stats only on Round 1 — active if
+ * Energy ≥ 50, otherwise the T3 passive-attack branch.
+ */
+function collectTreeOfOrigin(slot, { combatRound = "start", energy = 0 } = {}) {
   const map = emptyMap();
   const hero = heroOf(slot?.heroId);
   if (!hero) return map;
@@ -288,9 +300,14 @@ function collectTreeOfOrigin(slot) {
   if (originSpeed) {
     addRow(map, { stat: "Speed", value: originSpeed, unit: "" });
   }
+  if (normalizeCombatRound(combatRound) !== "round1") return map;
+
+  const wantOptional =
+    Number(energy) >= ORIGIN_ACTIVE_ENERGY ? "subActive" : "subP1";
   const optionals = slot?.progress?.optionals || {};
   for (const row of hero.originSubs || []) {
-    if (!row?.optionalId || !optionals[row.optionalId]) continue;
+    if (!row?.optionalId || row.optionalId !== wantOptional) continue;
+    if (!optionals[row.optionalId]) continue;
     addRow(map, {
       stat: row.stat,
       value: row.value,
@@ -298,6 +315,16 @@ function collectTreeOfOrigin(slot) {
     });
   }
   return map;
+}
+
+function energyFromSourceMaps(bySource) {
+  let energy = 0;
+  for (const source of STAT_SOURCES) {
+    const map = bySource[source.id];
+    if (!map) continue;
+    energy += Number(map.get("Energy|") || 0);
+  }
+  return energy;
 }
 
 function collectImprintInfusion(slot) {
@@ -456,9 +483,20 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns, sigils, train }
+  {
+    aura,
+    monster,
+    cloudIsland,
+    gameModeId,
+    combatRound,
+    guildTech,
+    starspawns,
+    sigils,
+    train,
+  }
 ) {
   const guild = collectGuildTech(slot, guildTech);
+  const round = normalizeCombatRound(combatRound);
   const bySource = {
     hero_kit: collectHeroKit(slot),
     gear: collectGear(slot),
@@ -466,7 +504,8 @@ export function computeHeroStatBreakdown(
     soul_stone: collectSoulStone(slot),
     enables: collectEnables(slot, gameModeId),
     imprints: collectImprints(slot),
-    tree_of_origin: collectTreeOfOrigin(slot),
+    // Speed first; combat T2/T3 filled after Energy is known.
+    tree_of_origin: collectTreeOfOrigin(slot, { combatRound: "start" }),
     imprint_infusion: collectImprintInfusion(slot),
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
@@ -485,6 +524,11 @@ export function computeHeroStatBreakdown(
       bySource[source.id] = emptySourceMap();
     }
   }
+
+  bySource.tree_of_origin = collectTreeOfOrigin(slot, {
+    combatRound: round,
+    energy: energyFromSourceMaps(bySource),
+  });
 
   const totals = emptyMap();
   for (const source of STAT_SOURCES) {
@@ -562,6 +606,7 @@ export function computeBoardStatTotals(board) {
   const monster = board?.monster || null;
   const cloudIsland = board?.cloudIsland;
   const gameModeId = board?.gameModeId || null;
+  const combatRound = normalizeCombatRound(board?.combatRound);
   const guildTech = board?.guildTech;
   const starspawns = board?.starspawns;
   const sigils = board?.sigils;
@@ -572,6 +617,7 @@ export function computeBoardStatTotals(board) {
       monster,
       cloudIsland,
       gameModeId,
+      combatRound,
       guildTech,
       starspawns,
       sigils,

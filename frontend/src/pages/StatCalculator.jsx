@@ -120,7 +120,12 @@ import {
   skinOf,
   skinsForHero,
 } from "../skins";
-import { GAME_MODES, gameModeOf } from "../gameModes";
+import {
+  COMBAT_ROUNDS,
+  GAME_MODES,
+  gameModeOf,
+  normalizeCombatRound,
+} from "../gameModes";
 import {
   GUILD_TECH_CLASSES,
   GUILD_TECH_CLASS_BY_ID,
@@ -3571,6 +3576,26 @@ export default function StatCalculator() {
                   <span>Select game mode</span>
                 )}
               </button>
+              <label className="sc-combat-round">
+                <select
+                  className="sc-summary-stats-toggle sc-combat-round-select"
+                  aria-label="Combat round"
+                  value={normalizeCombatRound(board.combatRound)}
+                  onChange={(e) =>
+                    updateBoard({
+                      ...board,
+                      combatRound: normalizeCombatRound(e.target.value),
+                    })
+                  }
+                  title="Game start = before attacks. Round 1 = after first attack/ability (T2 if Energy ≥ 50, else T3)."
+                >
+                  {COMBAT_ROUNDS.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
           <div className="sc-summary-grid">

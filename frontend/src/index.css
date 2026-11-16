@@ -3889,6 +3889,18 @@ input[type="range"] {
   flex: 0 0 auto;
 }
 
+.sc-combat-round {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+}
+
+.sc-combat-round-select {
+  appearance: auto;
+  max-width: min(150px, 42vw);
+  cursor: pointer;
+}
+
 .sc-pick-grid-game-modes {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

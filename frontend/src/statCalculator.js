@@ -630,7 +630,7 @@ import {
   normalizeTenants,
 } from "./tenantsCloud";
 import { defaultSkin, normalizeSkin } from "./skins";
-import { normalizeGameModeId } from "./gameModes";
+import { normalizeCombatRound, normalizeGameModeId } from "./gameModes";
 import { defaultGuildTech, normalizeGuildTech } from "./guildTech";
 import { defaultStarspawns, normalizeStarspawns } from "./starspawns";
 import { defaultSigils, normalizeSigils } from "./sigils";
@@ -662,6 +662,7 @@ export function emptyBoard() {
     monster: null,
     cloudIsland: defaultCloudIsland(),
     gameModeId: null,
+    combatRound: "start",
     guildTech: defaultGuildTech(),
     starspawns: defaultStarspawns(),
     sigils: defaultSigils(),
@@ -684,6 +685,7 @@ export function cloneBoard(board) {
     monster: normalizeMonster(src.monster, src.monsterId),
     cloudIsland: normalizeCloudIsland(src.cloudIsland),
     gameModeId: normalizeGameModeId(src.gameModeId),
+    combatRound: normalizeCombatRound(src.combatRound),
     guildTech: normalizeGuildTech(src.guildTech),
     starspawns: normalizeStarspawns(src.starspawns),
     sigils: normalizeSigils(src.sigils),
