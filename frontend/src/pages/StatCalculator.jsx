@@ -152,8 +152,8 @@ import {
   upsertSigil,
 } from "../sigils";
 import {
+  buildTrainMatrix,
   clearTrain,
-  formatTrainSectionLabel,
   mergeTrainSections,
   normalizeTrain,
   ocrTrainImage,
@@ -839,6 +839,7 @@ export default function StatCalculator() {
   const board = state.board;
   const monster = board.monster;
   const train = normalizeTrain(board.train);
+  const trainMatrix = useMemo(() => buildTrainMatrix(train), [train]);
 
   async function runTrainOcrOnFiles(fileList) {
     const files = Array.from(fileList || []).filter(
@@ -3870,80 +3871,53 @@ export default function StatCalculator() {
               </div>
             </div>
 
-            {train.sections.length === 0 ? (
+            {trainMatrix.rows.length === 0 ? (
               <p className="muted sc-train-empty">
                 No Train stats yet. Tap Load screenshot to paste or pick images.
               </p>
             ) : (
               <div className="sc-train-table-wrap">
-                <table className="sc-train-table sc-train-table-stats">
+                <table className="sc-train-table sc-train-table-matrix">
                   <thead>
                     <tr>
-                      <th>Exclusive</th>
-                      <th>Stat</th>
-                      <th className="sc-train-col-value">Value</th>
+                      <th className="sc-train-sticky-col">Exclusive</th>
+                      {trainMatrix.columns.map((col) => (
+                        <th key={col.key} title={`${col.stat}${col.unit === "%" ? " %" : ""} · in ${col.count}`}>
+                          {col.stat}
+                          {col.unit === "%" ? "%" : ""}
+                        </th>
+                      ))}
                       <th aria-label="Remove" />
                     </tr>
                   </thead>
                   <tbody>
-                    {train.sections.map((section) =>
-                      section.stats.map((stat, index) => {
-                        const value =
-                          Number.isFinite(Number(stat.value)) &&
-                          Number(stat.value) !== 0
-                            ? stat.unit === "%"
-                              ? `+${
-                                  Number.isInteger(Number(stat.value))
-                                    ? String(stat.value)
-                                    : String(Math.round(Number(stat.value) * 10) / 10)
-                                }%`
-                              : `+${
-                                  Number.isInteger(Number(stat.value))
-                                    ? Number(stat.value).toLocaleString("en-US")
-                                    : String(Math.round(Number(stat.value) * 10) / 10)
-                                }`
-                            : "—";
-                        return (
-                          <tr key={`${section.id}-${stat.stat}-${index}`}>
-                            {index === 0 ? (
-                              <td
-                                className="sc-train-exclusive"
-                                rowSpan={section.stats.length}
-                              >
-                                <strong>
-                                  {formatTrainSectionLabel(section)}
-                                </strong>
-                              </td>
-                            ) : null}
-                            <td>{stat.stat}</td>
-                            <td className="sc-train-col-value">{value}</td>
-                            {index === 0 ? (
-                              <td
-                                className="sc-train-actions-cell"
-                                rowSpan={section.stats.length}
-                              >
-                                <button
-                                  type="button"
-                                  className="sc-train-remove"
-                                  title="Remove section"
-                                  onClick={() =>
-                                    updateBoard({
-                                      ...board,
-                                      train: removeTrainSection(
-                                        board.train,
-                                        section.id
-                                      ),
-                                    })
-                                  }
-                                >
-                                  ×
-                                </button>
-                              </td>
-                            ) : null}
-                          </tr>
-                        );
-                      })
-                    )}
+                    {trainMatrix.rows.map((row) => (
+                      <tr key={row.id}>
+                        <th className="sc-train-sticky-col sc-train-exclusive" scope="row">
+                          {row.label}
+                        </th>
+                        {trainMatrix.columns.map((col) => (
+                          <td key={col.key} className="sc-train-col-value">
+                            {row.values[col.key] || "—"}
+                          </td>
+                        ))}
+                        <td className="sc-train-actions-cell">
+                          <button
+                            type="button"
+                            className="sc-train-remove"
+                            title="Remove section"
+                            onClick={() =>
+                              updateBoard({
+                                ...board,
+                                train: removeTrainSection(board.train, row.id),
+                              })
+                            }
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

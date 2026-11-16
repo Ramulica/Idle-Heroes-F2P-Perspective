@@ -6860,56 +6860,72 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .sc-train-table-wrap {
   overflow: auto;
-  max-height: 420px;
+  max-height: 480px;
   border: 1px solid #c9a46a;
   border-radius: 10px;
   background: #fffaf0;
 }
 
 .sc-train-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.72rem;
   color: #5a3210;
 }
 
 .sc-train-table th,
 .sc-train-table td {
-  padding: 8px 10px;
+  padding: 7px 8px;
   border-bottom: 1px solid #e2c896;
+  border-right: 1px solid #ead7b0;
   text-align: left;
   vertical-align: middle;
 }
 
-.sc-train-table th {
+.sc-train-table thead th {
   position: sticky;
   top: 0;
   background: #f5e2b8;
   font-weight: 900;
-  z-index: 1;
+  z-index: 2;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sc-train-table-stats tbody tr:nth-child(even) {
+.sc-train-table-matrix tbody tr:nth-child(even) td,
+.sc-train-table-matrix tbody tr:nth-child(even) th {
   background: color-mix(in srgb, #f3e2c0 55%, #fffaf0);
 }
 
-.sc-train-exclusive {
+.sc-train-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   background: #f7ebcf;
-  border-right: 1px solid #e2c896;
-  min-width: 120px;
-  max-width: 160px;
-  vertical-align: top;
+  min-width: 132px;
+  max-width: 170px;
+  white-space: normal;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #7a3f12;
+  border-right: 2px solid #c9a46a;
 }
 
-.sc-train-exclusive strong {
-  color: #7a3f12;
-  font-size: 0.74rem;
-  line-height: 1.25;
-  white-space: normal;
+.sc-train-table thead .sc-train-sticky-col {
+  z-index: 3;
+  background: #efd7a0;
+}
+
+.sc-train-exclusive {
+  vertical-align: middle;
 }
 
 .sc-train-col-value {
-  width: 88px;
+  min-width: 64px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -6920,6 +6936,17 @@ button.sc-aura-badge:hover .sc-aura-core {
 .sc-train-table th:last-child {
   width: 40px;
   text-align: center;
+  position: sticky;
+  right: 0;
+  background: #f7ebcf;
+  z-index: 1;
+  border-left: 2px solid #c9a46a;
+  border-right: none;
+}
+
+.sc-train-table thead th:last-child {
+  z-index: 3;
+  background: #efd7a0;
 }
 
 .sc-train-remove {

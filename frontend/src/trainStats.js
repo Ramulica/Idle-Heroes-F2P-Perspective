@@ -6,6 +6,18 @@
 
 const KINDS = new Set(["basic", "faction", "class", "gamemode"]);
 
+/** Flat + % HP/Attack stay out of the Train table and totals. */
+export const HIDDEN_TRAIN_STATS = new Set([
+  "HP",
+  "Attack",
+  "Fixed HP",
+  "Fixed Attack",
+]);
+
+export function isHiddenTrainStat(stat) {
+  return HIDDEN_TRAIN_STATS.has(String(stat || "").trim());
+}
+
 const FACTIONS = [
   "Transcendence",
   "Shadow",
@@ -177,7 +189,7 @@ function parseStatToken(token) {
 function normalizeStatRow(raw) {
   if (!raw || typeof raw !== "object") return null;
   const stat = normalizeStatName(raw.stat);
-  if (!stat) return null;
+  if (!stat || isHiddenTrainStat(stat)) return null;
   const n = Number(raw.value);
   if (!Number.isFinite(n) || n === 0) return null;
   const unit = raw.unit === "%" ? "%" : "";
@@ -305,13 +317,94 @@ export function formatTrainStat(row) {
   return row.unit === "%" ? `${row.stat} +${shown}%` : `${row.stat} +${shown}`;
 }
 
+export function formatTrainStatValue(row) {
+  if (!row) return "—";
+  const n = Number(row.value);
+  if (!Number.isFinite(n) || n === 0) return "—";
+  const shown = Number.isInteger(n)
+    ? n.toLocaleString("en-US")
+    : String(Math.round(n * 10) / 10);
+  return row.unit === "%" ? `+${shown}%` : `+${shown}`;
+}
+
 export function formatTrainSectionLabel(section) {
   if (!section) return "—";
-  if (section.kind === "basic") return "Basic Attribute Bonus";
+  if (section.kind === "basic") return "Basic";
   if (section.kind === "faction") return `Faction · ${section.target}`;
   if (section.kind === "class") return `Class · ${section.target}`;
   if (section.kind === "gamemode") return `Game mode · ${section.target}`;
   return section.kind;
+}
+
+function trainStatKey(stat, unit = "") {
+  return `${stat}|${unit || ""}`;
+}
+
+function sectionSortRank(section) {
+  const kindOrder = { basic: 0, faction: 1, class: 2, gamemode: 3 };
+  const kind = kindOrder[section.kind] ?? 9;
+  const target = String(section.target || "").toLowerCase();
+  return { kind, target };
+}
+
+/**
+ * Pivot Train data for the UI table:
+ * rows = exclusives (basic / faction / class / gamemode),
+ * columns = stats ordered by how many sections have them.
+ */
+export function buildTrainMatrix(train) {
+  const data = normalizeTrain(train);
+  const sections = data.sections
+    .map((section) => ({
+      ...section,
+      stats: section.stats.filter((s) => !isHiddenTrainStat(s.stat)),
+    }))
+    .filter((section) => section.stats.length > 0)
+    .sort((a, b) => {
+      const ra = sectionSortRank(a);
+      const rb = sectionSortRank(b);
+      if (ra.kind !== rb.kind) return ra.kind - rb.kind;
+      return ra.target.localeCompare(rb.target);
+    });
+
+  const counts = new Map();
+  for (const section of sections) {
+    const seen = new Set();
+    for (const row of section.stats) {
+      const key = trainStatKey(row.stat, row.unit);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const cur = counts.get(key) || {
+        key,
+        stat: row.stat,
+        unit: row.unit || "",
+        count: 0,
+      };
+      cur.count += 1;
+      counts.set(key, cur);
+    }
+  }
+
+  const columns = [...counts.values()].sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.stat.localeCompare(b.stat) || (a.unit || "").localeCompare(b.unit || "");
+  });
+
+  const rows = sections.map((section) => {
+    const values = {};
+    for (const row of section.stats) {
+      const key = trainStatKey(row.stat, row.unit);
+      values[key] = formatTrainStatValue(row);
+    }
+    return {
+      id: section.id,
+      section,
+      label: formatTrainSectionLabel(section),
+      values,
+    };
+  });
+
+  return { columns, rows };
 }
 
 /**
@@ -495,6 +588,7 @@ export function collectTrainStatRows(train, hero, gameModeId) {
       continue;
     }
     for (const stat of section.stats) {
+      if (isHiddenTrainStat(stat.stat)) continue;
       rows.push({ ...stat });
     }
   }
