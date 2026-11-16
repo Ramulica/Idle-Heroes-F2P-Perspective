@@ -162,7 +162,7 @@ export const STARSPAWNS = [
   {
     id: "trial",
     name: "Spirit of Trial",
-    icon: iconTrial,
+    icon: iconCrystal,
     maxLevel: 180,
     bonus: bonus("Shadow / Assassins", 30, {
       factions: ["Shadow"],
@@ -184,7 +184,7 @@ export const STARSPAWNS = [
   {
     id: "crystal",
     name: "Spirit of Crystal",
-    icon: iconCrystal,
+    icon: iconTrial,
     maxLevel: 180,
     bonus: bonus("Transcendence / Rangers", 30, {
       factions: ["Transcendence"],
