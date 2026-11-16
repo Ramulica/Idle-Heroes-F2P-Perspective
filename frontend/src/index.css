@@ -6724,3 +6724,133 @@ button.sc-aura-badge:hover .sc-aura-core {
   flex-direction: column;
   gap: 8px;
 }
+
+.sc-train-card {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 2px solid #8a5a2a;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff6e4, #f3e2c0);
+}
+
+.sc-train-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.sc-train-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-train-head-title h2 {
+  margin: 0;
+}
+
+.sc-train-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sc-train-file {
+  display: none;
+}
+
+.sc-train-load {
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #5a3210;
+  font-weight: 800;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.sc-train-load:hover:not(:disabled) {
+  background: #ffe8b8;
+}
+
+.sc-train-load:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.sc-train-clear {
+  padding: 8px 12px;
+}
+
+.sc-train-empty,
+.sc-train-error {
+  margin: 0;
+}
+
+.sc-train-error {
+  color: #9b1c1c;
+  margin-bottom: 8px;
+}
+
+.sc-train-table-wrap {
+  overflow: auto;
+  max-height: 320px;
+  border: 1px solid #c9a46a;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.sc-train-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  color: #5a3210;
+}
+
+.sc-train-table th,
+.sc-train-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2c896;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sc-train-table th {
+  position: sticky;
+  top: 0;
+  background: #f5e2b8;
+  font-weight: 900;
+  z-index: 1;
+}
+
+.sc-train-table td:last-child,
+.sc-train-table th:last-child {
+  width: 36px;
+  text-align: center;
+}
+
+.sc-train-table strong {
+  color: #7a3f12;
+  white-space: nowrap;
+}
+
+.sc-train-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid #8a5a2a;
+  background: transparent;
+  color: #8a5a2a;
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sc-train-remove:hover {
+  background: #f5e6c8;
+}

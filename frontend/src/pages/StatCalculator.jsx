@@ -151,6 +151,15 @@ import {
   statSlotsForRarity,
   upsertSigil,
 } from "../sigils";
+import {
+  clearTrain,
+  formatTrainSectionLabel,
+  formatTrainStat,
+  mergeTrainSections,
+  normalizeTrain,
+  ocrTrainImage,
+  removeTrainSection,
+} from "../trainStats";
 
 function AuraBadge({ aura, onClick, interactive = true }) {
   const slots = aura.slotFactions;
@@ -825,9 +834,12 @@ export default function StatCalculator() {
   const [picker, setPicker] = useState(null);
   const [saveName, setSaveName] = useState("");
   const [summaryStatsOpen, setSummaryStatsOpen] = useState(false);
+  const [trainOcr, setTrainOcr] = useState(null);
+  const trainFileRef = useRef(null);
 
   const board = state.board;
   const monster = board.monster;
+  const train = normalizeTrain(board.train);
 
   const summarySlots = useMemo(
     () =>
@@ -3616,6 +3628,175 @@ export default function StatCalculator() {
                 })
               )}
             </div>
+          </section>
+
+          <section
+            className="sc-train-card"
+            tabIndex={0}
+            onPaste={async (e) => {
+              if (trainOcr?.status === "running") return;
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              let file = null;
+              for (const item of items) {
+                if (item.type?.startsWith("image/")) {
+                  file = item.getAsFile();
+                  break;
+                }
+              }
+              if (!file) return;
+              e.preventDefault();
+              setTrainOcr({ status: "running", progress: 0, error: null });
+              try {
+                const parsed = await ocrTrainImage(file, (progress) => {
+                  setTrainOcr({
+                    status: "running",
+                    progress,
+                    error: null,
+                  });
+                });
+                updateBoard({
+                  ...board,
+                  train: mergeTrainSections(board.train, parsed),
+                });
+                setTrainOcr({
+                  status: "done",
+                  progress: 100,
+                  error:
+                    parsed.sections.length === 0
+                      ? "No Train sections found — try a clearer crop."
+                      : null,
+                });
+              } catch (err) {
+                setTrainOcr({
+                  status: "error",
+                  progress: 0,
+                  error: err?.message || "OCR failed",
+                });
+              }
+            }}
+          >
+            <div className="calc-row-head sc-train-head">
+              <div className="sc-train-head-title">
+                <h2>Train</h2>
+                <HelpTip message="Load a Train stats screenshot (or focus this card and paste). OCR runs in your browser (not on the server). Basic + matching class/faction always apply; game-mode exclusives only when that mode is selected. Multiple screenshots merge by exclusive." />
+              </div>
+              <div className="sc-train-actions">
+                <input
+                  ref={trainFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="sc-train-file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    setTrainOcr({ status: "running", progress: 0, error: null });
+                    try {
+                      const parsed = await ocrTrainImage(file, (progress) => {
+                        setTrainOcr({
+                          status: "running",
+                          progress,
+                          error: null,
+                        });
+                      });
+                      updateBoard({
+                        ...board,
+                        train: mergeTrainSections(board.train, parsed),
+                      });
+                      setTrainOcr({
+                        status: "done",
+                        progress: 100,
+                        error:
+                          parsed.sections.length === 0
+                            ? "No Train sections found — try a clearer crop."
+                            : null,
+                      });
+                    } catch (err) {
+                      setTrainOcr({
+                        status: "error",
+                        progress: 0,
+                        error: err?.message || "OCR failed",
+                      });
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="sc-train-load"
+                  disabled={trainOcr?.status === "running"}
+                  onClick={() => trainFileRef.current?.click()}
+                >
+                  {trainOcr?.status === "running"
+                    ? `Reading… ${trainOcr.progress || 0}%`
+                    : "Load screenshot"}
+                </button>
+                {train.sections.length > 0 ? (
+                  <button
+                    type="button"
+                    className="ghost-btn sc-train-clear"
+                    disabled={trainOcr?.status === "running"}
+                    onClick={() =>
+                      updateBoard({ ...board, train: clearTrain() })
+                    }
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {trainOcr?.error ? (
+              <p className="muted sc-train-error">{trainOcr.error}</p>
+            ) : null}
+
+            {train.sections.length === 0 ? (
+              <p className="muted sc-train-empty">
+                No Train stats yet. Screenshot the in-game Train bonus list and
+                tap Load screenshot.
+              </p>
+            ) : (
+              <div className="sc-train-table-wrap">
+                <table className="sc-train-table">
+                  <thead>
+                    <tr>
+                      <th>Exclusive</th>
+                      <th>Stats</th>
+                      <th aria-label="Remove" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {train.sections.map((section) => (
+                      <tr key={section.id}>
+                        <td>
+                          <strong>{formatTrainSectionLabel(section)}</strong>
+                        </td>
+                        <td>
+                          {section.stats
+                            .map((s) => formatTrainStat(s))
+                            .join(", ")}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="sc-train-remove"
+                            title="Remove section"
+                            onClick={() =>
+                              updateBoard({
+                                ...board,
+                                train: removeTrainSection(board.train, section.id),
+                              })
+                            }
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </section>
       </div>

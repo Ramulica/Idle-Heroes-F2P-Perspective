@@ -26,6 +26,7 @@ import {
 import { collectSkinStatRows } from "./skins";
 import { collectStarspawnStatRows } from "./starspawns";
 import { collectSigilStatRows } from "./sigils";
+import { collectTrainStatRows } from "./trainStats";
 import { gameModeOf, sourceAllowedInGameMode } from "./gameModes";
 
 /** Source rows for the hero breakdown table (id = first column). */
@@ -53,7 +54,7 @@ export const STAT_SOURCES = [
 const GEAR_BODY_SLOTS = new Set(["weapon", "armor", "accessory", "boots"]);
 
 /** Stats ignored in calculator totals / breakdown (tracked elsewhere). */
-const IGNORED_STATS = new Set(["HP", "Attack"]);
+const IGNORED_STATS = new Set(["HP", "Attack", "Fixed HP", "Fixed Attack"]);
 
 const STAT_SHORT = {
   Speed: "Spd",
@@ -362,6 +363,16 @@ function collectSigils(sigils, gameModeId) {
   return map;
 }
 
+function collectTrain(slot, train, gameModeId) {
+  const map = emptyMap();
+  const hero = heroOf(slot?.heroId);
+  if (!hero) return map;
+  for (const row of collectTrainStatRows(train, hero, gameModeId)) {
+    addRow(map, row);
+  }
+  return map;
+}
+
 function collectAwakening(slot) {
   const map = emptyMap();
   const awakening = slot?.progress?.awakening;
@@ -419,7 +430,7 @@ function emptySourceMap() {
 export function computeHeroStatBreakdown(
   slot,
   slotIndex,
-  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns, sigils }
+  { aura, monster, cloudIsland, gameModeId, guildTech, starspawns, sigils, train }
 ) {
   const guild = collectGuildTech(slot, guildTech);
   const bySource = {
@@ -433,7 +444,7 @@ export function computeHeroStatBreakdown(
     imprint_infusion: collectImprintInfusion(slot),
     team_aura: heroOf(slot?.heroId) ? collectTeamAura(aura, slotIndex) : emptySourceMap(),
     monster: heroOf(slot?.heroId) ? collectMonster(monster) : emptySourceMap(),
-    train: emptySourceMap(),
+    train: collectTrain(slot, train, gameModeId),
     tenants: collectTenants(slot),
     cloud_island: collectCloudIsland(slot, cloudIsland),
     skin: collectSkin(slot),
@@ -511,6 +522,7 @@ export function computeBoardStatTotals(board) {
   const guildTech = board?.guildTech;
   const starspawns = board?.starspawns;
   const sigils = board?.sigils;
+  const train = board?.train;
   const slots = (board?.slots || []).map((slot, index) =>
     computeHeroStatBreakdown(slot, index, {
       aura,
@@ -520,6 +532,7 @@ export function computeBoardStatTotals(board) {
       guildTech,
       starspawns,
       sigils,
+      train,
     })
   );
 
