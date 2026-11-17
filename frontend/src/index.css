@@ -47,6 +47,50 @@ button {
   cursor: pointer;
 }
 
+/* Global smooth image reveal (see useSmoothImages.js) */
+img.img-smooth {
+  opacity: 0;
+  filter: saturate(0.9) brightness(0.98);
+  background:
+    linear-gradient(110deg, rgba(239, 224, 196, 0.55) 25%, rgba(255, 246, 224, 0.9) 45%, rgba(239, 224, 196, 0.55) 65%);
+  background-size: 200% 100%;
+  animation: img-smooth-shimmer 1.15s ease-in-out infinite;
+}
+
+img.img-smooth.is-loaded {
+  opacity: 1;
+  filter: none;
+  background: none;
+  animation: none;
+  transition:
+    opacity 0.38s ease,
+    filter 0.38s ease;
+}
+
+img.img-smooth.is-loaded.img-cached {
+  transition: none;
+}
+
+@keyframes img-smooth-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  img.img-smooth,
+  img.img-smooth.is-loaded {
+    opacity: 1;
+    filter: none;
+    background: none;
+    animation: none;
+    transition: none;
+  }
+}
+
 .sky-page {
   min-height: 100vh;
   padding: 24px 16px 40px;
@@ -7012,16 +7056,6 @@ button.sc-aura-badge:hover .sc-aura-core {
 .sc-train-example-img {
   width: 100%;
   display: block;
-  opacity: 0;
-  transform: translateY(6px) scale(0.985);
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease;
-}
-
-.sc-train-example.is-ready .sc-train-example-img {
-  opacity: 1;
-  transform: none;
 }
 
 .sc-train-example-shimmer {

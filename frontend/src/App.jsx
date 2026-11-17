@@ -8,6 +8,7 @@ import {
   resetStatCalcStore,
 } from "./useStatCalculator";
 import { LoadingOverlay, LoadingScreen } from "./components/LoadingSpinner.jsx";
+import { useSmoothImages } from "./useSmoothImages";
 import Home from "./pages/Home.jsx";
 import MysteriousSale from "./pages/MysteriousSale.jsx";
 import SgCalculator from "./pages/SgCalculator.jsx";
@@ -43,6 +44,7 @@ function PendingOverlay() {
 
 export default function App() {
   const [user, setUser] = useState(undefined);
+  useSmoothImages(true);
 
   useEffect(() => {
     api
