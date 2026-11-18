@@ -1,6 +1,6 @@
 /**
- * Hero catalog prefs + flip strategy plans for Auction House.
- * Preferred % order (drag-ranked), flat priority, importance 1–10.
+ * Hero catalog setups + flip strategy plans for Auction House.
+ * Multiple setups per hero (e.g. Damage vs Support), ranked % and flats.
  */
 
 import { AWAKENING_STAT_POOL_S } from "./heroProgress";
@@ -13,6 +13,8 @@ export const FLAT_PRIORITIES = [
   { id: "hp", label: "Health" },
   { id: "speed", label: "Speed" },
 ];
+
+export const FLAT_PRIORITY_IDS = FLAT_PRIORITIES.map((f) => f.id);
 
 /**
  * Three flip strategies — margins, catalog weight, hammer tolerance differ.
@@ -81,44 +83,88 @@ export const FLIP_STRATEGY_BY_ID = Object.fromEntries(
   FLIP_STRATEGIES.map((s) => [s.id, s])
 );
 
-export function defaultHeroPref(heroId = null) {
-  return {
-    heroId: heroId || null,
-    preferredStats: [],
-    flatPriority: "attack",
-    importance: 5,
-  };
+function newId(prefix = "id") {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function normalizeHeroPref(raw, heroId) {
-  const base = defaultHeroPref(heroId);
-  if (!raw || typeof raw !== "object") return base;
-  const flat = FLAT_PRIORITIES.some((f) => f.id === raw.flatPriority)
-    ? raw.flatPriority
-    : "attack";
-  const importance = Math.min(
-    10,
-    Math.max(1, Math.round(Number(raw.importance) || 5))
-  );
+export function normalizeFlatRank(raw) {
+  const seen = new Set();
+  const out = [];
+  let source = [];
+  if (Array.isArray(raw?.flatRank)) source = raw.flatRank;
+  else if (Array.isArray(raw?.flatPriority)) source = raw.flatPriority;
+  else if (typeof raw?.flatPriority === "string" && raw.flatPriority) {
+    source = [raw.flatPriority];
+  } else if (Array.isArray(raw)) source = raw;
+  else if (typeof raw === "string" && raw) source = [raw];
+
+  for (const item of source) {
+    const id = String(item || "").trim();
+    if (!FLAT_PRIORITY_IDS.includes(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  for (const id of FLAT_PRIORITY_IDS) {
+    if (!seen.has(id)) out.push(id);
+  }
+  return out;
+}
+
+export function flatRankLabel(rank) {
+  const list = normalizeFlatRank(rank);
+  return list
+    .map((id) => FLAT_PRIORITIES.find((f) => f.id === id)?.label || id)
+    .join(" › ");
+}
+
+export function normalizePreferredStats(raw) {
   const seen = new Set();
   const preferredStats = [];
-  for (const s of Array.isArray(raw.preferredStats) ? raw.preferredStats : []) {
+  for (const s of Array.isArray(raw) ? raw : []) {
     const name = String(s || "").trim();
     if (!name || seen.has(name) || !CATALOG_STAT_OPTIONS.includes(name)) continue;
     seen.add(name);
     preferredStats.push(name);
   }
+  return preferredStats;
+}
+
+export function defaultHeroPref(heroId = null) {
+  return {
+    heroId: heroId || null,
+    name: "",
+    preferredStats: [],
+    flatRank: [...FLAT_PRIORITY_IDS],
+    flatPriority: "attack",
+    importance: 5,
+  };
+}
+
+/** Normalize a setup/pref shape (supports legacy flatPriority string). */
+export function normalizeHeroPref(raw, heroId) {
+  const base = defaultHeroPref(heroId);
+  if (!raw || typeof raw !== "object") return base;
+  const flatRank = normalizeFlatRank(raw);
+  const importance = Math.min(
+    10,
+    Math.max(1, Math.round(Number(raw.importance) || 5))
+  );
   return {
     heroId: heroId || raw.heroId || null,
-    preferredStats,
-    flatPriority: flat,
+    name: String(raw.name || "").trim(),
+    preferredStats: normalizePreferredStats(raw.preferredStats),
+    flatRank,
+    flatPriority: flatRank[0] || "attack",
     importance,
   };
 }
 
 export function normalizeHeroPrefs(raw, knownHeroIds = []) {
   const out = {};
-  if (!raw || typeof raw !== "object") return out;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
   const ids = knownHeroIds.length
     ? knownHeroIds
     : Object.keys(raw).filter((k) => raw[k]);
@@ -128,21 +174,68 @@ export function normalizeHeroPrefs(raw, knownHeroIds = []) {
   return out;
 }
 
-function newPresetId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+export function defaultHeroSetup(partial = {}) {
+  const pref = normalizeHeroPref(partial, partial.heroId || null);
+  return {
+    id:
+      typeof partial.id === "string" && partial.id
+        ? partial.id
+        : newId("setup"),
+    heroId: pref.heroId,
+    name: pref.name || "Setup",
+    preferredStats: pref.preferredStats,
+    flatRank: pref.flatRank,
+    flatPriority: pref.flatRank[0] || "attack",
+    importance: pref.importance,
+  };
 }
 
-/** Named reusable catalog setup (stats + flat + importance). */
+export function normalizeHeroSetup(raw, knownHeroIds = []) {
+  if (!raw || typeof raw !== "object") return null;
+  const heroId = String(raw.heroId || "").trim();
+  if (!heroId) return null;
+  if (knownHeroIds.length && !knownHeroIds.includes(heroId)) return null;
+  return defaultHeroSetup(raw);
+}
+
+export function normalizeHeroSetups(raw, knownHeroIds = [], legacyPrefs = null) {
+  const out = [];
+  const seen = new Set();
+  if (Array.isArray(raw)) {
+    for (const row of raw) {
+      const setup = normalizeHeroSetup(row, knownHeroIds);
+      if (!setup || seen.has(setup.id)) continue;
+      seen.add(setup.id);
+      out.push(setup);
+    }
+  }
+  if (out.length) return out;
+
+  // Migrate old one-pref-per-hero map.
+  const prefs = normalizeHeroPrefs(legacyPrefs, knownHeroIds);
+  for (const [heroId, pref] of Object.entries(prefs)) {
+    const setup = defaultHeroSetup({
+      ...pref,
+      heroId,
+      name: pref.name || "Setup",
+    });
+    out.push(setup);
+  }
+  return out;
+}
+
+/** Named reusable template (no hero). */
 export function defaultCatalogPreset(partial = {}) {
   const pref = normalizeHeroPref(partial, null);
   return {
-    id: typeof partial.id === "string" && partial.id ? partial.id : newPresetId(),
+    id:
+      typeof partial.id === "string" && partial.id
+        ? partial.id
+        : newId("preset"),
     name: String(partial.name || "").trim() || "Preset",
     preferredStats: pref.preferredStats,
-    flatPriority: pref.flatPriority,
+    flatRank: pref.flatRank,
+    flatPriority: pref.flatRank[0] || "attack",
     importance: pref.importance,
   };
 }
@@ -199,20 +292,25 @@ export function preferredMatchScore(copy, pref) {
   return max > 0 ? score / max : 0.5;
 }
 
-/** 0..1 — flat priority fit (Attack / Health / Speed). */
+/** 0..1 — ranked Attack / Health / Speed fit. */
 export function flatPriorityScore(copy, pref) {
   const atk = Math.max(0, Number(copy?.attack) || 0);
   const hp = Math.max(0, Number(copy?.hp) || 0);
   const spd = Math.max(0, Number(copy?.speed) || 0);
-  const nAtk = Math.min(1.2, atk / 7000);
-  const nHp = Math.min(1.2, hp / 6000);
-  const nSpd = Math.min(1.2, spd / 50);
-  const pri = pref?.flatPriority || "attack";
-  if (pri === "hp")
-    return Math.max(0, Math.min(1, nHp * 0.7 + nAtk * 0.2 + nSpd * 0.1));
-  if (pri === "speed")
-    return Math.max(0, Math.min(1, nSpd * 0.7 + nAtk * 0.2 + nHp * 0.1));
-  return Math.max(0, Math.min(1, nAtk * 0.7 + nHp * 0.15 + nSpd * 0.15));
+  const values = {
+    attack: Math.min(1.2, atk / 7000),
+    hp: Math.min(1.2, hp / 6000),
+    speed: Math.min(1.2, spd / 50),
+  };
+  const ranked = normalizeFlatRank(pref);
+  let score = 0;
+  let max = 0;
+  for (let i = 0; i < ranked.length; i++) {
+    const w = Math.max(0.2, 1 - i * 0.28);
+    max += w;
+    score += (values[ranked[i]] || 0) * w;
+  }
+  return max > 0 ? Math.max(0, Math.min(1, score / max)) : 0.5;
 }
 
 /**
@@ -229,4 +327,13 @@ export function estimatedHammerNeed(copy, pref) {
   for (const s of top) if (!have.has(s)) misses += 1;
   const already = Math.max(0, Number(copy?.hammersUsed) || 0);
   return misses + already * 0.35;
+}
+
+/** Fit of a copy to one setup (for picking Damage vs Support). */
+export function setupFitScore(copy, setup) {
+  const pref = normalizeHeroPref(setup, setup?.heroId);
+  const match = preferredMatchScore(copy, pref);
+  const flat = flatPriorityScore(copy, pref);
+  const imp = Math.max(1, Math.min(10, pref.importance)) / 10;
+  return match * 0.55 + flat * 0.3 + imp * 0.15;
 }

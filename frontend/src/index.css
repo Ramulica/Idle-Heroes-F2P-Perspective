@@ -7797,6 +7797,51 @@ button.sc-aura-badge:hover .sc-aura-core {
   color: #3a2818;
 }
 
+.ah-catalog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ah-catalog-head h2 {
+  margin-bottom: 4px;
+}
+
+.ah-catalog-add {
+  flex: 0 0 auto;
+  min-width: 44px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 8px 14px;
+}
+
+.ah-catalog-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.ah-catalog-card-add {
+  border-style: dashed;
+  background: linear-gradient(180deg, #fffdf8, #f6ebd2);
+}
+
+.ah-catalog-plus {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 2px dashed #8a5a2a;
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #8a5a2a;
+  background: #fff9ec;
+  flex: 0 0 auto;
+}
+
 .ah-catalog-group {
   margin-top: 16px;
 }

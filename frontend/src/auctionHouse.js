@@ -14,14 +14,17 @@ import {
   awakeningStatValue,
 } from "./heroProgress";
 import {
+  defaultCatalogPreset,
+  defaultHeroSetup,
   estimatedHammerNeed,
   flatPriorityScore,
+  flatRankLabel,
   FLIP_STRATEGIES,
   normalizeCatalogPresets,
   normalizeHeroPref,
-  normalizeHeroPrefs,
-  defaultCatalogPreset,
+  normalizeHeroSetups,
   preferredMatchScore,
+  setupFitScore,
   strategyOf,
 } from "./auctionCatalog";
 
@@ -363,7 +366,7 @@ export function normalizeCopy(raw, stage) {
 export function defaultAuctionState() {
   return {
     settings: defaultSettings(),
-    heroPrefs: {},
+    heroSetups: [],
     catalogPresets: [],
     biddings: [],
     bag: [],
@@ -400,7 +403,7 @@ export function normalizeAuctionState(raw) {
   // keep stored values; strategy applies at evaluate time.
   return {
     settings,
-    heroPrefs: normalizeHeroPrefs(raw.heroPrefs, knownIds),
+    heroSetups: normalizeHeroSetups(raw.heroSetups, knownIds, raw.heroPrefs),
     catalogPresets: normalizeCatalogPresets(raw.catalogPresets),
     biddings: (Array.isArray(raw.biddings) ? raw.biddings : [])
       .map((c) => normalizeCopy(c, "bidding"))
@@ -622,7 +625,7 @@ export function copyQualityScore(copy, state = null) {
   let raw = atkScore * 0.5 + rollScore * 0.3 + rarBoost * 0.1 + fill * 0.05;
 
   if (state) {
-    const pref = heroPrefOf(state, copy?.heroId);
+    const pref = bestHeroSetup(state, copy);
     const strat = strategyOf(state.settings);
     const prefW = Math.max(0, Math.min(0.7, Number(strat.prefWeight) || 0.35));
     const match = preferredMatchScore(copy, pref);
@@ -664,14 +667,45 @@ export function targetMarginPctFor(copy, state) {
   );
 }
 
-export function heroPrefOf(state, heroId) {
-  const pref = state?.heroPrefs?.[heroId];
-  return pref ? normalizeHeroPref(pref, heroId) : normalizeHeroPref(null, heroId);
+export function heroSetupsOf(state, heroId = null) {
+  const list = Array.isArray(state?.heroSetups) ? state.heroSetups : [];
+  if (!heroId) return list;
+  return list.filter((s) => s.heroId === heroId);
 }
 
-/** True once the user saved catalog prefs for this hero. */
+/** Best catalog setup for a hero/copy (Damage vs Support stay separate). */
+export function bestHeroSetup(state, copyOrHeroId) {
+  const heroId =
+    typeof copyOrHeroId === "string"
+      ? copyOrHeroId
+      : copyOrHeroId?.heroId || null;
+  const setups = heroSetupsOf(state, heroId);
+  if (!setups.length) return normalizeHeroPref(null, heroId);
+  if (setups.length === 1 || typeof copyOrHeroId === "string") {
+    return normalizeHeroPref(
+      [...setups].sort((a, b) => b.importance - a.importance)[0],
+      heroId
+    );
+  }
+  let best = setups[0];
+  let bestScore = -1;
+  for (const setup of setups) {
+    const score = setupFitScore(copyOrHeroId, setup);
+    if (score > bestScore) {
+      bestScore = score;
+      best = setup;
+    }
+  }
+  return normalizeHeroPref(best, heroId);
+}
+
+export function heroPrefOf(state, heroId) {
+  return bestHeroSetup(state, heroId);
+}
+
+/** True once the user saved at least one catalog setup for this hero. */
 export function isHeroSetUp(state, heroId) {
-  return Boolean(state?.heroPrefs?.[heroId]);
+  return heroSetupsOf(state, heroId).length > 0;
 }
 
 export function partitionAuctionHeroes(state) {
@@ -686,6 +720,7 @@ export function partitionAuctionHeroes(state) {
 
 export function hasAuctionProgress(state) {
   if (!state || typeof state !== "object") return false;
+  if (Array.isArray(state.heroSetups) && state.heroSetups.length) return true;
   if (state.heroPrefs && Object.keys(state.heroPrefs).length) return true;
   if (Array.isArray(state.catalogPresets) && state.catalogPresets.length) {
     return true;
@@ -696,15 +731,20 @@ export function hasAuctionProgress(state) {
   return false;
 }
 
-export function setHeroPref(state, heroId, partial) {
-  const prev = heroPrefOf(state, heroId);
-  const next = normalizeHeroPref({ ...prev, ...partial, heroId }, heroId);
+export function upsertHeroSetup(state, partial) {
+  const setup = defaultHeroSetup(partial);
+  if (!setup.heroId) return state;
+  const list = [...(state.heroSetups || [])];
+  const idx = list.findIndex((s) => s.id === setup.id);
+  if (idx >= 0) list[idx] = setup;
+  else list.push(setup);
+  return { ...state, heroSetups: list };
+}
+
+export function deleteHeroSetup(state, setupId) {
   return {
     ...state,
-    heroPrefs: {
-      ...(state.heroPrefs || {}),
-      [heroId]: next,
-    },
+    heroSetups: (state.heroSetups || []).filter((s) => s.id !== setupId),
   };
 }
 
@@ -735,16 +775,6 @@ export function deleteCatalogPreset(state, presetId) {
       (p) => p.id !== presetId
     ),
   };
-}
-
-export function applyCatalogPresetToHero(state, heroId, presetId) {
-  const preset = (state.catalogPresets || []).find((p) => p.id === presetId);
-  if (!preset) return state;
-  return setHeroPref(state, heroId, {
-    preferredStats: preset.preferredStats,
-    flatPriority: preset.flatPriority,
-    importance: preset.importance,
-  });
 }
 
 function sellDifficultyFrom(related, fails) {
@@ -778,7 +808,7 @@ function sellDifficultyFrom(related, fails) {
 export function evaluateFlip(copy, state, now = Date.now()) {
   const settings = { ...defaultSettings(), ...(state?.settings || {}) };
   const strat = strategyOf(settings);
-  const pref = heroPrefOf(state, copy?.heroId);
+  const pref = bestHeroSetup(state, copy);
   const phase = flipMarketPhase(copy, state);
   const targetMarginPct = targetMarginPctFor(copy, state);
   const quality = copyQualityScore(copy, state);
@@ -916,7 +946,7 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     reasons.push(`Mature market — ${targetMarginPct}% margin`);
   }
   reasons.push(
-    `Catalog · importance ${importance}/10 · pref match ${Math.round(prefMatch * 100)}% · flat ${pref.flatPriority}`
+    `Catalog · ${pref.name || "setup"} · Imp ${importance}/10 · pref ${Math.round(prefMatch * 100)}% · flats ${flatRankLabel(pref.flatRank)}`
   );
   if (samples === 0) {
     reasons.push("No close comps yet — grade leans on catalog + Attack/%");

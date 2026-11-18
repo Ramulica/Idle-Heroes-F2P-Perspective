@@ -23,6 +23,7 @@ import {
   copyTitle,
   copyToDraft,
   deleteCatalogPreset,
+  deleteHeroSetup,
   discardBag,
   dismissBidding,
   draftWithRarity,
@@ -35,7 +36,6 @@ import {
   formatSg,
   formatWhen,
   fromDatetimeLocalValue,
-  heroPrefOf,
   isHeroSetUp,
   listFromBag,
   listingPhases,
@@ -49,7 +49,7 @@ import {
   sellListing,
   setDraftBonus,
   setHammersUsed,
-  setHeroPref,
+  upsertHeroSetup,
   suggestListPrice,
   toDatetimeLocalValue,
   updateBagCopy,
@@ -61,6 +61,9 @@ import {
   FLAT_PRIORITIES,
   FLIP_STRATEGIES,
   catalogPresetToPref,
+  defaultHeroSetup,
+  flatRankLabel,
+  normalizeFlatRank,
   strategyOf,
 } from "../auctionCatalog";
 import { api } from "../api";
@@ -157,78 +160,175 @@ function HeroPickGrid({ value, onChange, state }) {
   );
 }
 
+function RankList({ items, labels, onReorder, onRemove = null, empty }) {
+  const dragIndex = useRef(null);
+  function move(from, to) {
+    if (from === to || from < 0 || to < 0) return;
+    const next = [...items];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    onReorder(next);
+  }
+  return (
+    <>
+      <ul className="ah-rank-list">
+        {items.length ? (
+          items.map((id, index) => (
+            <li
+              key={id}
+              className="ah-rank-item"
+              draggable
+              onDragStart={() => {
+                dragIndex.current = index;
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                move(dragIndex.current, index);
+                dragIndex.current = null;
+              }}
+            >
+              <span className="ah-rank-handle">☰</span>
+              <strong>
+                #{index + 1} {labels?.[id] || id}
+              </strong>
+              {onRemove ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => onRemove(id)}
+                >
+                  ✕
+                </button>
+              ) : null}
+            </li>
+          ))
+        ) : (
+          <li className="muted">{empty}</li>
+        )}
+      </ul>
+    </>
+  );
+}
+
 function HeroCatalogModal({
-  hero,
-  pref,
+  setup,
   presets,
   onSave,
   onSavePreset,
   onDeletePreset,
+  onDeleteSetup,
   onClose,
 }) {
+  const initial = defaultHeroSetup(setup || {});
+  const [heroId, setHeroId] = useState(initial.heroId || AUCTION_HEROES[0]?.id);
+  const [setupName, setSetupName] = useState(initial.name || "Setup");
   const [preferredStats, setPreferredStats] = useState([
-    ...(pref.preferredStats || []),
+    ...(initial.preferredStats || []),
   ]);
-  const [flatPriority, setFlatPriority] = useState(pref.flatPriority || "attack");
-  const [importance, setImportance] = useState(pref.importance || 5);
+  const [flatRank, setFlatRank] = useState(normalizeFlatRank(initial));
+  const [importance, setImportance] = useState(initial.importance || 5);
   const [presetId, setPresetId] = useState("");
   const [presetName, setPresetName] = useState("");
-  const dragIndex = useRef(null);
-
+  const editing = Boolean(setup?.id);
+  const hero = auctionHeroOf(heroId);
   const pool = CATALOG_STAT_OPTIONS.filter((s) => !preferredStats.includes(s));
   const list = Array.isArray(presets) ? presets : [];
-
-  function moveStat(from, to) {
-    if (from === to || from < 0 || to < 0) return;
-    setPreferredStats((listStats) => {
-      const next = [...listStats];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
-  }
+  const flatLabels = Object.fromEntries(
+    FLAT_PRIORITIES.map((f) => [f.id, f.label])
+  );
 
   function applyPreset(id) {
     const preset = list.find((p) => p.id === id);
     if (!preset) return;
-    const next = catalogPresetToPref(preset, hero.id);
+    const next = catalogPresetToPref(preset, heroId);
     setPreferredStats([...(next.preferredStats || [])]);
-    setFlatPriority(next.flatPriority || "attack");
+    setFlatRank(normalizeFlatRank(next));
     setImportance(next.importance || 5);
+    if (!setupName || setupName === "Setup") {
+      setSetupName(preset.name || "Setup");
+    }
     setPresetId(id);
     setPresetName(preset.name || "");
   }
 
   function currentSetup() {
-    return { preferredStats, flatPriority, importance };
+    return {
+      id: setup?.id,
+      heroId,
+      name: setupName.trim() || "Setup",
+      preferredStats,
+      flatRank,
+      importance,
+    };
   }
 
   return (
     <Modal
-      title="Hero catalog"
+      title={editing ? "Edit setup" : "New setup"}
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="tan-btn"
-          onClick={() => onSave(currentSetup())}
-        >
-          Save set up
-        </button>
+        <>
+          {editing ? (
+            <button
+              type="button"
+              className="gold-btn"
+              onClick={() => onDeleteSetup(setup.id)}
+            >
+              Delete setup
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="tan-btn"
+            disabled={!heroId}
+            onClick={() => onSave(currentSetup())}
+          >
+            Save set up
+          </button>
+        </>
       }
     >
       <div className="ah-catalog-hero-head">
-        <img src={hero.icon} alt="" />
+        {hero ? <img src={hero.icon} alt="" /> : null}
         <div>
-          <p className="muted">{hero.faction}</p>
-          <p className="muted">Imp {importance}/10 · {flatPriority}</p>
+          <label className="ah-field">
+            <span>Setup name</span>
+            <input
+              type="text"
+              maxLength={40}
+              placeholder="Damage / Support / …"
+              value={setupName}
+              onChange={(e) => setSetupName(e.target.value)}
+            />
+          </label>
+          <p className="muted">
+            Imp {importance}/10 · {flatRankLabel(flatRank)}
+          </p>
+        </div>
+      </div>
+
+      <div className="ah-field">
+        <span>Hero</span>
+        <div className="ah-hero-grid-wrap">
+          <div className="ah-hero-grid">
+            {AUCTION_HEROES.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                className={`ah-hero-pick${heroId === h.id ? " on" : ""}`}
+                onClick={() => setHeroId(h.id)}
+              >
+                <img src={h.icon} alt="" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="ah-preset-box">
         <h4>Presets</h4>
         <p className="muted">
-          Save this setup as a reusable preset, or load one onto this hero.
+          Load a template, or save this Damage/Support setup as a preset.
         </p>
         <div className="ah-preset-row">
           <label className="ah-field ah-preset-select">
@@ -244,8 +344,7 @@ function HeroCatalogModal({
               <option value="">Select preset…</option>
               {list.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} · Imp {p.importance} · {p.flatPriority}
-                  {p.preferredStats?.[0] ? ` · ${p.preferredStats[0]}` : ""}
+                  {p.name} · Imp {p.importance} · {flatRankLabel(p.flatRank)}
                 </option>
               ))}
             </select>
@@ -270,7 +369,7 @@ function HeroCatalogModal({
             <input
               type="text"
               maxLength={48}
-              placeholder="e.g. Attack GK / Defier"
+              placeholder="e.g. Support speed / DPS GK"
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
             />
@@ -285,7 +384,9 @@ function HeroCatalogModal({
               const saved = onSavePreset({
                 id: existing?.id,
                 name,
-                ...currentSetup(),
+                preferredStats,
+                flatRank,
+                importance,
               });
               if (saved?.id) {
                 setPresetId(saved.id);
@@ -299,7 +400,7 @@ function HeroCatalogModal({
       </div>
 
       <label className="ah-field">
-        <span>Hero importance (1–10)</span>
+        <span>Importance (1–10)</span>
         <div className="ah-importance-row">
           <input
             type="range"
@@ -312,64 +413,30 @@ function HeroCatalogModal({
         </div>
       </label>
 
-      <fieldset className="ah-flat-priority">
-        <legend>Most important hard stat</legend>
-        {FLAT_PRIORITIES.map((f) => (
-          <label key={f.id} className="ah-check">
-            <input
-              type="radio"
-              name="flat-priority"
-              checked={flatPriority === f.id}
-              onChange={() => setFlatPriority(f.id)}
-            />
-            {f.label}
-          </label>
-        ))}
-      </fieldset>
+      <div className="ah-catalog-ranks">
+        <h4>Attack / HP / Speed (top = best)</h4>
+        <p className="muted">Drag to rank hard flats for this role.</p>
+        <RankList
+          items={flatRank}
+          labels={flatLabels}
+          onReorder={(next) => setFlatRank(normalizeFlatRank(next))}
+          empty="—"
+        />
+      </div>
 
       <div className="ah-catalog-ranks">
         <h4>Preferred % (top = best)</h4>
         <p className="muted">
-          Drag to reorder. Include Giant Killer, Defier, and whatever this hero
-          wants. Strategies read this list.
+          Keep Damage and Support lists separate — don’t mix roles on one setup.
         </p>
-        <ul className="ah-rank-list">
-          {preferredStats.length ? (
-            preferredStats.map((stat, index) => (
-              <li
-                key={stat}
-                className="ah-rank-item"
-                draggable
-                onDragStart={() => {
-                  dragIndex.current = index;
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => {
-                  moveStat(dragIndex.current, index);
-                  dragIndex.current = null;
-                }}
-              >
-                <span className="ah-rank-handle">☰</span>
-                <strong>
-                  #{index + 1} {stat}
-                </strong>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  onClick={() =>
-                    setPreferredStats((stats) =>
-                      stats.filter((s) => s !== stat)
-                    )
-                  }
-                >
-                  ✕
-                </button>
-              </li>
-            ))
-          ) : (
-            <li className="muted">No preferred % yet — tap stats below.</li>
-          )}
-        </ul>
+        <RankList
+          items={preferredStats}
+          onReorder={setPreferredStats}
+          onRemove={(stat) =>
+            setPreferredStats((stats) => stats.filter((s) => s !== stat))
+          }
+          empty="No preferred % yet — tap stats below."
+        />
         <div className="ah-stat-pool">
           {pool.map((stat) => (
             <button
@@ -619,7 +686,7 @@ export default function AuctionHouse() {
   const { state, setState, loaded } = useAuctionHouse();
   const [tab, setTab] = useState("biddings");
   const [picker, setPicker] = useState(null);
-  const [catalogHeroId, setCatalogHeroId] = useState(null);
+  const [catalogEditor, setCatalogEditor] = useState(null);
   const [tick, setTick] = useState(() => Date.now());
   const [creatorDb, setCreatorDb] = useState(null);
   const [creatorDbError, setCreatorDbError] = useState("");
@@ -633,10 +700,7 @@ export default function AuctionHouse() {
 
   const summary = useMemo(() => auctionSummary(state), [state]);
   const alerts = useMemo(() => boardAlerts(state, tick), [state, tick]);
-  const catalogGroups = useMemo(
-    () => partitionAuctionHeroes(state),
-    [state]
-  );
+  const catalogSetups = state.heroSetups || [];
 
   async function loadCreatorDb() {
     setCreatorDbLoading(true);
@@ -1478,13 +1542,25 @@ export default function AuctionHouse() {
 
           {tab === "catalog" ? (
             <section className="ah-section">
-              <h2>Hero catalog</h2>
-              <p className="muted">
-                Tap a hero to rank preferred % (Giant Killer, Defier, …), set
-                Attack/Health/Speed priority, and importance 1–10. Save presets
-                from any hero and reuse them on others. Setups stay private to
-                your account.
-              </p>
+              <div className="ah-catalog-head">
+                <div>
+                  <h2>Hero catalog</h2>
+                  <p className="muted">
+                    Add separate setups for the same hero (Damage vs Support).
+                    Rank Attack/HP/Speed and % prefs per setup. Presets are
+                    templates you can reuse.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="tan-btn ah-catalog-add"
+                  onClick={() => setCatalogEditor({ mode: "new" })}
+                  title="Add setup"
+                >
+                  +
+                </button>
+              </div>
+
               {(state.catalogPresets || []).length ? (
                 <div className="ah-preset-strip">
                   <h3>
@@ -1498,7 +1574,7 @@ export default function AuctionHouse() {
                       <li key={p.id} className="ah-preset-chip">
                         <strong>{p.name}</strong>
                         <span className="muted">
-                          Imp {p.importance} · {p.flatPriority}
+                          Imp {p.importance} · {flatRankLabel(p.flatRank)}
                           {p.preferredStats?.[0]
                             ? ` · ${p.preferredStats.slice(0, 2).join(", ")}`
                             : ""}
@@ -1517,78 +1593,73 @@ export default function AuctionHouse() {
                     ))}
                   </ul>
                 </div>
-              ) : (
-                <p className="muted">
-                  No presets yet — open a hero, build a setup, then Save preset.
-                </p>
-              )}
-              {[
-                {
-                  key: "set-up",
-                  title: "Set up",
-                  heroes: catalogGroups.setUp,
-                  empty: "No heroes set up yet — tap one below.",
-                },
-                {
-                  key: "not-set-up",
-                  title: "Not set up",
-                  heroes: catalogGroups.notSetUp,
-                  empty: "Every hero is set up.",
-                },
-              ].map((group) => (
-                <div key={group.key} className="ah-catalog-group">
-                  <h3>
-                    {group.title}{" "}
-                    <span className="muted">({group.heroes.length})</span>
-                  </h3>
-                  {group.heroes.length ? (
-                    <div className="ah-catalog-grid">
-                      {group.heroes.map((hero) => {
-                        const pref = heroPrefOf(state, hero.id);
-                        const setUp = group.key === "set-up";
-                        return (
-                          <button
-                            key={hero.id}
-                            type="button"
-                            className={`ah-catalog-card${
-                              setUp ? "" : " unset"
-                            }`}
-                            onClick={() => setCatalogHeroId(hero.id)}
-                            title={
-                              setUp
-                                ? `${hero.faction} · Imp ${pref.importance}/10`
-                                : `${hero.faction} · Not set up`
-                            }
-                          >
-                            <img src={hero.icon} alt="" />
-                            <div className="ah-catalog-card-meta">
-                              {setUp ? (
-                                <>
-                                  <span className="muted">
-                                    Imp {pref.importance}/10 ·{" "}
-                                    {pref.flatPriority}
-                                  </span>
-                                  <span className="muted">
-                                    {pref.preferredStats.length
-                                      ? pref.preferredStats
-                                          .slice(0, 3)
-                                          .join(" · ")
-                                      : "No % prefs yet"}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="muted">Tap to set up</span>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="muted">{group.empty}</p>
-                  )}
-                </div>
-              ))}
+              ) : null}
+
+              <div className="ah-catalog-group">
+                <h3>
+                  Setups{" "}
+                  <span className="muted">({catalogSetups.length})</span>
+                </h3>
+                {catalogSetups.length ? (
+                  <div className="ah-catalog-grid">
+                    {catalogSetups.map((setup) => {
+                      const hero = auctionHeroOf(setup.heroId);
+                      return (
+                        <button
+                          key={setup.id}
+                          type="button"
+                          className="ah-catalog-card"
+                          onClick={() =>
+                            setCatalogEditor({ mode: "edit", setup })
+                          }
+                          title={`${setup.name} · Imp ${setup.importance}/10`}
+                        >
+                          <img src={hero?.icon} alt="" />
+                          <div className="ah-catalog-card-meta">
+                            <strong>{setup.name}</strong>
+                            <span className="muted">
+                              Imp {setup.importance}/10 ·{" "}
+                              {flatRankLabel(setup.flatRank)}
+                            </span>
+                            <span className="muted">
+                              {setup.preferredStats?.length
+                                ? setup.preferredStats.slice(0, 3).join(" · ")
+                                : "No % prefs yet"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className="ah-catalog-card ah-catalog-card-add"
+                      onClick={() => setCatalogEditor({ mode: "new" })}
+                    >
+                      <span className="ah-catalog-plus">+</span>
+                      <div className="ah-catalog-card-meta">
+                        <strong>Add setup</strong>
+                        <span className="muted">
+                          Same hero can have Damage and Support
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="ah-catalog-empty">
+                    <p className="muted">
+                      No setups yet. Add Damage, Support, or any role — even
+                      multiple on the same hero.
+                    </p>
+                    <button
+                      type="button"
+                      className="tan-btn"
+                      onClick={() => setCatalogEditor({ mode: "new" })}
+                    >
+                      + Add setup
+                    </button>
+                  </div>
+                )}
+              </div>
             </section>
           ) : null}
 
@@ -1848,7 +1919,9 @@ export default function AuctionHouse() {
                     <div className="ah-creator-list">
                       {creatorDb.map((row) => {
                         const st = row.state || {};
-                        const prefs = Object.keys(st.heroPrefs || {}).length;
+                        const prefs = Array.isArray(st.heroSetups)
+                          ? st.heroSetups.length
+                          : Object.keys(st.heroPrefs || {}).length;
                         const bids = (st.biddings || []).length;
                         const bag = (st.bag || []).length;
                         const listed = (st.listings || []).length;
@@ -1880,35 +1953,36 @@ export default function AuctionHouse() {
         </div>
       </div>
       {renderPicker()}
-      {catalogHeroId
-        ? (() => {
-            const hero = auctionHeroOf(catalogHeroId);
-            if (!hero) return null;
-            return (
-              <HeroCatalogModal
-                hero={hero}
-                pref={heroPrefOf(state, catalogHeroId)}
-                presets={state.catalogPresets || []}
-                onClose={() => setCatalogHeroId(null)}
-                onSave={(partial) => {
-                  setState((s) => setHeroPref(s, catalogHeroId, partial));
-                  setCatalogHeroId(null);
-                }}
-                onSavePreset={(partial) => {
-                  let saved = null;
-                  setState((s) => {
-                    const result = saveCatalogPreset(s, partial);
-                    saved = result.preset;
-                    return result.state;
-                  });
-                  return saved;
-                }}
-                onDeletePreset={(presetId) => {
-                  setState((s) => deleteCatalogPreset(s, presetId));
-                }}
-              />
-            );
-          })()
+      {catalogEditor
+        ? (
+            <HeroCatalogModal
+              setup={
+                catalogEditor.mode === "edit" ? catalogEditor.setup : null
+              }
+              presets={state.catalogPresets || []}
+              onClose={() => setCatalogEditor(null)}
+              onSave={(partial) => {
+                setState((s) => upsertHeroSetup(s, partial));
+                setCatalogEditor(null);
+              }}
+              onDeleteSetup={(setupId) => {
+                setState((s) => deleteHeroSetup(s, setupId));
+                setCatalogEditor(null);
+              }}
+              onSavePreset={(partial) => {
+                let saved = null;
+                setState((s) => {
+                  const result = saveCatalogPreset(s, partial);
+                  saved = result.preset;
+                  return result.state;
+                });
+                return saved;
+              }}
+              onDeletePreset={(presetId) => {
+                setState((s) => deleteCatalogPreset(s, presetId));
+              }}
+            />
+          )
         : null}
     </div>
   );

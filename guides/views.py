@@ -393,6 +393,9 @@ def _auction_house_progress(state):
         return False
     if state.get("heroPrefs"):
         return True
+    setups = state.get("heroSetups")
+    if isinstance(setups, list) and len(setups) > 0:
+        return True
     presets = state.get("catalogPresets")
     if isinstance(presets, list) and len(presets) > 0:
         return True
