@@ -71,6 +71,15 @@ import {
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { useAuctionHouse } from "../useAuctionHouse";
+import runeAtkIcon from "../assets/stats/monsters/rune-atk.png";
+import runeHpIcon from "../assets/stats/monsters/rune-hp.png";
+import runeSpdIcon from "../assets/stats/monsters/rune-spd.png";
+
+const FLAT_STAT_ICONS = {
+  attack: runeAtkIcon,
+  hp: runeHpIcon,
+  speed: runeSpdIcon,
+};
 
 const TABS = [
   { id: "biddings", label: "My Biddings" },
@@ -87,6 +96,22 @@ function Sg({ value, className = "" }) {
     <span className={`ah-sg ${className}`.trim()}>
       <strong>{formatSg(value)}</strong>
       <img src={STAR_GEM_ICON} alt="" className="ah-sg-icon" />
+    </span>
+  );
+}
+
+/** Small Attack / HP / Speed rune badge. */
+function FlatStatBadge({ id, label = null, className = "" }) {
+  const icon = FLAT_STAT_ICONS[id];
+  const text =
+    label ??
+    FLAT_PRIORITIES.find((f) => f.id === id)?.label ??
+    id;
+  if (!icon) return <span className={className}>{text}</span>;
+  return (
+    <span className={`ah-flat-badge ${className}`.trim()}>
+      <img src={icon} alt="" className="ah-flat-badge-icon" />
+      <span>{text}</span>
     </span>
   );
 }
@@ -163,7 +188,14 @@ function HeroPickGrid({ value, onChange, state, onSetupMore }) {
   );
 }
 
-function RankList({ items, labels, onReorder, onRemove = null, empty }) {
+function RankList({
+  items,
+  labels,
+  icons = null,
+  onReorder,
+  onRemove = null,
+  empty,
+}) {
   const dragIndex = useRef(null);
   function move(from, to) {
     if (from === to || from < 0 || to < 0) return;
@@ -191,8 +223,13 @@ function RankList({ items, labels, onReorder, onRemove = null, empty }) {
               }}
             >
               <span className="ah-rank-handle">☰</span>
-              <strong>
-                #{index + 1} {labels?.[id] || id}
+              <strong className="ah-rank-label">
+                <span className="muted">#{index + 1}</span>{" "}
+                {icons?.[id] ? (
+                  <FlatStatBadge id={id} label={labels?.[id]} />
+                ) : (
+                  labels?.[id] || id
+                )}
               </strong>
               {onRemove ? (
                 <button
@@ -417,11 +454,17 @@ function HeroCatalogModal({
       </label>
 
       <div className="ah-catalog-ranks">
-        <h4>Attack / HP / Speed (top = best)</h4>
+        <h4 className="ah-flat-title">
+          <FlatStatBadge id="attack" />
+          <FlatStatBadge id="hp" />
+          <FlatStatBadge id="speed" />
+          <span className="muted">(top = best)</span>
+        </h4>
         <p className="muted">Drag to rank hard flats for this role.</p>
         <RankList
           items={flatRank}
           labels={flatLabels}
+          icons={FLAT_STAT_ICONS}
           onReorder={(next) => setFlatRank(normalizeFlatRank(next))}
           empty="—"
         />
@@ -530,7 +573,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
       )}
       <div className="ah-flat-row">
         <label className="ah-field">
-          <span>Speed</span>
+          <span>
+            <FlatStatBadge id="speed" />
+          </span>
           <select
             value={draft.speed ?? ""}
             onChange={(e) => onChange({ ...draft, speed: e.target.value })}
@@ -543,7 +588,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
           </select>
         </label>
         <label className="ah-field">
-          <span>Attack</span>
+          <span>
+            <FlatStatBadge id="attack" />
+          </span>
           <input
             type="number"
             min={0}
@@ -552,7 +599,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
           />
         </label>
         <label className="ah-field">
-          <span>HP</span>
+          <span>
+            <FlatStatBadge id="hp" label="HP" />
+          </span>
           <input
             type="number"
             min={0}
@@ -607,15 +656,15 @@ function CopyCard({
         <img src={hero?.icon} alt="" className="ah-card-icon" />
         <div className="ah-card-flats">
           <div className="ah-stat-row">
-            <span className="muted">Attack</span>
+            <FlatStatBadge id="attack" className="muted" />
             <strong>{formatSg(copy.attack || 0)}</strong>
           </div>
           <div className="ah-stat-row">
-            <span className="muted">Health</span>
+            <FlatStatBadge id="hp" label="HP" className="muted" />
             <strong>{formatSg(copy.hp || 0)}</strong>
           </div>
           <div className="ah-stat-row">
-            <span className="muted">Speed</span>
+            <FlatStatBadge id="speed" className="muted" />
             <strong>{formatSg(copy.speed || 0)}</strong>
           </div>
         </div>
