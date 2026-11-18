@@ -17,8 +17,10 @@ import {
   estimatedHammerNeed,
   flatPriorityScore,
   FLIP_STRATEGIES,
+  normalizeCatalogPresets,
   normalizeHeroPref,
   normalizeHeroPrefs,
+  defaultCatalogPreset,
   preferredMatchScore,
   strategyOf,
 } from "./auctionCatalog";
@@ -362,6 +364,7 @@ export function defaultAuctionState() {
   return {
     settings: defaultSettings(),
     heroPrefs: {},
+    catalogPresets: [],
     biddings: [],
     bag: [],
     listings: [],
@@ -398,6 +401,7 @@ export function normalizeAuctionState(raw) {
   return {
     settings,
     heroPrefs: normalizeHeroPrefs(raw.heroPrefs, knownIds),
+    catalogPresets: normalizeCatalogPresets(raw.catalogPresets),
     biddings: (Array.isArray(raw.biddings) ? raw.biddings : [])
       .map((c) => normalizeCopy(c, "bidding"))
       .filter(Boolean),
@@ -683,6 +687,9 @@ export function partitionAuctionHeroes(state) {
 export function hasAuctionProgress(state) {
   if (!state || typeof state !== "object") return false;
   if (state.heroPrefs && Object.keys(state.heroPrefs).length) return true;
+  if (Array.isArray(state.catalogPresets) && state.catalogPresets.length) {
+    return true;
+  }
   for (const key of ["biddings", "bag", "listings", "history"]) {
     if (Array.isArray(state[key]) && state[key].length) return true;
   }
@@ -699,6 +706,45 @@ export function setHeroPref(state, heroId, partial) {
       [heroId]: next,
     },
   };
+}
+
+export function saveCatalogPreset(state, partial) {
+  const list = [...(state.catalogPresets || [])];
+  let preset = defaultCatalogPreset(partial);
+  const byId = list.findIndex((p) => p.id === preset.id);
+  if (byId >= 0) {
+    list[byId] = preset;
+  } else {
+    const byName = list.findIndex(
+      (p) => p.name.toLowerCase() === preset.name.toLowerCase()
+    );
+    if (byName >= 0) {
+      preset = { ...preset, id: list[byName].id };
+      list[byName] = preset;
+    } else {
+      list.push(preset);
+    }
+  }
+  return { state: { ...state, catalogPresets: list }, preset };
+}
+
+export function deleteCatalogPreset(state, presetId) {
+  return {
+    ...state,
+    catalogPresets: (state.catalogPresets || []).filter(
+      (p) => p.id !== presetId
+    ),
+  };
+}
+
+export function applyCatalogPresetToHero(state, heroId, presetId) {
+  const preset = (state.catalogPresets || []).find((p) => p.id === presetId);
+  if (!preset) return state;
+  return setHeroPref(state, heroId, {
+    preferredStats: preset.preferredStats,
+    flatPriority: preset.flatPriority,
+    importance: preset.importance,
+  });
 }
 
 function sellDifficultyFrom(related, fails) {

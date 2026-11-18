@@ -7733,6 +7733,70 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-size: 0.88rem;
 }
 
+.ah-preset-box {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(122, 74, 34, 0.35);
+  border-radius: 12px;
+  background: #fff8ea;
+  display: grid;
+  gap: 8px;
+}
+
+.ah-preset-box h4 {
+  margin: 0;
+  font-family: Cinzel, serif;
+  color: #3a2818;
+}
+
+.ah-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+
+.ah-preset-select,
+.ah-preset-name {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.ah-preset-strip {
+  margin: 12px 0 4px;
+}
+
+.ah-preset-strip h3 {
+  margin: 0 0 8px;
+  font-family: Cinzel, serif;
+  color: #3a2818;
+  font-size: 1.05rem;
+}
+
+.ah-preset-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ah-preset-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(122, 74, 34, 0.4);
+  border-radius: 999px;
+  background: #fff9ec;
+  font-size: 0.82rem;
+}
+
+.ah-preset-chip strong {
+  color: #3a2818;
+}
+
 .ah-catalog-group {
   margin-top: 16px;
 }

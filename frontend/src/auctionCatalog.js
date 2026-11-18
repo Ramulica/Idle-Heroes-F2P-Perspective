@@ -128,6 +128,49 @@ export function normalizeHeroPrefs(raw, knownHeroIds = []) {
   return out;
 }
 
+function newPresetId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Named reusable catalog setup (stats + flat + importance). */
+export function defaultCatalogPreset(partial = {}) {
+  const pref = normalizeHeroPref(partial, null);
+  return {
+    id: typeof partial.id === "string" && partial.id ? partial.id : newPresetId(),
+    name: String(partial.name || "").trim() || "Preset",
+    preferredStats: pref.preferredStats,
+    flatPriority: pref.flatPriority,
+    importance: pref.importance,
+  };
+}
+
+export function normalizeCatalogPreset(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const name = String(raw.name || "").trim();
+  if (!name) return null;
+  return defaultCatalogPreset(raw);
+}
+
+export function normalizeCatalogPresets(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const row of raw) {
+    const preset = normalizeCatalogPreset(row);
+    if (!preset || seen.has(preset.id)) continue;
+    seen.add(preset.id);
+    out.push(preset);
+  }
+  return out;
+}
+
+export function catalogPresetToPref(preset, heroId) {
+  return normalizeHeroPref(preset, heroId);
+}
+
 export function strategyOf(settings) {
   const id = settings?.strategyId || "safe_bootstrap";
   return FLIP_STRATEGY_BY_ID[id] || FLIP_STRATEGIES[0];

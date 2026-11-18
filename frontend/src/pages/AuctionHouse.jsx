@@ -22,6 +22,7 @@ import {
   copyAlerts,
   copyTitle,
   copyToDraft,
+  deleteCatalogPreset,
   discardBag,
   dismissBidding,
   draftWithRarity,
@@ -44,6 +45,7 @@ import {
   patchSettings,
   returnBagToBidding,
   returnListingToBag,
+  saveCatalogPreset,
   sellListing,
   setDraftBonus,
   setHammersUsed,
@@ -58,6 +60,7 @@ import {
   CATALOG_STAT_OPTIONS,
   FLAT_PRIORITIES,
   FLIP_STRATEGIES,
+  catalogPresetToPref,
   strategyOf,
 } from "../auctionCatalog";
 import { api } from "../api";
@@ -154,24 +157,50 @@ function HeroPickGrid({ value, onChange, state }) {
   );
 }
 
-function HeroCatalogModal({ hero, pref, onSave, onClose }) {
+function HeroCatalogModal({
+  hero,
+  pref,
+  presets,
+  onSave,
+  onSavePreset,
+  onDeletePreset,
+  onClose,
+}) {
   const [preferredStats, setPreferredStats] = useState([
     ...(pref.preferredStats || []),
   ]);
   const [flatPriority, setFlatPriority] = useState(pref.flatPriority || "attack");
   const [importance, setImportance] = useState(pref.importance || 5);
+  const [presetId, setPresetId] = useState("");
+  const [presetName, setPresetName] = useState("");
   const dragIndex = useRef(null);
 
   const pool = CATALOG_STAT_OPTIONS.filter((s) => !preferredStats.includes(s));
+  const list = Array.isArray(presets) ? presets : [];
 
   function moveStat(from, to) {
     if (from === to || from < 0 || to < 0) return;
-    setPreferredStats((list) => {
-      const next = [...list];
+    setPreferredStats((listStats) => {
+      const next = [...listStats];
       const [item] = next.splice(from, 1);
       next.splice(to, 0, item);
       return next;
     });
+  }
+
+  function applyPreset(id) {
+    const preset = list.find((p) => p.id === id);
+    if (!preset) return;
+    const next = catalogPresetToPref(preset, hero.id);
+    setPreferredStats([...(next.preferredStats || [])]);
+    setFlatPriority(next.flatPriority || "attack");
+    setImportance(next.importance || 5);
+    setPresetId(id);
+    setPresetName(preset.name || "");
+  }
+
+  function currentSetup() {
+    return { preferredStats, flatPriority, importance };
   }
 
   return (
@@ -182,15 +211,9 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
         <button
           type="button"
           className="tan-btn"
-          onClick={() =>
-            onSave({
-              preferredStats,
-              flatPriority,
-              importance,
-            })
-          }
+          onClick={() => onSave(currentSetup())}
         >
-          Save prefs
+          Save set up
         </button>
       }
     >
@@ -199,6 +222,79 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
         <div>
           <p className="muted">{hero.faction}</p>
           <p className="muted">Imp {importance}/10 · {flatPriority}</p>
+        </div>
+      </div>
+
+      <div className="ah-preset-box">
+        <h4>Presets</h4>
+        <p className="muted">
+          Save this setup as a reusable preset, or load one onto this hero.
+        </p>
+        <div className="ah-preset-row">
+          <label className="ah-field ah-preset-select">
+            <span>Use preset</span>
+            <select
+              value={presetId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPresetId(id);
+                if (id) applyPreset(id);
+              }}
+            >
+              <option value="">Select preset…</option>
+              {list.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} · Imp {p.importance} · {p.flatPriority}
+                  {p.preferredStats?.[0] ? ` · ${p.preferredStats[0]}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {presetId ? (
+            <button
+              type="button"
+              className="gold-btn"
+              onClick={() => {
+                onDeletePreset(presetId);
+                setPresetId("");
+                setPresetName("");
+              }}
+            >
+              Delete preset
+            </button>
+          ) : null}
+        </div>
+        <div className="ah-preset-row">
+          <label className="ah-field ah-preset-name">
+            <span>Save current as preset</span>
+            <input
+              type="text"
+              maxLength={48}
+              placeholder="e.g. Attack GK / Defier"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="tan-btn"
+            onClick={() => {
+              const name = presetName.trim();
+              if (!name) return;
+              const existing = list.find((p) => p.id === presetId);
+              const saved = onSavePreset({
+                id: existing?.id,
+                name,
+                ...currentSetup(),
+              });
+              if (saved?.id) {
+                setPresetId(saved.id);
+                setPresetName(saved.name);
+              }
+            }}
+          >
+            Save preset
+          </button>
         </div>
       </div>
 
@@ -261,7 +357,9 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
                   type="button"
                   className="ghost-btn"
                   onClick={() =>
-                    setPreferredStats((list) => list.filter((s) => s !== stat))
+                    setPreferredStats((stats) =>
+                      stats.filter((s) => s !== stat)
+                    )
                   }
                 >
                   ✕
@@ -279,8 +377,8 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
               type="button"
               className="ah-stat-chip"
               onClick={() =>
-                setPreferredStats((list) =>
-                  list.includes(stat) ? list : [...list, stat]
+                setPreferredStats((stats) =>
+                  stats.includes(stat) ? stats : [...stats, stat]
                 )
               }
             >
@@ -1383,10 +1481,47 @@ export default function AuctionHouse() {
               <h2>Hero catalog</h2>
               <p className="muted">
                 Tap a hero to rank preferred % (Giant Killer, Defier, …), set
-                Attack/Health/Speed priority, and importance 1–10. Strategies
-                use these when grading bids. Your setups stay private to your
-                account.
+                Attack/Health/Speed priority, and importance 1–10. Save presets
+                from any hero and reuse them on others. Setups stay private to
+                your account.
               </p>
+              {(state.catalogPresets || []).length ? (
+                <div className="ah-preset-strip">
+                  <h3>
+                    Presets{" "}
+                    <span className="muted">
+                      ({state.catalogPresets.length})
+                    </span>
+                  </h3>
+                  <ul className="ah-preset-chips">
+                    {state.catalogPresets.map((p) => (
+                      <li key={p.id} className="ah-preset-chip">
+                        <strong>{p.name}</strong>
+                        <span className="muted">
+                          Imp {p.importance} · {p.flatPriority}
+                          {p.preferredStats?.[0]
+                            ? ` · ${p.preferredStats.slice(0, 2).join(", ")}`
+                            : ""}
+                        </span>
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          title="Delete preset"
+                          onClick={() =>
+                            setState((s) => deleteCatalogPreset(s, p.id))
+                          }
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="muted">
+                  No presets yet — open a hero, build a setup, then Save preset.
+                </p>
+              )}
               {[
                 {
                   key: "set-up",
@@ -1753,10 +1888,23 @@ export default function AuctionHouse() {
               <HeroCatalogModal
                 hero={hero}
                 pref={heroPrefOf(state, catalogHeroId)}
+                presets={state.catalogPresets || []}
                 onClose={() => setCatalogHeroId(null)}
                 onSave={(partial) => {
                   setState((s) => setHeroPref(s, catalogHeroId, partial));
                   setCatalogHeroId(null);
+                }}
+                onSavePreset={(partial) => {
+                  let saved = null;
+                  setState((s) => {
+                    const result = saveCatalogPreset(s, partial);
+                    saved = result.preset;
+                    return result.state;
+                  });
+                  return saved;
+                }}
+                onDeletePreset={(presetId) => {
+                  setState((s) => deleteCatalogPreset(s, presetId));
                 }}
               />
             );
