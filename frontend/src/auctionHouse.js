@@ -355,11 +355,25 @@ export function normalizeCopy(raw, stage) {
     soldPrice: Math.max(0, Number(raw.soldPrice) || 0),
     soldAt: typeof raw.soldAt === "string" ? raw.soldAt : null,
     outcome:
-      raw.outcome === "sold" || raw.outcome === "discarded"
+      raw.outcome === "sold" ||
+      raw.outcome === "discarded" ||
+      raw.outcome === "bid_failed"
         ? raw.outcome
         : stage === "history"
           ? "sold"
           : null,
+    // bid-fail analysis snapshot (optional)
+    failPrice: Math.max(0, Number(raw.failPrice) || 0),
+    pushVerdict:
+      raw.pushVerdict === "should_push" ||
+      raw.pushVerdict === "good_stop" ||
+      raw.pushVerdict === "borderline"
+        ? raw.pushVerdict
+        : null,
+    counterfactualMarginPct: Number.isFinite(Number(raw.counterfactualMarginPct))
+      ? Number(raw.counterfactualMarginPct)
+      : null,
+    maxBidAtFail: Math.max(0, Number(raw.maxBidAtFail) || 0),
   };
 }
 
@@ -562,6 +576,130 @@ export function failedTriesForHero(copy, bag, listings, history) {
     for (const t of row.tries || []) tries.push(t);
   }
   return tries.sort((a, b) => b.price - a.price);
+}
+
+/** Lost auctions — market cleared at this buy price for a similar copy. */
+export function lostBidsForHero(copy, history) {
+  const list = Array.isArray(history) ? history : [];
+  return list
+    .filter(
+      (h) =>
+        h.heroId === copy?.heroId &&
+        h.outcome === "bid_failed" &&
+        (Number(h.failPrice) || Number(h.buyPrice) || 0) > 0
+    )
+    .map((h) => {
+      const price = Math.max(
+        0,
+        Number(h.failPrice) || Number(h.buyPrice) || 0
+      );
+      return { row: h, price, dist: statDistance(copy, h) };
+    })
+    .filter((x) => x.dist <= 6.5)
+    .sort((a, b) => a.dist - b.dist || b.price - a.price);
+}
+
+/**
+ * Counterfactual: if you had bought at failPrice, was pushing worth it?
+ */
+export function bidFailAdvice(copy, failPrice, state, now = Date.now()) {
+  const price = Math.max(0, Number(failPrice) || 0);
+  const flip = evaluateFlip(copy, state, now);
+  const expectSell = flip.suggestList;
+  const expectNet =
+    expectSell != null ? netFromListPrice(expectSell) : null;
+  const marginIfBought =
+    expectNet != null && price > 0
+      ? ((expectNet - price) / price) * 100
+      : null;
+  const maxBid = flip.maxBid;
+  const target = flip.targetMarginPct;
+
+  let verdict = "borderline";
+  let label = "Borderline";
+  const reasons = [];
+
+  if (!(price > 0)) {
+    return {
+      verdict: "borderline",
+      label: "Enter fail price",
+      maxBid,
+      suggestBid: flip.suggestBid,
+      expectSell,
+      marginIfBought: null,
+      targetMarginPct: target,
+      reasons: ["Need the price the auction cleared at."],
+      flip,
+    };
+  }
+
+  if (maxBid != null && price <= maxBid) {
+    if (marginIfBought == null || marginIfBought >= target - 3) {
+      verdict = "should_push";
+      label = "Should have pushed";
+      reasons.push(
+        `Fail ${formatSg(price)} was ≤ Max bid ${formatSg(maxBid)} — still inside plan.`
+      );
+    } else {
+      verdict = "borderline";
+      label = "Borderline";
+      reasons.push(
+        `Under Max bid, but expected margin ~${Math.round(marginIfBought)}% is thin vs ${target}%.`
+      );
+    }
+  } else if (
+    maxBid != null &&
+    price <= maxBid * 1.1 &&
+    marginIfBought != null &&
+    marginIfBought >= 0
+  ) {
+    verdict = "borderline";
+    label = "Borderline";
+    reasons.push(
+      `Slightly over Max bid (${formatSg(maxBid)}) but still ~${Math.round(marginIfBought)}% expected net.`
+    );
+  } else if (marginIfBought != null && marginIfBought >= target) {
+    verdict = "should_push";
+    label = "Should have pushed";
+    reasons.push(
+      `At ${formatSg(price)}, expected sell still clears ~${Math.round(marginIfBought)}% vs ${target}% target.`
+    );
+  } else {
+    verdict = "good_stop";
+    label = "Good to stop";
+    if (maxBid != null) {
+      reasons.push(
+        `Fail ${formatSg(price)} above Max bid ${formatSg(maxBid)} — chasing would break the plan.`
+      );
+    }
+    if (marginIfBought != null) {
+      reasons.push(
+        `Bought at fail price → ~${Math.round(marginIfBought)}% expected net (target ${target}%).`
+      );
+    }
+  }
+
+  if (expectSell != null) {
+    reasons.push(
+      `Treating fail as buy cost ${formatSg(price)} vs expect sell ${formatSg(expectSell)}.`
+    );
+  } else {
+    reasons.push(
+      "No strong sell comps yet — verdict leans on Max bid / catalog until history fills."
+    );
+  }
+
+  return {
+    verdict,
+    label,
+    maxBid,
+    suggestBid: flip.suggestBid,
+    expectSell,
+    marginIfBought,
+    targetMarginPct: target,
+    reasons,
+    flip,
+  };
 }
 
 function weightedMean(pairs) {
@@ -828,6 +966,7 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     state?.listings,
     state?.history
   );
+  const lostBids = lostBidsForHero(copy, state?.history);
   const difficulty = sellDifficultyFrom(related, fails);
 
   let expectedSell = null;
@@ -838,6 +977,26 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }));
     const mean = weightedMean(pool);
     if (mean != null) expectedSell = Math.round(mean);
+  }
+
+  // Lost auctions: market paid this buy price for a similar copy.
+  // Infer a sell target that still clears strategy margin after 5%.
+  if (lostBids.length) {
+    const closeLost = lostBids.filter((x) => x.dist <= 3.8);
+    const pool = (closeLost.length ? closeLost : lostBids.slice(0, 8)).map(
+      ({ price, dist }) => ({
+        value: price,
+        weight: 1 / (1 + dist * dist),
+      })
+    );
+    const meanBuy = weightedMean(pool);
+    if (meanBuy != null && meanBuy > 0) {
+      const impliedList = Math.ceil(
+        (meanBuy * (1 + targetMarginPct / 100)) / (1 - SELL_COMMISSION)
+      );
+      if (expectedSell == null) expectedSell = impliedList;
+      else expectedSell = Math.round(expectedSell * 0.55 + impliedList * 0.45);
+    }
   }
 
   if (fails.length && expectedSell != null) {
@@ -890,9 +1049,12 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }
   }
 
+  const lostClose = lostBids.filter((x) => x.dist <= 3.8).length;
   const confidence = Math.min(
     1,
-    (samples / 8) * (close.length ? 1 : 0.55) * (phase === "cold" ? 0.7 : 1)
+    ((samples + Math.min(4, lostBids.length) * 0.65) / 8) *
+      (close.length || lostClose ? 1 : 0.55) *
+      (phase === "cold" ? 0.7 : 1)
   );
 
   let maxBid = null;
@@ -924,6 +1086,18 @@ export function evaluateFlip(copy, state, now = Date.now()) {
           (0.82 + 0.18 * confidence)
       )
     );
+    // Lost bids teach how hot the buy side is — don't lowball below recent clears.
+    if (lostBids.length) {
+      const hot = lostBids
+        .slice(0, 5)
+        .reduce((s, x) => s + x.price, 0) / Math.min(5, lostBids.length);
+      if (Number.isFinite(hot) && hot > 0) {
+        const floorBid = Math.floor(hot * 0.92);
+        if (suggestBid < floorBid) {
+          suggestBid = Math.min(maxBid, Math.max(suggestBid, floorBid));
+        }
+      }
+    }
     if (maxBid > 0) suggestBid = Math.min(suggestBid, maxBid);
   }
 
@@ -957,6 +1131,17 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   }
   if (fails.length) {
     reasons.push(`Failed list ceiling near ${formatSg(fails[0].price)} SG`);
+  }
+  if (lostBids.length) {
+    const top = lostBids[0];
+    const pushN = lostBids.filter(
+      (x) => x.row.pushVerdict === "should_push"
+    ).length;
+    reasons.push(
+      `${lostBids.length} lost bid${lostBids.length === 1 ? "" : "s"} (near ${formatSg(top.price)} SG)${
+        pushN ? ` · ${pushN} were “should have pushed”` : ""
+      }`
+    );
   }
   if (hammerNeed >= 1) {
     reasons.push(
@@ -1064,6 +1249,12 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     reasons,
     related: related.slice(0, 5).map((r) => r.row),
     failedTries: fails.slice(0, 5),
+    lostBids: lostBids.slice(0, 5).map((x) => ({
+      price: x.price,
+      dist: x.dist,
+      pushVerdict: x.row.pushVerdict,
+      at: x.row.soldAt || x.row.boughtAt,
+    })),
   };
 }
 
@@ -1089,7 +1280,8 @@ export function flipBootstrapPlan(settings) {
   const strat = strategyOf(s);
   return [
     ...strat.plan,
-    `History phases still apply: cold → building (until ${s.bootstrapSales} sold/hero) → mature. Log Sold and failed X every time.`,
+    `History phases still apply: cold → building (until ${s.bootstrapSales} sold/hero) → mature. Log Sold, Bid failed, and failed lists every time.`,
+    "Bid failed: enter the clear price — calculator treats it as a buy-cost counterfactual (should you have pushed?) and feeds lost-bid comps into Max/Suggest.",
     "Catalog: set each hero’s preferred % order, flat priority (Attack/HP/Speed), and importance 1–10 — strategies read those.",
     "Hammers are scarce: prefer copies that already match prefs. Only Meta Sniper leans on hammers for importance 8+ near-misses.",
   ];
@@ -1385,6 +1577,41 @@ export function dismissBidding(state, id) {
   return {
     ...state,
     biddings: (state.biddings || []).filter((c) => c.id !== id),
+  };
+}
+
+/**
+ * Log a lost auction: clear price becomes the counterfactual buy cost.
+ * Feeds Max/Suggest and “should have pushed” learning.
+ */
+export function failBidding(state, id, failPrice, failedAtIso) {
+  const row = (state.biddings || []).find((c) => c.id === id);
+  if (!row) return state;
+  const price = Math.max(0, Number(failPrice) || 0);
+  if (!(price > 0)) return state;
+  const when = failedAtIso || nowIso();
+  const advice = bidFailAdvice(row, price, state);
+  const logged = normalizeCopy(
+    {
+      ...row,
+      buyPrice: price,
+      failPrice: price,
+      boughtAt: when,
+      soldAt: when,
+      soldPrice: 0,
+      outcome: "bid_failed",
+      pushVerdict: advice.verdict,
+      counterfactualMarginPct: advice.marginIfBought,
+      maxBidAtFail: advice.maxBid || 0,
+      stage: "history",
+    },
+    "history"
+  );
+  if (!logged) return state;
+  return {
+    ...state,
+    biddings: state.biddings.filter((c) => c.id !== id),
+    history: [logged, ...(state.history || [])],
   };
 }
 

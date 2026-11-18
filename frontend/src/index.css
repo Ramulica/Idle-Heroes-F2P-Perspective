@@ -7906,6 +7906,14 @@ button.sc-aura-badge:hover .sc-aura-core {
   line-height: 1.35;
 }
 
+.ah-bidfail-reasons {
+  margin: 0 0 12px;
+  padding-left: 1.15em;
+  display: grid;
+  gap: 4px;
+  font-size: 0.86rem;
+}
+
 .ah-creator-db {
   margin-top: 22px;
   padding-top: 16px;

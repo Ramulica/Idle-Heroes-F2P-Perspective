@@ -22,13 +22,14 @@ import {
   copyAlerts,
   copyTitle,
   copyToDraft,
+  bidFailAdvice,
   deleteCatalogPreset,
   deleteHeroSetup,
   discardBag,
-  dismissBidding,
   draftWithRarity,
   emptyBiddingDraft,
   evaluateFlip,
+  failBidding,
   failListing,
   flipBootstrapPlan,
   formatBonuses,
@@ -795,6 +796,94 @@ export default function AuctionHouse() {
       );
     }
 
+    if (picker.type === "bid-failed") {
+      const copy = state.biddings.find((c) => c.id === picker.id);
+      if (!copy) return null;
+      const failPrice = Number(picker.price) || 0;
+      const advice = bidFailAdvice(copy, failPrice, state, tick);
+      return (
+        <Modal
+          title={`Bid failed · ${copyTitle(copy)}`}
+          onClose={() => setPicker(null)}
+          footer={
+            <button
+              type="button"
+              className="tan-btn"
+              disabled={!(failPrice > 0)}
+              onClick={() => {
+                setState((s) =>
+                  failBidding(
+                    s,
+                    copy.id,
+                    failPrice,
+                    fromDatetimeLocalValue(picker.when)
+                  )
+                );
+                setPicker(null);
+                setTab("history");
+              }}
+            >
+              Log bid failed
+            </button>
+          }
+        >
+          <p className="muted sc-modal-lead">
+            Enter the price the auction cleared at (winning bid). Logged as a
+            counterfactual buy cost for the calculator.
+          </p>
+          <label className="ah-field">
+            <span>Failed at (SG)</span>
+            <input
+              type="number"
+              min={1}
+              value={picker.price ?? ""}
+              onChange={(e) => setPicker({ ...picker, price: e.target.value })}
+            />
+          </label>
+          {failPrice > 0 ? (
+            <div
+              className={`ah-flip-grade ah-flip-${
+                advice.verdict === "should_push"
+                  ? "warn"
+                  : advice.verdict === "good_stop"
+                    ? "good"
+                    : "muted"
+              }`}
+            >
+              <strong>{advice.label}</strong>
+              <span className="muted">
+                Max {advice.maxBid != null ? formatSg(advice.maxBid) : "—"} ·
+                suggest{" "}
+                {advice.suggestBid != null ? formatSg(advice.suggestBid) : "—"}{" "}
+                · expect sell{" "}
+                {advice.expectSell != null ? formatSg(advice.expectSell) : "—"}
+                {advice.marginIfBought != null
+                  ? ` · if bought ~${Math.round(advice.marginIfBought)}% net`
+                  : ""}
+              </span>
+            </div>
+          ) : null}
+          {failPrice > 0 && advice.reasons?.length ? (
+            <ul className="ah-bidfail-reasons">
+              {advice.reasons.map((r, i) => (
+                <li key={i} className="muted">
+                  {r}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <label className="ah-field">
+            <span>When</span>
+            <input
+              type="datetime-local"
+              value={picker.when}
+              onChange={(e) => setPicker({ ...picker, when: e.target.value })}
+            />
+          </label>
+        </Modal>
+      );
+    }
+
     if (picker.type === "buy") {
       const copy = state.biddings.find((c) => c.id === picker.id);
       if (!copy) return null;
@@ -1043,7 +1132,8 @@ export default function AuctionHouse() {
                   "Catalog: set each hero’s preferred % order, Attack/HP/Speed priority, and importance 1–10.",
                   "Settings: pick Safe Bootstrap, Volume Grinder, or Meta Sniper — margins, hammer strictness, and importance floors differ.",
                   "My Biddings grades use strategy + catalog + history comps (Attack/%). Never bid past Max bid.",
-                  "Hammers are scarce: prefer copies that already match prefs. Log Sold and failed X to teach ceilings.",
+                  "Bid failed: log the clear price — calculator scores if you should have pushed, and uses lost bids as comps.",
+                  "Hammers are scarce: prefer copies that already match prefs. Log Sold and failed lists to teach ceilings.",
                 ]}
               />
             </div>
@@ -1216,13 +1306,23 @@ export default function AuctionHouse() {
                           </button>
                           <button
                             type="button"
-                            className="ghost-btn"
-                            title="Didn't win — remove"
+                            className="gold-btn"
+                            title="Log the clear price you lost at"
                             onClick={() =>
-                              setState((s) => dismissBidding(s, copy.id))
+                              setPicker({
+                                type: "bid-failed",
+                                id: copy.id,
+                                price:
+                                  flip.suggestBid != null
+                                    ? String(flip.suggestBid)
+                                    : flip.maxBid != null
+                                      ? String(flip.maxBid)
+                                      : "",
+                                when: toDatetimeLocalValue(),
+                              })
                             }
                           >
-                            ✕
+                            Bid failed
                           </button>
                         </>
                       }
@@ -1479,12 +1579,13 @@ export default function AuctionHouse() {
                     </thead>
                     <tbody>
                       {state.history.map((copy) => {
+                        const bidFailed = copy.outcome === "bid_failed";
                         const net =
                           copy.outcome === "sold"
                             ? netFromListPrice(copy.soldPrice)
                             : 0;
                         const hold =
-                          copy.boughtAt && copy.soldAt
+                          !bidFailed && copy.boughtAt && copy.soldAt
                             ? new Date(copy.soldAt) - new Date(copy.boughtAt)
                             : null;
                         const uplift =
@@ -1492,6 +1593,14 @@ export default function AuctionHouse() {
                             ? (copy.soldPrice / copy.buyPrice - 1) * 100
                             : null;
                         const hero = auctionHeroOf(copy.heroId);
+                        const pushLabel =
+                          copy.pushVerdict === "should_push"
+                            ? "Should have pushed"
+                            : copy.pushVerdict === "good_stop"
+                              ? "Good to stop"
+                              : copy.pushVerdict === "borderline"
+                                ? "Borderline"
+                                : null;
                         return (
                           <tr key={copy.id}>
                             <td>
@@ -1500,19 +1609,31 @@ export default function AuctionHouse() {
                                 <div>
                                   <strong>{copy.rarity || "Copy"}</strong>
                                   <div className="muted">
-                                    {copy.outcome === "sold"
-                                      ? formatBonuses(copy)
-                                      : "Discarded"}
+                                    {bidFailed
+                                      ? `Bid failed${
+                                          pushLabel ? ` · ${pushLabel}` : ""
+                                        }`
+                                      : copy.outcome === "sold"
+                                        ? formatBonuses(copy)
+                                        : "Discarded"}
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td>
-                              <Sg value={copy.buyPrice} />
+                              <Sg
+                                value={
+                                  bidFailed
+                                    ? copy.failPrice || copy.buyPrice
+                                    : copy.buyPrice
+                                }
+                              />
                             </td>
                             <td>
                               {copy.outcome === "sold" ? (
                                 <Sg value={copy.soldPrice} />
+                              ) : bidFailed ? (
+                                <span className="muted">Lost</span>
                               ) : (
                                 "—"
                               )}
@@ -1520,6 +1641,12 @@ export default function AuctionHouse() {
                             <td>
                               {copy.outcome === "sold" ? (
                                 <Sg value={net} />
+                              ) : bidFailed &&
+                                copy.counterfactualMarginPct != null ? (
+                                <span className="muted">
+                                  ~{Math.round(copy.counterfactualMarginPct)}%
+                                  if bought
+                                </span>
                               ) : (
                                 "—"
                               )}
@@ -1528,7 +1655,9 @@ export default function AuctionHouse() {
                             <td>
                               {uplift != null
                                 ? `${uplift >= 0 ? "+" : ""}${uplift.toFixed(0)}%`
-                                : "—"}
+                                : bidFailed && copy.maxBidAtFail
+                                  ? `Max was ${formatSg(copy.maxBidAtFail)}`
+                                  : "—"}
                             </td>
                           </tr>
                         );
