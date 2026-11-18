@@ -644,19 +644,11 @@ function CopyCard({
       onClick={onEdit || undefined}
       title={onEdit ? "Tap to edit" : undefined}
     >
-      <div
-        className={`ah-card-rarity sc-awaken-btn filled${long ? " long" : ""}`}
-        style={{ "--sc-awaken-color": rarityColor }}
-        title={`Awakening · ${rarity}`}
-      >
-        <span>{rarity}</span>
-      </div>
-
       <div className="ah-card-top">
         <img src={hero?.icon} alt="" className="ah-card-icon" />
         <div className="ah-card-flats">
           <div className="ah-stat-row">
-            <FlatStatBadge id="attack" className="muted" />
+            <FlatStatBadge id="attack" label="Atk" className="muted" />
             <strong>{formatSg(copy.attack || 0)}</strong>
           </div>
           <div className="ah-stat-row">
@@ -664,9 +656,16 @@ function CopyCard({
             <strong>{formatSg(copy.hp || 0)}</strong>
           </div>
           <div className="ah-stat-row">
-            <FlatStatBadge id="speed" className="muted" />
+            <FlatStatBadge id="speed" label="Spd" className="muted" />
             <strong>{formatSg(copy.speed || 0)}</strong>
           </div>
+        </div>
+        <div
+          className={`ah-card-rarity sc-awaken-btn filled${long ? " long" : ""}`}
+          style={{ "--sc-awaken-color": rarityColor }}
+          title={`Awakening · ${rarity}`}
+        >
+          <span>{rarity}</span>
         </div>
       </div>
 

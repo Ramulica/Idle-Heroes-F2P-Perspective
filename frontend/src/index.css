@@ -7449,7 +7449,7 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .ah-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
 }
 
@@ -7463,17 +7463,17 @@ button.sc-aura-badge:hover .sc-aura-core {
   padding: 14px 14px 12px;
   display: grid;
   gap: 10px;
+  min-width: 0;
   box-shadow:
     0 4px 0 #6b3e16,
     inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .ah-card-rarity {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  position: static;
+  flex: 0 0 auto;
+  align-self: start;
   pointer-events: none;
-  z-index: 1;
   display: grid;
   place-items: center;
   padding: 0;
@@ -7494,15 +7494,15 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .ah-card-top {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding-right: 52px;
 }
 
 .ah-card-icon {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 12px;
   object-fit: contain;
   object-position: center;
@@ -7514,29 +7514,38 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .ah-card-flats {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  flex: 1;
 }
 
 .ah-stat-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
 
+.ah-stat-row .ah-flat-badge,
 .ah-stat-row .muted {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  min-width: 0;
+}
+
+.ah-stat-row .ah-flat-badge-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .ah-stat-row strong {
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   color: #3a2818;
+  white-space: nowrap;
+  justify-self: end;
 }
 
 .ah-card-pcts {
@@ -7654,6 +7663,11 @@ button.sc-aura-badge:hover .sc-aura-core {
 .ah-flip-prices {
   display: grid;
   gap: 4px;
+  justify-items: stretch;
+}
+
+.ah-flip-prices .ah-card-money {
+  justify-content: space-between;
 }
 
 .ah-bootstrap-plan {
@@ -8120,16 +8134,24 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .ah-card-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
   padding-top: 2px;
 }
 
+.ah-card-actions > * {
+  min-width: 0;
+  width: 100%;
+  justify-content: center;
+  font-size: 0.84rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .ah-card-actions .ghost-btn {
-  min-width: 42px;
+  min-width: 0;
   min-height: 42px;
   border: 2px solid #8a5a2a;
   border-radius: 12px;
