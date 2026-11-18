@@ -370,9 +370,16 @@ export function normalizeCopy(raw, stage) {
       raw.pushVerdict === "borderline"
         ? raw.pushVerdict
         : null,
-    counterfactualMarginPct: Number.isFinite(Number(raw.counterfactualMarginPct))
-      ? Number(raw.counterfactualMarginPct)
-      : null,
+    counterfactualMarginPct: (() => {
+      if (
+        raw.counterfactualMarginPct == null ||
+        raw.counterfactualMarginPct === ""
+      ) {
+        return null;
+      }
+      const n = Number(raw.counterfactualMarginPct);
+      return Number.isFinite(n) ? n : null;
+    })(),
     maxBidAtFail: Math.max(0, Number(raw.maxBidAtFail) || 0),
   };
 }
@@ -588,7 +595,10 @@ export function failedTriesForHero(copy, bag, listings, history) {
   return tries.sort((a, b) => b.price - a.price);
 }
 
-/** Lost auctions — market cleared at this buy price for a similar copy. */
+/**
+ * Lost auctions — that copy sold/cleared at this buy price (who won is irrelevant).
+ * Same-hero clears always count; distance only weights how hard they pull Suggest.
+ */
 export function lostBidsForHero(copy, history) {
   const list = Array.isArray(history) ? history : [];
   return list
@@ -605,7 +615,6 @@ export function lostBidsForHero(copy, history) {
       );
       return { row: h, price, dist: statDistance(copy, h) };
     })
-    .filter((x) => x.dist <= 6.5)
     .sort((a, b) => a.dist - b.dist || b.price - a.price);
 }
 
@@ -788,9 +797,19 @@ export function copyQualityScore(copy, state = null) {
 
 export function flipMarketPhase(copy, state) {
   const settings = { ...defaultSettings(), ...(state?.settings || {}) };
-  const n = (state?.history || []).filter(
-    (h) => h.heroId === copy?.heroId && h.outcome === "sold"
-  ).length;
+  const hist = Array.isArray(state?.history) ? state.history : [];
+  let n = 0;
+  for (const h of hist) {
+    if (h.heroId !== copy?.heroId) continue;
+    if (h.outcome === "sold") n += 1;
+    else if (
+      h.outcome === "bid_failed" &&
+      (Number(h.failPrice) || Number(h.buyPrice) || 0) > 0
+    ) {
+      // Clear = market paid that price for that copy — counts as market data.
+      n += 1;
+    }
+  }
   const gate = Math.max(1, Number(settings.bootstrapSales) || 8);
   if (n < Math.max(3, Math.ceil(gate * 0.4))) return "cold";
   if (n < gate) return "building";
@@ -978,6 +997,10 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   );
   const lostBids = lostBidsForHero(copy, state?.history);
   const difficulty = sellDifficultyFrom(related, fails);
+  const twinLost = lostBids.filter((x) => x.dist <= 2.2);
+  const closeLost = lostBids.filter((x) => x.dist <= 3.8);
+  // Market events: your solds + any clear (someone bought that copy at that price).
+  const marketSamples = samples + lostBids.length;
 
   let expectedSell = null;
   if (related.length) {
@@ -989,23 +1012,36 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     if (mean != null) expectedSell = Math.round(mean);
   }
 
-  // Lost auctions: market paid this buy price for a similar copy.
-  // Infer a sell target that still clears strategy margin after 5%.
+  // Bid-failed clear = that copy sold at failPrice. Feeds list + Max/Suggest.
   if (lostBids.length) {
-    const closeLost = lostBids.filter((x) => x.dist <= 3.8);
-    const pool = (closeLost.length ? closeLost : lostBids.slice(0, 8)).map(
-      ({ price, dist }) => ({
-        value: price,
-        weight: 1 / (1 + dist * dist),
-      })
-    );
+    const pool = (
+      twinLost.length
+        ? twinLost
+        : closeLost.length
+          ? closeLost
+          : lostBids.slice(0, 8)
+    ).map(({ price, dist }) => ({
+      value: price,
+      // Same flats/% weigh hardest; distant same-hero clears still anchor the market.
+      weight:
+        (1 / (1 + dist * dist)) *
+        (dist <= 2.2 ? 2.6 : dist <= 3.8 ? 1.4 : 0.55),
+    }));
     const meanBuy = weightedMean(pool);
     if (meanBuy != null && meanBuy > 0) {
       const impliedList = Math.ceil(
         (meanBuy * (1 + targetMarginPct / 100)) / (1 - SELL_COMMISSION)
       );
-      if (expectedSell == null) expectedSell = impliedList;
-      else expectedSell = Math.round(expectedSell * 0.55 + impliedList * 0.45);
+      if (expectedSell == null) {
+        // Only clears: list so a rebuy at ~clear still hits strategy margin after 5%.
+        expectedSell = impliedList;
+      } else if (twinLost.length) {
+        expectedSell = Math.round(expectedSell * 0.3 + impliedList * 0.7);
+      } else if (closeLost.length) {
+        expectedSell = Math.round(expectedSell * 0.5 + impliedList * 0.5);
+      } else {
+        expectedSell = Math.round(expectedSell * 0.7 + impliedList * 0.3);
+      }
     }
   }
 
@@ -1059,12 +1095,15 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }
   }
 
-  const lostClose = lostBids.filter((x) => x.dist <= 3.8).length;
   const confidence = Math.min(
     1,
-    ((samples + Math.min(4, lostBids.length) * 0.65) / 8) *
-      (close.length || lostClose ? 1 : 0.55) *
-      (phase === "cold" ? 0.7 : 1)
+    ((samples + Math.min(6, lostBids.length) * 0.85) / 8) *
+      (close.length || closeLost.length || twinLost.length
+        ? 1
+        : lostBids.length
+          ? 0.72
+          : 0.55) *
+      (phase === "cold" ? 0.75 : 1)
   );
 
   let maxBid = null;
@@ -1096,14 +1135,28 @@ export function evaluateFlip(copy, state, now = Date.now()) {
           (0.82 + 0.18 * confidence)
       )
     );
-    // Lost bids teach how hot the buy side is — don't lowball below recent clears.
+    // Clears = market paid this for those (or nearby) stats — anchor bids to them.
     if (lostBids.length) {
-      const hot = lostBids
-        .slice(0, 5)
-        .reduce((s, x) => s + x.price, 0) / Math.min(5, lostBids.length);
+      const hotPool = (
+        twinLost.length ? twinLost : closeLost.length ? closeLost : lostBids
+      ).slice(0, 5);
+      const hot = hotPool.reduce((s, x) => s + x.price, 0) / hotPool.length;
       if (Number.isFinite(hot) && hot > 0) {
-        const floorBid = Math.floor(hot * 0.92);
+        const floorMul = twinLost.length
+          ? 0.97
+          : closeLost.length
+            ? 0.93
+            : 0.85; // distant same-hero clear still floors Suggest
+        const floorBid = Math.floor(hot * floorMul);
         if (suggestBid < floorBid) {
+          suggestBid = Math.min(maxBid, Math.max(suggestBid, floorBid));
+        }
+        // Only clears, no solds: Max should at least respect the last clear.
+        if (samples === 0 && twinLost.length) {
+          maxBid = Math.max(maxBid, Math.floor(hot));
+          suggestBid = Math.min(maxBid, Math.max(suggestBid, floorBid));
+        } else if (samples === 0 && lostBids.length) {
+          maxBid = Math.max(maxBid, Math.floor(hot * 0.98));
           suggestBid = Math.min(maxBid, Math.max(suggestBid, floorBid));
         }
       }
@@ -1132,11 +1185,13 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   reasons.push(
     `Catalog · ${pref.name || "setup"} · Imp ${importance}/10 · pref ${Math.round(prefMatch * 100)}% · flats ${flatRankLabel(pref.flatRank)}`
   );
-  if (samples === 0) {
-    reasons.push("No close comps yet — grade leans on catalog + Attack/%");
+  if (marketSamples === 0) {
+    reasons.push("No solds or clears yet — grade leans on catalog + Attack/%");
   } else {
     reasons.push(
-      `${samples} similar sold · ${close.length} close comps · sell looks ${difficulty}`
+      `${samples} sold · ${lostBids.length} clear${
+        lostBids.length === 1 ? "" : "s"
+      } · ${close.length} close sold · sell looks ${difficulty}`
     );
   }
   if (fails.length) {
@@ -1148,9 +1203,9 @@ export function evaluateFlip(copy, state, now = Date.now()) {
       (x) => x.row.pushVerdict === "should_push"
     ).length;
     reasons.push(
-      `${lostBids.length} lost bid${lostBids.length === 1 ? "" : "s"} (near ${formatSg(top.price)} SG)${
-        pushN ? ` · ${pushN} were “should have pushed”` : ""
-      }`
+      `Market cleared near ${formatSg(top.price)} SG for ${
+        top.dist <= 2.2 ? "near-identical" : top.dist <= 3.8 ? "similar" : "this hero"
+      } stats${pushN ? ` · ${pushN} “should have pushed”` : ""}`
     );
   }
   if (hammerNeed >= 1) {
@@ -1180,7 +1235,7 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     grade = "skip";
     label = "Needs too many hammers";
     tone = "muted";
-  } else if (samples === 0) {
+  } else if (marketSamples === 0) {
     if (quality >= 0.8 && qualityOk && !belowImportance) {
       grade = "ok";
       label = "Speculative";
@@ -1199,7 +1254,7 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     prefMatch >= 0.35
   ) {
     grade = "strong";
-    label = "Strong buy";
+    label = samples === 0 ? "Strong (from clears)" : "Strong buy";
     tone = "good";
   } else if (
     expectedMarginPct != null &&
@@ -1208,14 +1263,19 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     qualityOk
   ) {
     grade = "buy";
-    label = "Buy";
+    label = samples === 0 ? "Buy (from clears)" : "Buy";
     tone = "good";
   } else if (
     expectedMarginPct != null &&
     expectedMarginPct >= targetMarginPct - 6
   ) {
     grade = "ok";
-    label = "Thin";
+    label = samples === 0 ? "Thin (from clears)" : "Thin";
+    tone = "warn";
+  } else if (samples === 0 && lostBids.length > 0 && suggestBid != null) {
+    // Have clear price(s) even if margin looks tight — still not "No data".
+    grade = "ok";
+    label = "Priced from clears";
     tone = "warn";
   } else {
     grade = "skip";
@@ -1248,6 +1308,8 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     label,
     tone,
     samples,
+    marketSamples,
+    lostBidCount: lostBids.length,
     closeSamples: close.length,
     expectedSell: suggestList,
     maxBid,

@@ -1167,6 +1167,146 @@ export default function AuctionHouse() {
       );
     }
 
+    if (picker.type === "history-detail") {
+      const copy = state.history.find((c) => c.id === picker.id);
+      if (!copy) return null;
+      const hero = auctionHeroOf(copy.heroId);
+      const rarity = copy.rarity || "?";
+      const rarityColor = AUCTION_RARITY_META[rarity]?.color || "#f4c430";
+      const long = String(rarity).length >= 3;
+      const bonuses = auctionBonusList(copy).filter((b) => b?.stat);
+      const bidFailed = copy.outcome === "bid_failed";
+      const clearPrice = bidFailed
+        ? Math.max(0, Number(copy.failPrice) || Number(copy.buyPrice) || 0)
+        : 0;
+      const pushLabel =
+        copy.pushVerdict === "should_push"
+          ? "Should have pushed"
+          : copy.pushVerdict === "good_stop"
+            ? "Good to stop"
+            : copy.pushVerdict === "borderline"
+              ? "Borderline"
+              : null;
+      const when =
+        (bidFailed ? copy.failedAt : copy.soldAt) ||
+        copy.boughtAt ||
+        copy.listedAt;
+      return (
+        <Modal
+          title={bidFailed ? "Bid failed · copy stats" : "History · copy stats"}
+          onClose={() => setPicker(null)}
+        >
+          <div className="ah-history-detail">
+            <div className="ah-history-detail-head">
+              <img src={hero?.icon} alt="" className="ah-card-icon" />
+              <div
+                className={`ah-card-rarity sc-awaken-btn filled${
+                  long ? " long" : ""
+                }`}
+                style={{ "--sc-awaken-color": rarityColor }}
+                title={`Awakening · ${rarity}`}
+              >
+                <span>{rarity}</span>
+              </div>
+              <div className="ah-history-detail-meta">
+                <strong>
+                  {bidFailed
+                    ? "Market cleared"
+                    : copy.outcome === "sold"
+                      ? "Sold"
+                      : "Discarded"}
+                </strong>
+                <span className="muted">
+                  {when ? formatWhen(when) : "—"}
+                  {pushLabel ? ` · ${pushLabel}` : ""}
+                </span>
+              </div>
+            </div>
+
+            <div className="ah-card-flats ah-history-detail-flats">
+              <div className="ah-stat-row">
+                <FlatStatLabel id="attack" label="Atk" className="muted" />
+                <strong className="ah-stat-value">
+                  {formatSg(copy.attack || 0)}
+                  <AwakenFlatBadge kind="attack" value={copy.attack} />
+                </strong>
+              </div>
+              <div className="ah-stat-row">
+                <FlatStatLabel id="hp" label="HP" className="muted" />
+                <strong className="ah-stat-value">
+                  {formatSg(copy.hp || 0)}
+                  <AwakenFlatBadge kind="hp" value={copy.hp} />
+                </strong>
+              </div>
+              <div className="ah-stat-row">
+                <FlatStatLabel id="speed" label="Spd" className="muted" />
+                <strong className="ah-stat-value">
+                  {formatSg(copy.speed || 0)}
+                  <AwakenFlatBadge kind="speed" value={copy.speed} />
+                </strong>
+              </div>
+            </div>
+
+            <ul className="ah-card-pcts">
+              {bonuses.length ? (
+                bonuses.map((b, i) => (
+                  <li key={`${b.stat}-${i}`}>
+                    <span>{b.stat}</span>
+                    <strong>+{b.value}%</strong>
+                  </li>
+                ))
+              ) : (
+                <li className="muted">No % bonuses</li>
+              )}
+            </ul>
+
+            <div className="ah-history-detail-prices">
+              {bidFailed ? (
+                <>
+                  <p>
+                    Clear price{" "}
+                    <Sg value={clearPrice} />
+                    {copy.maxBidAtFail > 0 ? (
+                      <>
+                        {" "}
+                        · Max was <Sg value={copy.maxBidAtFail} />
+                      </>
+                    ) : null}
+                  </p>
+                  {Number.isFinite(copy.counterfactualMarginPct) ? (
+                    <p className="muted">
+                      ~{Math.round(copy.counterfactualMarginPct)}% if bought
+                    </p>
+                  ) : null}
+                  <p className="muted ah-history-detail-note">
+                    This clear (these flats / %) feeds Max / Suggest for similar
+                    copies of this hero.
+                  </p>
+                </>
+              ) : copy.outcome === "sold" ? (
+                <>
+                  <p>
+                    Bought <Sg value={copy.buyPrice || 0} /> · Sold{" "}
+                    <Sg value={copy.soldPrice || 0} /> · Net{" "}
+                    <Sg value={netFromListPrice(copy.soldPrice || 0)} />
+                  </p>
+                  <p className="muted ah-history-detail-note">
+                    Sold comps weight list / bid suggestions for similar rolls.
+                  </p>
+                </>
+              ) : (
+                <p className="muted">Discarded — not used as a price comp.</p>
+              )}
+            </div>
+
+            {copy.note ? (
+              <p className="ah-history-detail-user-note">{copy.note}</p>
+            ) : null}
+          </div>
+        </Modal>
+      );
+    }
+
     return null;
   }
 
@@ -1183,7 +1323,8 @@ export default function AuctionHouse() {
                   "Catalog: set each hero’s preferred % order, Attack/HP/Speed priority, and importance 1–10.",
                   "Settings: pick Safe Bootstrap, Volume Grinder, or Meta Sniper — margins, hammer strictness, and importance floors differ.",
                   "My Biddings grades use strategy + catalog + history comps (Attack/%). Never bid past Max bid.",
-                  "Bid failed: log the clear price — calculator scores if you should have pushed, and uses lost bids as comps.",
+                  "Bid failed: log the clear price for that copy’s flats/% — it feeds Max/Suggest for similar rolls, and scores if you should have pushed.",
+                  "History: tap a row to see Attack / HP / Speed / %. Sold + bid-failed clears teach price suggestions.",
                   "Hammers are scarce: prefer copies that already match prefs. Log Sold and failed lists to teach ceilings.",
                 ]}
               />
@@ -1305,7 +1446,12 @@ export default function AuctionHouse() {
                             <strong>{flip.label}</strong>
                             <span className="muted">
                               {flip.phase} · {flip.difficulty} sell ·{" "}
-                              {flip.samples} comps
+                              {flip.samples} sold
+                              {flip.lostBidCount
+                                ? ` · ${flip.lostBidCount} clear${
+                                    flip.lostBidCount === 1 ? "" : "s"
+                                  }`
+                                : ""}
                             </span>
                           </div>
                           <div className="ah-flip-prices">
@@ -1322,7 +1468,8 @@ export default function AuctionHouse() {
                               </div>
                             ) : (
                               <p className="muted ah-card-date">
-                                No bid yet — need sold comps for this hero
+                                No bid yet — need a sold or bid-failed clear for
+                                this hero
                               </p>
                             )}
                             {flip.suggestList != null ? (
@@ -1622,9 +1769,13 @@ export default function AuctionHouse() {
             <section className="ah-section">
               <h2>History</h2>
               {!state.history.length ? (
-                <p className="muted">No sold / discarded copies yet.</p>
+                <p className="muted">No sold / discarded / bid-failed copies yet.</p>
               ) : (
                 <div className="ah-table-wrap">
+                  <p className="muted ah-history-hint-line">
+                    Tap a row to see Attack / HP / Speed / %. Bid-failed clears
+                    feed Max/Suggest for similar copies.
+                  </p>
                   <table className="ah-table">
                     <thead>
                       <tr>
@@ -1661,7 +1812,14 @@ export default function AuctionHouse() {
                                 ? "Borderline"
                                 : null;
                         return (
-                          <tr key={copy.id}>
+                          <tr
+                            key={copy.id}
+                            className="ah-history-row"
+                            onClick={() =>
+                              setPicker({ type: "history-detail", id: copy.id })
+                            }
+                            title="Tap to see stats"
+                          >
                             <td>
                               <div className="ah-table-hero">
                                 <img src={hero?.icon} alt="" />

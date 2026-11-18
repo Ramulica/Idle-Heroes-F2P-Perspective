@@ -8310,6 +8310,59 @@ button.sc-aura-badge:hover .sc-aura-core {
   padding-left: 18px;
 }
 
+.ah-history-hint-line {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+}
+
+.ah-history-row {
+  cursor: pointer;
+}
+
+.ah-history-row:hover {
+  background: #fff3d6;
+}
+
+.ah-history-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.ah-history-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ah-history-detail-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ah-history-detail-flats {
+  display: grid;
+  gap: 6px;
+}
+
+.ah-history-detail-prices {
+  display: grid;
+  gap: 4px;
+}
+
+.ah-history-detail-note {
+  font-size: 0.85rem;
+}
+
+.ah-history-detail-user-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff6e0;
+  border: 1px solid #e2c891;
+  color: #5a3210;
+}
+
 .ah-table-wrap {
   overflow: auto;
   border: 2px solid #c9a46a;
