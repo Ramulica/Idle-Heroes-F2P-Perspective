@@ -7303,6 +7303,13 @@ button.sc-aura-badge:hover .sc-aura-core {
   margin: 0;
 }
 
+.ah-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 14px 18px;
+}
+
 .ah-sg {
   display: inline-flex;
   align-items: center;
@@ -7319,7 +7326,7 @@ button.sc-aura-badge:hover .sc-aura-core {
 .ah-banner {
   display: grid;
   gap: 6px;
-  padding: 10px 16px 0;
+  margin-bottom: 8px;
 }
 
 .ah-banner-item {
@@ -7339,14 +7346,16 @@ button.sc-aura-badge:hover .sc-aura-core {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #2a1a0a;
 }
 
 .ah-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 12px 16px 0;
+  padding: 4px 0 0;
 }
 
 .ah-tab {
@@ -7356,6 +7365,7 @@ button.sc-aura-badge:hover .sc-aura-core {
   background: #efe0c4;
   color: #5a3210;
   font-weight: 800;
+  box-shadow: 0 2px 0 #6b3e16;
 }
 
 .ah-tab.on {
@@ -7363,7 +7373,14 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .ah-main {
-  padding: 12px 16px 28px;
+  padding: 12px 0 8px;
+}
+
+.ah-section h2 {
+  margin: 0 0 10px;
+  font-family: Cinzel, serif;
+  font-size: 1.15rem;
+  color: #3a2818;
 }
 
 .ah-section-head {
@@ -7371,46 +7388,124 @@ button.sc-aura-badge:hover .sc-aura-core {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ah-section-head h2 {
+  margin: 0;
+}
+
+.ah-section-head .tan-btn {
+  min-width: 42px;
+  padding: 6px 12px;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .ah-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
 }
 
 .ah-card {
-  border: 2px solid #8a5a2a;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fff6e0, #efd9b0);
-  padding: 12px;
+  position: relative;
+  border: 2px solid #7a4a22;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(255, 244, 210, 0.95), transparent 55%),
+    linear-gradient(180deg, #fff9ec, #ebd6ad 55%, #e0c694);
+  padding: 14px 14px 12px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  box-shadow:
+    0 4px 0 #6b3e16,
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
-.ah-card-head {
+.ah-card-rarity {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ah-card-top {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 12px;
+  align-items: center;
+  padding-right: 52px;
 }
 
 .ah-card-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
-  object-fit: cover;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  object-fit: contain;
+  object-position: center;
   border: 2px solid #8a5a2a;
+  background: #2a1a0a;
   flex: 0 0 auto;
+  box-shadow: 0 2px 0 rgba(90, 50, 16, 0.35);
 }
 
-.ah-card-title {
+.ah-card-flats {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
-.ah-card-title .muted {
-  font-size: 0.82rem;
+.ah-stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ah-stat-row .muted {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ah-stat-row strong {
+  font-size: 1.02rem;
+  color: #3a2818;
+}
+
+.ah-card-pcts {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+  border-radius: 10px;
+  background: rgba(90, 50, 16, 0.08);
+  border: 1px solid rgba(122, 74, 34, 0.28);
+}
+
+.ah-card-pcts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #5a3210;
+}
+
+.ah-card-pcts strong {
+  color: #2f5d12;
+  font-variant-numeric: tabular-nums;
+}
+
+.ah-card-date {
+  margin: 0;
+  text-align: center;
+  font-size: 0.84rem;
 }
 
 .ah-card-alerts {
@@ -7449,6 +7544,18 @@ button.sc-aura-badge:hover .sc-aura-core {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.ah-card-actions .ghost-btn {
+  min-width: 42px;
+  min-height: 42px;
+  border: 2px solid #8a5a2a;
+  border-radius: 12px;
+  background: #efe0c4;
+  color: #5a3210;
+  font-weight: 900;
 }
 
 .ah-hero-grid-wrap {
@@ -7506,17 +7613,24 @@ button.sc-aura-badge:hover .sc-aura-core {
 
 .ah-rarity-chip {
   min-width: 44px;
-  border: 2px solid var(--ah-rarity, #8a5a2a);
+  border: 2.5px solid var(--ah-rarity, #8a5a2a);
   border-radius: 999px;
-  padding: 4px 10px;
-  background: #fff6e0;
+  padding: 6px 10px;
+  background: #efe0c4;
   color: var(--ah-rarity, #5a3210);
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .ah-rarity-chip.on {
-  background: var(--ah-rarity, #f4c430);
-  color: #fff6e0;
+  background: #2a1a10;
+  border-color: var(--ah-rarity, #f4c430);
+  border-width: 3px;
+  color: var(--ah-rarity, #f4c430);
+  box-shadow: 0 0 0 1px rgba(244, 196, 48, 0.35);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
 }
 
 .ah-bonus-value {
@@ -7612,7 +7726,9 @@ button.sc-aura-badge:hover .sc-aura-core {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #2a1a0a;
 }
 
 .ah-summary-grid {

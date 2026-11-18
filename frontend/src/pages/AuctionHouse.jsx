@@ -8,6 +8,7 @@ import {
   STAR_GEM_ICON,
   SELL_COMMISSION,
   addBidding,
+  auctionBonusList,
   auctionBonusPool,
   auctionBonusSlots,
   auctionHeroOf,
@@ -26,7 +27,6 @@ import {
   failListing,
   formatBonuses,
   formatDuration,
-  formatFlats,
   formatSg,
   formatWhen,
   fromDatetimeLocalValue,
@@ -109,19 +109,57 @@ function HeroPickGrid({ value, onChange }) {
   );
 }
 
-function CopyCard({ copy, state, children, footer }) {
+function CopyCard({ copy, state, meta = null, footer = null }) {
   const hero = auctionHeroOf(copy.heroId);
   const alerts = copyAlerts(copy, state);
+  const rarity = copy.rarity || "?";
+  const rarityColor = AUCTION_RARITY_META[rarity]?.color || "#f4c430";
+  const long = String(rarity).length >= 3;
+  const bonuses = auctionBonusList(copy).filter((b) => b?.stat);
+
   return (
     <article className="ah-card">
-      <div className="ah-card-head">
+      <div
+        className={`ah-card-rarity sc-awaken-btn filled${long ? " long" : ""}`}
+        style={{ "--sc-awaken-color": rarityColor }}
+        title={`Awakening · ${rarity}`}
+      >
+        <span>{rarity}</span>
+      </div>
+
+      <div className="ah-card-top">
         <img src={hero?.icon} alt="" className="ah-card-icon" />
-        <div className="ah-card-title">
-          <strong>{copyTitle(copy)}</strong>
-          <span className="muted">{formatBonuses(copy)}</span>
-          <span className="muted">{formatFlats(copy)}</span>
+        <div className="ah-card-flats">
+          <div className="ah-stat-row">
+            <span className="muted">Attack</span>
+            <strong>{formatSg(copy.attack || 0)}</strong>
+          </div>
+          <div className="ah-stat-row">
+            <span className="muted">Health</span>
+            <strong>{formatSg(copy.hp || 0)}</strong>
+          </div>
+          <div className="ah-stat-row">
+            <span className="muted">Speed</span>
+            <strong>{formatSg(copy.speed || 0)}</strong>
+          </div>
         </div>
       </div>
+
+      <ul className="ah-card-pcts">
+        {bonuses.length ? (
+          bonuses.map((b, i) => (
+            <li key={`${b.stat}-${i}`}>
+              <span>{b.stat}</span>
+              <strong>+{b.value}%</strong>
+            </li>
+          ))
+        ) : (
+          <li className="muted">No % bonuses</li>
+        )}
+      </ul>
+
+      {meta}
+
       {alerts.length ? (
         <ul className="ah-card-alerts">
           {alerts.map((a, i) => (
@@ -131,7 +169,7 @@ function CopyCard({ copy, state, children, footer }) {
           ))}
         </ul>
       ) : null}
-      {children}
+
       {footer ? <div className="ah-card-actions">{footer}</div> : null}
     </article>
   );
@@ -564,16 +602,9 @@ export default function AuctionHouse() {
   return (
     <div className="sky-page">
       <div className="shell ah-shell">
-        <header className="shell-head">
-          <div>
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() => navigate("/")}
-            >
-              ← Home
-            </button>
-            <div className="head-with-help" style={{ marginTop: 8 }}>
+        <div className="shell-head">
+          <div className="brand">
+            <div className="head-with-help">
               <h1>Auction House</h1>
               <HelpTip
                 title="Auction House Accounting"
@@ -585,72 +616,70 @@ export default function AuctionHouse() {
                 ]}
               />
             </div>
-            <p className="muted">
+            <p>
               Track bids, bag cooldown, listings, and SG profit after 5%
               commission.
             </p>
           </div>
-          <div className="shell-head-right">
-            <button
-              type="button"
-              className="gold-btn"
-              onClick={() =>
-                setPicker({ type: "add-bid", draft: emptyBiddingDraft() })
-              }
-            >
-              + Add copy
-            </button>
-          </div>
-        </header>
+          <button
+            className="tan-btn"
+            type="button"
+            onClick={() => navigate("/")}
+          >
+            Back to menu
+          </button>
+        </div>
 
-        {alerts.length ? (
-          <div className="ah-banner">
-            {alerts.slice(0, 6).map((a, i) => (
-              <button
-                key={`${a.copy.id}-${a.type}-${i}`}
-                type="button"
-                className={`ah-banner-item ah-alert-${a.tone}`}
-                onClick={() => {
-                  if (a.type === "ready") setTab("bag");
-                  else setTab("listings");
-                }}
-              >
-                <img
-                  src={auctionHeroOf(a.copy.heroId)?.icon}
-                  alt=""
-                  className="ah-banner-icon"
-                />
-                <span>
-                  <strong>{copyTitle(a.copy)}</strong> — {a.text}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <div className="shell-body no-sidebar">
+          <section className="main-panel calc-panel ah-panel">
+            {alerts.length ? (
+              <div className="ah-banner">
+                {alerts.slice(0, 6).map((a, i) => (
+                  <button
+                    key={`${a.copy.id}-${a.type}-${i}`}
+                    type="button"
+                    className={`ah-banner-item ah-alert-${a.tone}`}
+                    onClick={() => {
+                      if (a.type === "ready") setTab("bag");
+                      else setTab("listings");
+                    }}
+                  >
+                    <img
+                      src={auctionHeroOf(a.copy.heroId)?.icon}
+                      alt=""
+                      className="ah-banner-icon"
+                    />
+                    <span>
+                      <strong>{copyTitle(a.copy)}</strong> — {a.text}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-        <nav className="ah-tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`ah-tab${tab === t.id ? " on" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-              {t.id === "biddings" && state.biddings.length
-                ? ` (${state.biddings.length})`
-                : ""}
-              {t.id === "bag" && state.bag.length
-                ? ` (${state.bag.length})`
-                : ""}
-              {t.id === "listings" && state.listings.length
-                ? ` (${state.listings.length})`
-                : ""}
-            </button>
-          ))}
-        </nav>
+            <nav className="ah-tabs">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`ah-tab${tab === t.id ? " on" : ""}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label}
+                  {t.id === "biddings" && state.biddings.length
+                    ? ` (${state.biddings.length})`
+                    : ""}
+                  {t.id === "bag" && state.bag.length
+                    ? ` (${state.bag.length})`
+                    : ""}
+                  {t.id === "listings" && state.listings.length
+                    ? ` (${state.listings.length})`
+                    : ""}
+                </button>
+              ))}
+            </nav>
 
-        <main className="ah-main">
+            <div className="ah-main">
           {tab === "biddings" ? (
             <section className="ah-section">
               <div className="ah-section-head">
@@ -672,35 +701,44 @@ export default function AuctionHouse() {
               ) : (
                 <div className="ah-card-grid">
                   {state.biddings.map((copy) => (
-                    <CopyCard key={copy.id} copy={copy} state={state}>
-                      <p className="muted">Added {formatWhen(copy.createdAt)}</p>
-                      <div className="ah-card-actions">
-                        <button
-                          type="button"
-                          className="gold-btn"
-                          onClick={() =>
-                            setPicker({
-                              type: "buy",
-                              id: copy.id,
-                              price: "",
-                              when: toDatetimeLocalValue(),
-                            })
-                          }
-                        >
-                          Bought for…
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost-btn"
-                          title="Didn't win — remove"
-                          onClick={() =>
-                            setState((s) => dismissBidding(s, copy.id))
-                          }
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </CopyCard>
+                    <CopyCard
+                      key={copy.id}
+                      copy={copy}
+                      state={state}
+                      meta={
+                        <p className="muted ah-card-date">
+                          Added {formatWhen(copy.createdAt)}
+                        </p>
+                      }
+                      footer={
+                        <>
+                          <button
+                            type="button"
+                            className="gold-btn"
+                            onClick={() =>
+                              setPicker({
+                                type: "buy",
+                                id: copy.id,
+                                price: "",
+                                when: toDatetimeLocalValue(),
+                              })
+                            }
+                          >
+                            Bought for…
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-btn"
+                            title="Didn't win — remove"
+                            onClick={() =>
+                              setState((s) => dismissBidding(s, copy.id))
+                            }
+                          >
+                            ✕
+                          </button>
+                        </>
+                      }
+                    />
                   ))}
                 </div>
               )}
@@ -719,57 +757,66 @@ export default function AuctionHouse() {
                     const canList = ready == null || tick >= ready;
                     const tip = suggestListPrice(copy, state, tick);
                     return (
-                      <CopyCard key={copy.id} copy={copy} state={state}>
-                        <p>
-                          Bought <Sg value={copy.buyPrice} /> ·{" "}
-                          {formatWhen(copy.boughtAt)}
-                        </p>
-                        <p className="muted">
-                          Suggest list <Sg value={tip.suggested} /> (min{" "}
-                          <Sg value={tip.floor} />)
-                        </p>
-                        {copy.tries?.length ? (
-                          <p className="muted">
-                            Failed tries:{" "}
-                            {copy.tries
-                              .map((t) => formatSg(t.price))
-                              .join(", ")}{" "}
-                            SG
-                          </p>
-                        ) : null}
-                        <div className="ah-card-actions">
-                          <button
-                            type="button"
-                            className="gold-btn"
-                            disabled={!canList}
-                            title={
-                              canList
-                                ? "List copy"
-                                : `Ready in ${formatDuration(ready - tick)}`
-                            }
-                            onClick={() =>
-                              setPicker({
-                                type: "list",
-                                id: copy.id,
-                                price: tip.suggested,
-                                when: toDatetimeLocalValue(),
-                              })
-                            }
-                          >
-                            List
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-btn"
-                            title="Discard from bag"
-                            onClick={() =>
-                              setState((s) => discardBag(s, copy.id))
-                            }
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </CopyCard>
+                      <CopyCard
+                        key={copy.id}
+                        copy={copy}
+                        state={state}
+                        meta={
+                          <>
+                            <p className="ah-card-date">
+                              Bought <Sg value={copy.buyPrice} /> ·{" "}
+                              {formatWhen(copy.boughtAt)}
+                            </p>
+                            <p className="muted">
+                              Suggest list <Sg value={tip.suggested} /> (min{" "}
+                              <Sg value={tip.floor} />)
+                            </p>
+                            {copy.tries?.length ? (
+                              <p className="muted">
+                                Failed tries:{" "}
+                                {copy.tries
+                                  .map((t) => formatSg(t.price))
+                                  .join(", ")}{" "}
+                                SG
+                              </p>
+                            ) : null}
+                          </>
+                        }
+                        footer={
+                          <>
+                            <button
+                              type="button"
+                              className="gold-btn"
+                              disabled={!canList}
+                              title={
+                                canList
+                                  ? "List copy"
+                                  : `Ready in ${formatDuration(ready - tick)}`
+                              }
+                              onClick={() =>
+                                setPicker({
+                                  type: "list",
+                                  id: copy.id,
+                                  price: tip.suggested,
+                                  when: toDatetimeLocalValue(),
+                                })
+                              }
+                            >
+                              List
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost-btn"
+                              title="Discard from bag"
+                              onClick={() =>
+                                setState((s) => discardBag(s, copy.id))
+                              }
+                            >
+                              ✕
+                            </button>
+                          </>
+                        }
+                      />
                     );
                   })}
                 </div>
@@ -787,47 +834,56 @@ export default function AuctionHouse() {
                   {state.listings.map((copy) => {
                     const phase = listingPhases(copy, tick);
                     return (
-                      <CopyCard key={copy.id} copy={copy} state={state}>
-                        <p>
-                          Listed <Sg value={copy.listPrice} /> ·{" "}
-                          {formatWhen(copy.listedAt)}
-                        </p>
-                        <p className="muted">
-                          Phase: {phase.phase}
-                          {phase.phase === "auction"
-                            ? ` · ends ${formatWhen(phase.auctionEndsAt)}`
-                            : ""}
-                          {phase.phase === "warmup"
-                            ? ` · bidding ${formatWhen(phase.warmupEndsAt)}`
-                            : ""}
-                        </p>
-                        <div className="ah-card-actions">
-                          <button
-                            type="button"
-                            className="gold-btn"
-                            onClick={() =>
-                              setPicker({
-                                type: "sell",
-                                id: copy.id,
-                                price: copy.listPrice,
-                                when: toDatetimeLocalValue(),
-                              })
-                            }
-                          >
-                            Sold for…
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-btn"
-                            title="Didn't sell — record try, back to bag"
-                            onClick={() =>
-                              setState((s) => failListing(s, copy.id))
-                            }
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </CopyCard>
+                      <CopyCard
+                        key={copy.id}
+                        copy={copy}
+                        state={state}
+                        meta={
+                          <>
+                            <p className="ah-card-date">
+                              Listed <Sg value={copy.listPrice} /> ·{" "}
+                              {formatWhen(copy.listedAt)}
+                            </p>
+                            <p className="muted">
+                              Phase: {phase.phase}
+                              {phase.phase === "auction"
+                                ? ` · ends ${formatWhen(phase.auctionEndsAt)}`
+                                : ""}
+                              {phase.phase === "warmup"
+                                ? ` · bidding ${formatWhen(phase.warmupEndsAt)}`
+                                : ""}
+                            </p>
+                          </>
+                        }
+                        footer={
+                          <>
+                            <button
+                              type="button"
+                              className="gold-btn"
+                              onClick={() =>
+                                setPicker({
+                                  type: "sell",
+                                  id: copy.id,
+                                  price: copy.listPrice,
+                                  when: toDatetimeLocalValue(),
+                                })
+                              }
+                            >
+                              Sold for…
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost-btn"
+                              title="Didn't sell — record try, back to bag"
+                              onClick={() =>
+                                setState((s) => failListing(s, copy.id))
+                              }
+                            >
+                              ✕
+                            </button>
+                          </>
+                        }
+                      />
                     );
                   })}
                 </div>
@@ -874,7 +930,7 @@ export default function AuctionHouse() {
                               <div className="ah-table-hero">
                                 <img src={hero?.icon} alt="" />
                                 <div>
-                                  <strong>{copyTitle(copy)}</strong>
+                                  <strong>{copy.rarity || "Copy"}</strong>
                                   <div className="muted">
                                     {copy.outcome === "sold"
                                       ? formatBonuses(copy)
@@ -1060,7 +1116,9 @@ export default function AuctionHouse() {
               </div>
             </section>
           ) : null}
-        </main>
+            </div>
+          </section>
+        </div>
       </div>
       {renderPicker()}
     </div>

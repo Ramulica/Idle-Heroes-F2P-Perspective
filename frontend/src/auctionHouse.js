@@ -461,9 +461,13 @@ function rarityRank(rarity) {
   return Math.max(0, AUCTION_RARITIES.indexOf(rarity));
 }
 
-function bonusList(copy) {
+export function auctionBonusList(copy) {
   if (Array.isArray(copy?.bonuses) && copy.bonuses.length) return copy.bonuses;
   return [copy?.bonusA, copy?.bonusB].filter(Boolean);
+}
+
+function bonusList(copy) {
+  return auctionBonusList(copy);
 }
 
 function statDistance(a, b) {
@@ -834,8 +838,7 @@ export function patchSettings(state, partial) {
 }
 
 export function copyTitle(copy) {
-  const hero = auctionHeroOf(copy?.heroId);
-  return `${hero?.name || "Hero"} · ${copy?.rarity || "?"}`;
+  return copy?.rarity || "Copy";
 }
 
 export function formatBonuses(copy) {
