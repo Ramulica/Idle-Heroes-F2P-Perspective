@@ -148,7 +148,6 @@ export const AUCTION_HEROES = [
   { id: "ignis", name: "Ignis", icon: ignis, faction: "Abyss" },
   {
     id: "holmes-young",
-    name: "Holmes Young",
     icon: holmesYoung,
     faction: "Fortress",
   },
@@ -159,7 +158,6 @@ export const AUCTION_HEROES = [
   { id: "valentino", name: "Valentino", icon: valentino, faction: "Fortress" },
   {
     id: "onikirimaru",
-    name: "Onikirimaru",
     icon: onikirimaru,
     faction: "Shadow",
   },

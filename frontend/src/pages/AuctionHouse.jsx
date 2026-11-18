@@ -126,10 +126,9 @@ function HeroPickGrid({ value, onChange }) {
             key={hero.id}
             type="button"
             className={`ah-hero-pick${value === hero.id ? " on" : ""}`}
-            title={hero.name}
             onClick={() => onChange(hero.id)}
           >
-            <img src={hero.icon} alt={hero.name} />
+            <img src={hero.icon} alt="" />
           </button>
         ))}
       </div>
@@ -159,7 +158,7 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
 
   return (
     <Modal
-      title={`${hero.name} · catalog`}
+      title="Hero catalog"
       onClose={onClose}
       footer={
         <button
@@ -180,8 +179,8 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
       <div className="ah-catalog-hero-head">
         <img src={hero.icon} alt="" />
         <div>
-          <strong>{hero.name}</strong>
           <p className="muted">{hero.faction}</p>
+          <p className="muted">Imp {importance}/10 · {flatPriority}</p>
         </div>
       </div>
 
@@ -1345,10 +1344,10 @@ export default function AuctionHouse() {
                       type="button"
                       className="ah-catalog-card"
                       onClick={() => setCatalogHeroId(hero.id)}
+                      title={`${hero.faction} · Imp ${pref.importance}/10`}
                     >
                       <img src={hero.icon} alt="" />
                       <div className="ah-catalog-card-meta">
-                        <strong>{hero.name}</strong>
                         <span className="muted">
                           Imp {pref.importance}/10 · {pref.flatPriority}
                         </span>
