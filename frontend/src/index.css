@@ -7601,6 +7601,40 @@ button.sc-aura-badge:hover .sc-aura-core {
   color: #6a4424;
 }
 
+.ah-alert-toggle {
+  display: block;
+  width: 100%;
+  border: none;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ah-alert-toggle:hover {
+  filter: brightness(0.97);
+}
+
+.ah-bought-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 700;
+  color: #5a3210;
+}
+
+.ah-bought-field input {
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: #fffaf0;
+  color: #3a2818;
+  font-weight: 800;
+  max-width: 100%;
+}
+
 .ah-card-actions {
   display: flex;
   flex-wrap: wrap;

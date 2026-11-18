@@ -205,13 +205,19 @@ export function formatWhen(iso) {
   });
 }
 
-export function formatDuration(ms) {
+/** mode: "days" → 6d 23h · "hours" → 167h 12m (total hours) */
+export function formatDuration(ms, mode = "days") {
   if (!Number.isFinite(ms)) return "—";
   const abs = Math.abs(ms);
   const sign = ms < 0 ? "-" : "";
+  const mins = Math.floor((abs % (60 * 60 * 1000)) / (60 * 1000));
+  if (mode === "hours") {
+    const totalHours = Math.floor(abs / (60 * 60 * 1000));
+    if (totalHours > 0) return `${sign}${totalHours}h ${mins}m`;
+    return `${sign}${mins}m`;
+  }
   const days = Math.floor(abs / (24 * 60 * 60 * 1000));
   const hours = Math.floor((abs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const mins = Math.floor((abs % (60 * 60 * 1000)) / (60 * 1000));
   if (days > 0) return `${sign}${days}d ${hours}h`;
   if (hours > 0) return `${sign}${hours}h ${mins}m`;
   return `${sign}${mins}m`;
@@ -618,6 +624,7 @@ export function copyAlerts(copy, state, now = Date.now()) {
       alerts.push({
         type: "cooldown",
         tone: "muted",
+        remainingMs: ready - now,
         text: `Sell unlocks in ${formatDuration(ready - now)}`,
       });
     }
@@ -805,6 +812,23 @@ export function setHammersUsed(state, id, value) {
   if (idx < 0) return state;
   const prev = state.bag[idx];
   const next = normalizeCopy({ ...prev, hammersUsed: n }, "bag");
+  if (!next) return state;
+  const bag = [...state.bag];
+  bag[idx] = next;
+  return { ...state, bag };
+}
+
+export function setBoughtAt(state, id, boughtAtIso) {
+  const idx = (state.bag || []).findIndex((c) => c.id === id);
+  if (idx < 0) return state;
+  const prev = state.bag[idx];
+  const next = normalizeCopy(
+    {
+      ...prev,
+      boughtAt: boughtAtIso || nowIso(),
+    },
+    "bag"
+  );
   if (!next) return state;
   const bag = [...state.bag];
   bag[idx] = next;

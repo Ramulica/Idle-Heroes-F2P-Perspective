@@ -40,6 +40,7 @@ import {
   returnBagToBidding,
   returnListingToBag,
   sellListing,
+  setBoughtAt,
   setDraftBonus,
   setHammersUsed,
   suggestListPrice,
@@ -230,13 +231,21 @@ function BiddingDraftFields({ draft, onChange }) {
   );
 }
 
-function CopyCard({ copy, state, meta = null, footer = null, onEdit = null }) {
+function CopyCard({
+  copy,
+  state,
+  now = Date.now(),
+  meta = null,
+  footer = null,
+  onEdit = null,
+}) {
   const hero = auctionHeroOf(copy.heroId);
-  const alerts = copyAlerts(copy, state);
+  const alerts = copyAlerts(copy, state, now);
   const rarity = copy.rarity || "?";
   const rarityColor = AUCTION_RARITY_META[rarity]?.color || "#f4c430";
   const long = String(rarity).length >= 3;
   const bonuses = auctionBonusList(copy).filter((b) => b?.stat);
+  const [durationMode, setDurationMode] = useState("days");
 
   return (
     <article
@@ -287,11 +296,35 @@ function CopyCard({ copy, state, meta = null, footer = null, onEdit = null }) {
 
       {alerts.length ? (
         <ul className="ah-card-alerts">
-          {alerts.map((a, i) => (
-            <li key={`${a.type}-${i}`} className={`ah-alert ah-alert-${a.tone}`}>
-              {a.text}
-            </li>
-          ))}
+          {alerts.map((a, i) =>
+            a.type === "cooldown" && Number.isFinite(a.remainingMs) ? (
+              <li key={`${a.type}-${i}`}>
+                <button
+                  type="button"
+                  className={`ah-alert ah-alert-${a.tone} ah-alert-toggle`}
+                  title={
+                    durationMode === "days"
+                      ? "Tap to show total hours"
+                      : "Tap to show days + hours"
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDurationMode((m) => (m === "days" ? "hours" : "days"));
+                  }}
+                >
+                  Sell unlocks in{" "}
+                  {formatDuration(a.remainingMs, durationMode)}
+                </button>
+              </li>
+            ) : (
+              <li
+                key={`${a.type}-${i}`}
+                className={`ah-alert ah-alert-${a.tone}`}
+              >
+                {a.text}
+              </li>
+            )
+          )}
         </ul>
       ) : null}
 
@@ -698,6 +731,7 @@ export default function AuctionHouse() {
                       key={copy.id}
                       copy={copy}
                       state={state}
+                      now={tick}
                       onEdit={() =>
                         setPicker({
                           type: "edit-copy",
@@ -762,6 +796,7 @@ export default function AuctionHouse() {
                         key={copy.id}
                         copy={copy}
                         state={state}
+                        now={tick}
                         onEdit={() =>
                           setPicker({
                             type: "edit-copy",
@@ -776,9 +811,25 @@ export default function AuctionHouse() {
                               <span className="muted">Bought</span>
                               <Sg value={copy.buyPrice} />
                             </div>
-                            <p className="muted ah-card-date">
-                              {formatWhen(copy.boughtAt)}
-                            </p>
+                            <label
+                              className="ah-bought-field"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="muted">Bought at</span>
+                              <input
+                                type="datetime-local"
+                                value={toDatetimeLocalValue(copy.boughtAt)}
+                                onChange={(e) =>
+                                  setState((s) =>
+                                    setBoughtAt(
+                                      s,
+                                      copy.id,
+                                      fromDatetimeLocalValue(e.target.value)
+                                    )
+                                  )
+                                }
+                              />
+                            </label>
                             <div className="ah-card-money muted">
                               <span>Suggest</span>
                               <Sg value={tip.suggested} />
@@ -886,6 +937,7 @@ export default function AuctionHouse() {
                         key={copy.id}
                         copy={copy}
                         state={state}
+                        now={tick}
                         onEdit={() =>
                           setPicker({
                             type: "edit-copy",
