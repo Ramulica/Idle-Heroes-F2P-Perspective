@@ -7621,6 +7621,67 @@ button.sc-aura-badge:hover .sc-aura-core {
   margin-top: 2px;
 }
 
+.ah-flip-grade {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.ah-flip-grade strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.ah-flip-good {
+  background: #e5f6d6;
+  color: #2f5d12;
+}
+
+.ah-flip-warn {
+  background: #ffe2b8;
+  color: #7a3d00;
+}
+
+.ah-flip-muted {
+  background: #efe6d4;
+  color: #6a4424;
+}
+
+.ah-flip-prices {
+  display: grid;
+  gap: 4px;
+}
+
+.ah-bootstrap-plan {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 2px solid #8a5a2a;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff9ec, #efd9b0);
+}
+
+.ah-bootstrap-plan h3 {
+  margin: 0 0 8px;
+  font-family: Cinzel, serif;
+  font-size: 1.05rem;
+  color: #3a2818;
+}
+
+.ah-bootstrap-plan ol {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 8px;
+  color: #5a3210;
+  font-weight: 700;
+  line-height: 1.35;
+  font-size: 0.9rem;
+}
+
 .ah-card-actions {
   display: flex;
   flex-wrap: wrap;

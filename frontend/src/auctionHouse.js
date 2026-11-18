@@ -242,7 +242,12 @@ export function listPriceForNet(desiredNet) {
 export function defaultSettings() {
   return {
     pricingMode: "margin", // margin | profit
+    /** Mature-phase target net margin after 5% commission. */
     minMarginPct: 15,
+    /** Cold/building phase — safer flips while learning the market. */
+    bootstrapMarginPct: 30,
+    /** Switch from bootstrap → mature after this many sold of that hero. */
+    bootstrapSales: 8,
     minProfitSg: 50,
     staleDiscountPct: 8,
     autoBumpOnHistoryUplift: true,
@@ -368,6 +373,14 @@ export function normalizeAuctionState(raw) {
   settings.pricingMode =
     settings.pricingMode === "profit" ? "profit" : "margin";
   settings.minMarginPct = Math.max(0, Number(settings.minMarginPct) || 0);
+  settings.bootstrapMarginPct = Math.max(
+    0,
+    Number(settings.bootstrapMarginPct) || 30
+  );
+  settings.bootstrapSales = Math.max(
+    1,
+    Math.round(Number(settings.bootstrapSales) || 8)
+  );
   settings.minProfitSg = Math.max(0, Number(settings.minProfitSg) || 0);
   settings.staleDiscountPct = Math.max(
     0,
@@ -534,31 +547,129 @@ export function failedTriesForHero(copy, bag, listings, history) {
   return tries.sort((a, b) => b.price - a.price);
 }
 
-/**
- * Recommended list price from floor + history uplift − failed-try ceiling.
- */
-export function suggestListPrice(copy, state, now = Date.now()) {
-  const settings = state?.settings || defaultSettings();
-  const floor = minListPrice(copy.buyPrice, settings);
-  let suggested = floor;
-
-  const related = relatedHistory(copy, state?.history).slice(0, 8);
-  if (related.length && settings.autoBumpOnHistoryUplift !== false) {
-    const uplifts = related
-      .map(({ row }) => {
-        if (!row.buyPrice || !row.soldPrice) return null;
-        return row.soldPrice / row.buyPrice;
-      })
-      .filter((x) => Number.isFinite(x) && x > 0);
-    if (uplifts.length) {
-      const avg =
-        uplifts.reduce((s, x) => s + x, 0) / Math.max(1, uplifts.length);
-      const historyTarget = Math.ceil(copy.buyPrice * avg);
-      // If past sales beat floor a lot, lean toward that market.
-      suggested = Math.max(suggested, Math.round((floor + historyTarget) / 2));
-      if (avg >= 1.45) suggested = Math.max(suggested, historyTarget);
-    }
+function weightedMean(pairs) {
+  let sw = 0;
+  let sv = 0;
+  for (const p of pairs) {
+    const w = Math.max(0, Number(p.weight) || 0);
+    const v = Number(p.value);
+    if (!Number.isFinite(v) || w <= 0) continue;
+    sw += w;
+    sv += v * w;
   }
+  if (sw <= 0) return null;
+  return sv / sw;
+}
+
+/** Soft attack baselines by awakening letter — used only as cold-start prior. */
+const ATTACK_SOFT_BASE = {
+  C: 4200,
+  B: 5200,
+  A: 6200,
+  S: 7200,
+  SS: 8200,
+  SSS: 9200,
+};
+
+function rarityLetter(rarity) {
+  const id = String(rarity || "");
+  if (id.startsWith("SSS")) return "SSS";
+  if (id.startsWith("SS")) return "SS";
+  if (id.startsWith("S")) return "S";
+  if (id.startsWith("A")) return "A";
+  if (id.startsWith("B")) return "B";
+  return "C";
+}
+
+/**
+ * 0..1 quality prior from Attack + % rolls (Attack/% dominate).
+ * No absolute SG without market — used to grade speculative bids.
+ */
+export function copyQualityScore(copy) {
+  const letter = rarityLetter(copy?.rarity);
+  const base = ATTACK_SOFT_BASE[letter] || 5000;
+  const atk = Math.max(0, Number(copy?.attack) || 0);
+  const atkScore = Math.max(0, Math.min(1.15, atk / Math.max(1, base)));
+
+  const bonuses = bonusList(copy).filter((b) => b?.stat);
+  const need = Math.max(1, auctionBonusSlots(copy?.rarity));
+  const fill = Math.min(1, bonuses.length / need);
+  let rollScore = 0;
+  for (const b of bonuses) {
+    const table = awakeningStatValue(copy?.rarity, b.stat);
+    if (!Number.isFinite(table) || table <= 0) {
+      rollScore += 0.55;
+      continue;
+    }
+    // Table values are fixed per rarity; having the "right" contested rolls
+    // still matters via fill + attack. Slight bump for multi-roll ranks.
+    rollScore += 0.7 + 0.3 * Math.min(1, (Number(b.value) || 0) / table);
+  }
+  rollScore = bonuses.length ? rollScore / bonuses.length : 0.25;
+
+  const rarBoost = Math.min(1, rarityRank(copy?.rarity) / 20);
+  const raw = atkScore * 0.55 + rollScore * 0.35 + rarBoost * 0.1 + fill * 0.05;
+  return Math.max(0, Math.min(1, raw / 1.1));
+}
+
+export function flipMarketPhase(copy, state) {
+  const settings = { ...defaultSettings(), ...(state?.settings || {}) };
+  const n = (state?.history || []).filter(
+    (h) => h.heroId === copy?.heroId && h.outcome === "sold"
+  ).length;
+  const gate = Math.max(1, Number(settings.bootstrapSales) || 8);
+  if (n < Math.max(3, Math.ceil(gate * 0.4))) return "cold";
+  if (n < gate) return "building";
+  return "mature";
+}
+
+export function targetMarginPctFor(copy, state) {
+  const settings = { ...defaultSettings(), ...(state?.settings || {}) };
+  const phase = flipMarketPhase(copy, state);
+  if (phase === "cold" || phase === "building") {
+    return Math.max(0, Number(settings.bootstrapMarginPct) || 30);
+  }
+  return Math.max(0, Number(settings.minMarginPct) || 15);
+}
+
+function sellDifficultyFrom(related, fails) {
+  const sold = related.length;
+  const failN = fails.length;
+  const holds = related
+    .map(({ row }) => {
+      if (!row.boughtAt || !row.soldAt) return null;
+      return new Date(row.soldAt) - new Date(row.boughtAt);
+    })
+    .filter((x) => Number.isFinite(x) && x > 0);
+  const avgHold =
+    holds.length > 0
+      ? holds.reduce((s, x) => s + x, 0) / holds.length
+      : null;
+  const failRatio = failN / Math.max(1, sold + failN);
+  if (failRatio >= 0.45 || (avgHold != null && avgHold > 12 * 24 * 3600 * 1000)) {
+    return "hard";
+  }
+  if (failRatio <= 0.15 && (avgHold == null || avgHold < 9 * 24 * 3600 * 1000)) {
+    return "easy";
+  }
+  return "normal";
+}
+
+/**
+ * Full flip advice: max bid, suggest bid/list, grade, difficulty.
+ * Attack + % similarity drive comps; failed tries cap sell; bootstrap
+ * margin protects early history building.
+ */
+export function evaluateFlip(copy, state, now = Date.now()) {
+  const settings = { ...defaultSettings(), ...(state?.settings || {}) };
+  const phase = flipMarketPhase(copy, state);
+  const targetMarginPct = targetMarginPctFor(copy, state);
+  const quality = copyQualityScore(copy);
+
+  const relatedAll = relatedHistory(copy, state?.history);
+  const related = relatedAll.filter((r) => r.dist <= 9).slice(0, 14);
+  const close = related.filter((r) => r.dist <= 3.8);
+  const samples = close.length || related.length;
 
   const fails = failedTriesForHero(
     copy,
@@ -566,29 +677,218 @@ export function suggestListPrice(copy, state, now = Date.now()) {
     state?.listings,
     state?.history
   );
-  if (fails.length) {
-    const topFail = fails[0].price;
-    if (topFail > floor) {
-      suggested = Math.min(suggested, Math.max(floor, Math.floor(topFail * 0.94)));
+  const difficulty = sellDifficultyFrom(related, fails);
+
+  let expectedSell = null;
+  if (related.length) {
+    const pool = (close.length >= 2 ? close : related).map(({ row, dist }) => ({
+      value: row.soldPrice,
+      weight: 1 / (1 + dist * dist),
+    }));
+    const mean = weightedMean(pool);
+    if (mean != null) expectedSell = Math.round(mean);
+  }
+
+  if (fails.length && expectedSell != null) {
+    const cap = Math.floor(fails[0].price * 0.94);
+    if (cap > 0) expectedSell = Math.min(expectedSell, cap);
+  } else if (fails.length && expectedSell == null && fails[0].price > 0) {
+    // Only know what did NOT sell — treat as soft ceiling, not a market.
+    expectedSell = Math.floor(fails[0].price * 0.9);
+  }
+
+  // Already owned: never suggest below margin floor on your buy.
+  const buy = Math.max(0, Number(copy?.buyPrice) || 0);
+  const floor =
+    buy > 0
+      ? minListPrice(buy, {
+          ...settings,
+          pricingMode: "margin",
+          minMarginPct: targetMarginPct,
+        })
+      : 0;
+
+  if (buy > 0 && settings.autoBumpOnHistoryUplift !== false && related.length) {
+    const uplifts = related
+      .map(({ row }) =>
+        row.buyPrice > 0 && row.soldPrice > 0
+          ? row.soldPrice / row.buyPrice
+          : null
+      )
+      .filter((x) => Number.isFinite(x) && x > 0);
+    if (uplifts.length) {
+      const avg = uplifts.reduce((s, x) => s + x, 0) / uplifts.length;
+      const historyTarget = Math.ceil(buy * avg);
+      if (expectedSell == null) expectedSell = historyTarget;
+      else expectedSell = Math.round((expectedSell + historyTarget) / 2);
+      if (avg >= 1.45) expectedSell = Math.max(expectedSell, historyTarget);
     }
   }
 
-  // Stale listing discount
-  if (copy.stage === "listing" && copy.listedAt) {
+  let suggestList = expectedSell;
+  if (buy > 0) {
+    suggestList = Math.max(floor, suggestList || floor);
+  }
+
+  if (copy?.stage === "listing" && copy.listedAt && suggestList != null) {
     const listed = new Date(copy.listedAt).getTime();
     const auctionStart = listed + LIST_WARMUP_MS;
     if (now >= auctionStart + STALE_LIST_MS) {
       const disc = Math.max(0, Number(settings.staleDiscountPct) || 0) / 100;
-      suggested = Math.max(floor, Math.floor(suggested * (1 - disc)));
+      suggestList = Math.max(floor, Math.floor(suggestList * (1 - disc)));
     }
   }
 
+  const confidence = Math.min(
+    1,
+    (samples / 8) * (close.length ? 1 : 0.55) * (phase === "cold" ? 0.7 : 1)
+  );
+
+  let maxBid = null;
+  let suggestBid = null;
+  if (suggestList != null && suggestList > 0) {
+    const net = netFromListPrice(suggestList);
+    maxBid = Math.floor(net / (1 + targetMarginPct / 100));
+    const phaseCut = phase === "cold" ? 0.8 : phase === "building" ? 0.88 : 0.94;
+    const hardCut = difficulty === "hard" ? 0.9 : difficulty === "easy" ? 1.02 : 1;
+    const qCut = 0.88 + quality * 0.14;
+    suggestBid = Math.max(
+      0,
+      Math.floor(maxBid * phaseCut * hardCut * qCut * (0.82 + 0.18 * confidence))
+    );
+    if (maxBid > 0) suggestBid = Math.min(suggestBid, maxBid);
+  }
+
+  const bidForEdge = buy > 0 ? buy : suggestBid;
+  let expectedNet = suggestList != null ? netFromListPrice(suggestList) : null;
+  let expectedMarginPct = null;
+  if (expectedNet != null && bidForEdge > 0) {
+    expectedMarginPct = ((expectedNet - bidForEdge) / bidForEdge) * 100;
+  }
+
+  const reasons = [];
+  if (phase === "cold") {
+    reasons.push(
+      `Cold market for this hero — use ${targetMarginPct}% bootstrap margin`
+    );
+  } else if (phase === "building") {
+    reasons.push(`Building history — still targeting ${targetMarginPct}% margin`);
+  } else {
+    reasons.push(`Mature market — targeting ${targetMarginPct}% margin`);
+  }
+  if (samples === 0) {
+    reasons.push("No close comps yet — grade is speculative from Attack/% only");
+  } else {
+    reasons.push(
+      `${samples} similar sold · ${close.length} close comps · sell looks ${difficulty}`
+    );
+  }
+  if (fails.length) {
+    reasons.push(
+      `Failed list ceiling near ${formatSg(fails[0].price)} SG`
+    );
+  }
+  if (quality >= 0.78) reasons.push("Strong Attack / % roll profile");
+  else if (quality <= 0.42) reasons.push("Weak Attack / % profile vs rarity");
+
+  // Grade
+  let grade = "skip";
+  let label = "Skip";
+  let tone = "muted";
+  if (samples === 0) {
+    if (quality >= 0.8) {
+      grade = "ok";
+      label = "Speculative";
+      tone = "warn";
+    } else {
+      grade = "skip";
+      label = "No data";
+      tone = "muted";
+    }
+  } else if (
+    expectedMarginPct != null &&
+    expectedMarginPct >= targetMarginPct + 8 &&
+    confidence >= 0.45 &&
+    difficulty !== "hard"
+  ) {
+    grade = "strong";
+    label = "Strong buy";
+    tone = "good";
+  } else if (
+    expectedMarginPct != null &&
+    expectedMarginPct >= targetMarginPct &&
+    confidence >= 0.3
+  ) {
+    grade = "buy";
+    label = "Buy";
+    tone = "good";
+  } else if (
+    expectedMarginPct != null &&
+    expectedMarginPct >= targetMarginPct - 6
+  ) {
+    grade = "ok";
+    label = "Thin";
+    tone = "warn";
+  } else {
+    grade = "skip";
+    label = "Skip";
+    tone = "muted";
+  }
+
+  if (difficulty === "hard" && grade === "strong") {
+    grade = "buy";
+    label = "Buy (hard sell)";
+  }
+
   return {
+    phase,
+    targetMarginPct,
+    quality,
+    confidence,
+    difficulty,
+    grade,
+    label,
+    tone,
+    samples,
+    closeSamples: close.length,
+    expectedSell: suggestList,
+    maxBid,
+    suggestBid,
+    suggestList,
     floor,
-    suggested: Math.max(floor, suggested),
+    expectedNet,
+    expectedMarginPct,
+    reasons,
     related: related.slice(0, 5).map((r) => r.row),
     failedTries: fails.slice(0, 5),
   };
+}
+
+/**
+ * Recommended list price from floor + history uplift − failed-try ceiling.
+ */
+export function suggestListPrice(copy, state, now = Date.now()) {
+  const flip = evaluateFlip(copy, state, now);
+  const floor = flip.floor || minListPrice(copy.buyPrice, state?.settings);
+  const suggested = Math.max(floor, flip.suggestList || floor);
+  return {
+    floor,
+    suggested,
+    related: flip.related,
+    failedTries: flip.failedTries,
+    flip,
+  };
+}
+
+/** Short bootstrap plan for Settings / help. */
+export function flipBootstrapPlan(settings) {
+  const s = { ...defaultSettings(), ...(settings || {}) };
+  return [
+    `Phase 1 · Cold (first sales per hero): only buy when the board looks clearly good (Attack + % you like). Bid so that a realistic sell still nets ~${s.bootstrapMarginPct}% after 5% tax. Prefer fewer, cleaner flips over volume.`,
+    `Phase 2 · Building (until ${s.bootstrapSales} sold of that hero): keep logging every Buy, List, Sold, and failed X. Failed tries teach the ceiling — they matter as much as wins. Stay near ${s.bootstrapMarginPct}% margin; lower only when comps are close.`,
+    `Phase 3 · Mature (${s.bootstrapSales}+ sold): trust the suggester more. Target ~${s.minMarginPct}% net margin, bid up to Max bid, and use Sell unlocks / stale discounts. Still skip hard-sell comps unless the edge is fat.`,
+    `Always: Attack + % rolls drive comps. Log hammers. Never chase a bid past Max bid. If unsure, Skip and wait for a cleaner copy.`,
+  ];
 }
 
 export function bagReadyAt(copy) {

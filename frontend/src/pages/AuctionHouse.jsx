@@ -26,7 +26,9 @@ import {
   dismissBidding,
   draftWithRarity,
   emptyBiddingDraft,
+  evaluateFlip,
   failListing,
+  flipBootstrapPlan,
   formatBonuses,
   formatDuration,
   formatSg,
@@ -435,6 +437,8 @@ export default function AuctionHouse() {
     if (picker.type === "buy") {
       const copy = state.biddings.find((c) => c.id === picker.id);
       if (!copy) return null;
+      const flip = evaluateFlip(copy, state, tick);
+      const buyPrice = Number(picker.price) || 0;
       return (
         <Modal
           title={`Bought · ${copyTitle(copy)}`}
@@ -448,7 +452,7 @@ export default function AuctionHouse() {
                   buyBidding(
                     s,
                     copy.id,
-                    Number(picker.price) || 0,
+                    buyPrice,
                     fromDatetimeLocalValue(picker.when)
                   )
                 );
@@ -460,6 +464,16 @@ export default function AuctionHouse() {
             </button>
           }
         >
+          <div className={`ah-flip-grade ah-flip-${flip.tone}`}>
+            <strong>{flip.label}</strong>
+            <span className="muted">
+              Max bid{" "}
+              {flip.maxBid != null ? formatSg(flip.maxBid) : "—"} · suggest{" "}
+              {flip.suggestBid != null ? formatSg(flip.suggestBid) : "—"} ·
+              expect sell{" "}
+              {flip.suggestList != null ? formatSg(flip.suggestList) : "—"}
+            </span>
+          </div>
           <label className="ah-field">
             <span>Buy price (SG)</span>
             <input
@@ -469,6 +483,12 @@ export default function AuctionHouse() {
               onChange={(e) => setPicker({ ...picker, price: e.target.value })}
             />
           </label>
+          {flip.maxBid != null && buyPrice > flip.maxBid ? (
+            <p className="ah-alert ah-alert-warn">
+              Above Max bid — expected net margin may miss the{" "}
+              {flip.targetMarginPct}% target.
+            </p>
+          ) : null}
           <label className="ah-field">
             <span>Bought at</span>
             <input
@@ -480,7 +500,11 @@ export default function AuctionHouse() {
           <p className="muted">
             7-day sell cooldown starts from this time. Floor after buy:{" "}
             <Sg
-              value={minListPrice(Number(picker.price) || 0, state.settings)}
+              value={minListPrice(buyPrice, {
+                ...state.settings,
+                pricingMode: "margin",
+                minMarginPct: flip.targetMarginPct,
+              })}
             />
           </p>
         </Modal>
@@ -655,10 +679,10 @@ export default function AuctionHouse() {
               <HelpTip
                 title="Auction House Accounting"
                 steps={[
-                  "My Biddings: track copies you are bidding on. X = didn’t win. Bought → Bag with date/time.",
-                  "Bag: 7-day cooldown after buy. Tap ← Back if you bought by mistake. Track hammers used to reroll % stats. List when ready.",
-                  "Listings: 6h warmup, then 2 days of bidding. ← Back returns to bag without a failed try. X = failed try (price learning).",
-                  "Pricing leans on Attack and % rolls first. History uplift / failed tries still adjust the suggest.",
+                  "My Biddings: each copy gets a flip grade + Max bid / Suggest bid from history (Attack + % comps). Skip past Max bid.",
+                  "Bootstrap: start with ~30% net margin until you have enough sold per hero, then mature margin applies. Log every sold and failed X.",
+                  "Bag: 7-day cooldown. Edit Bought at in the edit modal. Hammers used tracks rerolls. ← Back undoes a mistaken buy.",
+                  "Listings: ← Back = undo list. X = failed try (teaches the ceiling). Sold feeds the suggester.",
                 ]}
               />
             </div>
@@ -746,7 +770,9 @@ export default function AuctionHouse() {
                 </p>
               ) : (
                 <div className="ah-card-grid">
-                  {state.biddings.map((copy) => (
+                  {state.biddings.map((copy) => {
+                    const flip = evaluateFlip(copy, state, tick);
+                    return (
                     <CopyCard
                       key={copy.id}
                       copy={copy}
@@ -761,9 +787,52 @@ export default function AuctionHouse() {
                         })
                       }
                       meta={
-                        <p className="muted ah-card-date">
-                          Added {formatWhen(copy.createdAt)}
-                        </p>
+                        <>
+                          <div
+                            className={`ah-flip-grade ah-flip-${flip.tone}`}
+                            title={flip.reasons.join(" · ")}
+                          >
+                            <strong>{flip.label}</strong>
+                            <span className="muted">
+                              {flip.phase} · {flip.difficulty} sell ·{" "}
+                              {flip.samples} comps
+                            </span>
+                          </div>
+                          <div className="ah-flip-prices">
+                            {flip.maxBid != null ? (
+                              <div className="ah-card-money">
+                                <span className="muted">Max bid</span>
+                                <Sg value={flip.maxBid} />
+                              </div>
+                            ) : null}
+                            {flip.suggestBid != null ? (
+                              <div className="ah-card-money">
+                                <span className="muted">Suggest bid</span>
+                                <Sg value={flip.suggestBid} />
+                              </div>
+                            ) : (
+                              <p className="muted ah-card-date">
+                                No bid yet — need sold comps for this hero
+                              </p>
+                            )}
+                            {flip.suggestList != null ? (
+                              <div className="ah-card-money">
+                                <span className="muted">Expect sell</span>
+                                <Sg value={flip.suggestList} />
+                                {flip.expectedMarginPct != null ? (
+                                  <span className="muted">
+                                    (~{Math.round(flip.expectedMarginPct)}% net
+                                    @ suggest)
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                          <p className="muted ah-card-date">
+                            Target margin {flip.targetMarginPct}% · Added{" "}
+                            {formatWhen(copy.createdAt)}
+                          </p>
+                        </>
                       }
                       footer={
                         <>
@@ -774,7 +843,10 @@ export default function AuctionHouse() {
                               setPicker({
                                 type: "buy",
                                 id: copy.id,
-                                price: "",
+                                price:
+                                  flip.suggestBid != null
+                                    ? String(flip.suggestBid)
+                                    : "",
                                 when: toDatetimeLocalValue(),
                               })
                             }
@@ -794,7 +866,8 @@ export default function AuctionHouse() {
                         </>
                       }
                     />
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -1170,9 +1243,18 @@ export default function AuctionHouse() {
             <section className="ah-section">
               <h2>Pricing settings</h2>
               <p className="muted">
-                Min list price always covers the 5% sell commission so your net
-                hits the target.
+                Min list price covers the 5% sell commission. Flip grades use
+                Attack + % comps, failed tries as a ceiling, and a bootstrap
+                margin until you have enough sold history per hero.
               </p>
+              <div className="ah-bootstrap-plan">
+                <h3>How to build history</h3>
+                <ol>
+                  {flipBootstrapPlan(state.settings).map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </div>
               <div className="ah-settings">
                 <label className="ah-field">
                   <span>Target mode</span>
@@ -1190,7 +1272,7 @@ export default function AuctionHouse() {
                 </label>
                 {state.settings.pricingMode === "margin" ? (
                   <label className="ah-field">
-                    <span>Min margin %</span>
+                    <span>Mature margin %</span>
                     <input
                       type="number"
                       min={0}
@@ -1222,6 +1304,41 @@ export default function AuctionHouse() {
                     />
                   </label>
                 )}
+                <label className="ah-field">
+                  <span>Bootstrap margin %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={state.settings.bootstrapMarginPct ?? 30}
+                    onChange={(e) =>
+                      setState((s) =>
+                        patchSettings(s, {
+                          bootstrapMarginPct: Number(e.target.value) || 0,
+                        })
+                      )
+                    }
+                  />
+                  <span className="muted ah-field-hint">
+                    Used while that hero is still cold/building history.
+                  </span>
+                </label>
+                <label className="ah-field">
+                  <span>Bootstrap until sold (per hero)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={state.settings.bootstrapSales ?? 8}
+                    onChange={(e) =>
+                      setState((s) =>
+                        patchSettings(s, {
+                          bootstrapSales: Number(e.target.value) || 8,
+                        })
+                      )
+                    }
+                  />
+                </label>
                 <label className="ah-field">
                   <span>Stale-list discount %</span>
                   <input
