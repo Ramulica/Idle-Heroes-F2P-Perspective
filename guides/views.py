@@ -162,7 +162,11 @@ def _profile(user):
 
 
 def _user_payload(user):
-    return {"id": user.id, "username": user.username}
+    return {
+        "id": user.id,
+        "username": user.username,
+        "isCreator": getattr(user, "username", "") == EVENT_EDITOR_USERNAME,
+    }
 
 
 def login_required_json(view):
@@ -382,6 +386,61 @@ def stat_calculator(request):
     profile.stat_calculator = incoming if isinstance(incoming, dict) else {}
     profile.save(update_fields=["stat_calculator"])
     return JsonResponse({"state": profile.stat_calculator})
+
+
+def _auction_house_progress(state):
+    if not isinstance(state, dict):
+        return False
+    if state.get("heroPrefs"):
+        return True
+    for key in ("biddings", "bag", "listings", "history"):
+        rows = state.get(key)
+        if isinstance(rows, list) and len(rows) > 0:
+            return True
+    return False
+
+
+@require_http_methods(["GET", "PUT", "PATCH"])
+def auction_house(request):
+    """Each logged-in user only reads/writes their own auction house state."""
+    if not request.user.is_authenticated:
+        if request.method == "GET":
+            return JsonResponse({"state": {}})
+        return JsonResponse({"error": "Please log in to save."}, status=401)
+    profile = _profile(request.user)
+    if request.method == "GET":
+        return JsonResponse({"state": profile.auction_house or {}})
+    data = _json_body(request)
+    incoming = data.get("state") or {}
+    existing = profile.auction_house or {}
+    if not _auction_house_progress(incoming) and _auction_house_progress(existing):
+        return JsonResponse({"state": existing})
+    profile.auction_house = incoming if isinstance(incoming, dict) else {}
+    profile.save(update_fields=["auction_house"])
+    return JsonResponse({"state": profile.auction_house})
+
+
+@login_required_json
+@require_http_methods(["GET"])
+def auction_house_all(request):
+    """Creator-only dump of every user's auction house row."""
+    if not _can_edit_events(request.user):
+        return JsonResponse(
+            {"error": "Only the creator can view the full auction database."},
+            status=403,
+        )
+    users = []
+    for profile in UserProfile.objects.select_related("user").order_by(
+        "user__username"
+    ):
+        users.append(
+            {
+                "userId": profile.user_id,
+                "username": profile.user.username,
+                "state": profile.auction_house or {},
+            }
+        )
+    return JsonResponse({"users": users})
 
 
 @login_required_json

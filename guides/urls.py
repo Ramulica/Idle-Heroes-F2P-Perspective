@@ -10,6 +10,8 @@ urlpatterns = [
     path("bootstrap/", views.bootstrap),
     path("sg-calculator/", views.sg_calculator),
     path("stat-calculator/", views.stat_calculator),
+    path("auction-house/", views.auction_house),
+    path("auction-house/all/", views.auction_house_all),
     path("options/", views.options_collection),
     path("options/<int:option_id>/", views.option_detail),
     path("options/<int:option_id>/rate/", views.option_rate),

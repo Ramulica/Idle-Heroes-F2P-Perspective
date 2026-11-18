@@ -665,6 +665,30 @@ export function heroPrefOf(state, heroId) {
   return pref ? normalizeHeroPref(pref, heroId) : normalizeHeroPref(null, heroId);
 }
 
+/** True once the user saved catalog prefs for this hero. */
+export function isHeroSetUp(state, heroId) {
+  return Boolean(state?.heroPrefs?.[heroId]);
+}
+
+export function partitionAuctionHeroes(state) {
+  const setUp = [];
+  const notSetUp = [];
+  for (const hero of AUCTION_HEROES) {
+    if (isHeroSetUp(state, hero.id)) setUp.push(hero);
+    else notSetUp.push(hero);
+  }
+  return { setUp, notSetUp };
+}
+
+export function hasAuctionProgress(state) {
+  if (!state || typeof state !== "object") return false;
+  if (state.heroPrefs && Object.keys(state.heroPrefs).length) return true;
+  for (const key of ["biddings", "bag", "listings", "history"]) {
+    if (Array.isArray(state[key]) && state[key].length) return true;
+  }
+  return false;
+}
+
 export function setHeroPref(state, heroId, partial) {
   const prev = heroPrefOf(state, heroId);
   const next = normalizeHeroPref({ ...prev, ...partial, heroId }, heroId);

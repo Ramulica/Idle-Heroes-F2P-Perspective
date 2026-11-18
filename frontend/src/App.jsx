@@ -7,6 +7,10 @@ import {
   flushStatCalcSave,
   resetStatCalcStore,
 } from "./useStatCalculator";
+import {
+  flushAuctionHouseSave,
+  resetAuctionHouseStore,
+} from "./useAuctionHouse";
 import { LoadingOverlay, LoadingScreen } from "./components/LoadingSpinner.jsx";
 import { useSmoothImages } from "./useSmoothImages";
 import Home from "./pages/Home.jsx";
@@ -72,11 +76,16 @@ export default function App() {
   async function logout() {
     sessionStorage.removeItem(GUEST_KEY);
     if (!user?.guest) {
-      await Promise.all([flushSgCalcSave(), flushStatCalcSave()]);
+      await Promise.all([
+        flushSgCalcSave(),
+        flushStatCalcSave(),
+        flushAuctionHouseSave(),
+      ]);
       await api.logout();
     }
     resetSgCalcStore();
     resetStatCalcStore();
+    resetAuctionHouseStore();
     setUser(null);
   }
 

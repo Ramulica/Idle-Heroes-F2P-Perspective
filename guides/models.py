@@ -61,6 +61,7 @@ class UserProfile(models.Model):
     )
     sg_calculator = models.JSONField(default=dict, blank=True)
     stat_calculator = models.JSONField(default=dict, blank=True)
+    auction_house = models.JSONField(default=dict, blank=True)
     cases_initialized = models.BooleanField(default=False)
 
     def __str__(self):

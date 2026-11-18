@@ -35,10 +35,12 @@ import {
   formatWhen,
   fromDatetimeLocalValue,
   heroPrefOf,
+  isHeroSetUp,
   listFromBag,
   listingPhases,
   minListPrice,
   netFromListPrice,
+  partitionAuctionHeroes,
   patchSettings,
   returnBagToBidding,
   returnListingToBag,
@@ -58,6 +60,8 @@ import {
   FLIP_STRATEGIES,
   strategyOf,
 } from "../auctionCatalog";
+import { api } from "../api";
+import { useAuth } from "../auth";
 import { useAuctionHouse } from "../useAuctionHouse";
 
 const TABS = [
@@ -117,21 +121,35 @@ function Modal({ title, children, onClose, footer = null }) {
   );
 }
 
-function HeroPickGrid({ value, onChange }) {
+function HeroPickGrid({ value, onChange, state }) {
+  const { setUp, notSetUp } = partitionAuctionHeroes(state);
+  function renderGroup(label, heroes, unset) {
+    if (!heroes.length) return null;
+    return (
+      <div className="ah-hero-group">
+        <p className="ah-hero-group-label muted">{label}</p>
+        <div className="ah-hero-grid">
+          {heroes.map((hero) => (
+            <button
+              key={hero.id}
+              type="button"
+              className={`ah-hero-pick${value === hero.id ? " on" : ""}${
+                unset ? " unset" : ""
+              }`}
+              onClick={() => onChange(hero.id)}
+              title={unset ? "Not set up in Catalog" : "Set up"}
+            >
+              <img src={hero.icon} alt="" />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="ah-hero-grid-wrap">
-      <div className="ah-hero-grid">
-        {AUCTION_HEROES.map((hero) => (
-          <button
-            key={hero.id}
-            type="button"
-            className={`ah-hero-pick${value === hero.id ? " on" : ""}`}
-            onClick={() => onChange(hero.id)}
-          >
-            <img src={hero.icon} alt="" />
-          </button>
-        ))}
-      </div>
+      {renderGroup("Set up", setUp, false)}
+      {renderGroup("Not set up", notSetUp, true)}
     </div>
   );
 }
@@ -275,20 +293,29 @@ function HeroCatalogModal({ hero, pref, onSave, onClose }) {
   );
 }
 
-function BiddingDraftFields({ draft, onChange }) {
+function BiddingDraftFields({ draft, onChange, state }) {
   const need = auctionBonusSlots(draft.rarity);
   const pool = auctionBonusPool(draft.rarity);
   const bonuses = Array.from(
     { length: need },
     (_, i) => draft.bonuses?.[i] || { stat: "", value: 0 }
   );
+  const unset = draft.heroId && !isHeroSetUp(state, draft.heroId);
 
   return (
     <>
       <HeroPickGrid
         value={draft.heroId}
         onChange={(heroId) => onChange({ ...draft, heroId })}
+        state={state}
       />
+      {unset ? (
+        <p className="ah-setup-warn" role="alert">
+          This hero is not set up in Catalog. Flip grades and strategy prefs
+          will be weak until you save preferred %, flat priority, and
+          importance.
+        </p>
+      ) : null}
       <div className="ah-rarity-row">
         {AUCTION_RARITIES.map((r) => (
           <button
@@ -490,11 +517,16 @@ function CopyCard({
 
 export default function AuctionHouse() {
   const navigate = useNavigate();
+  const { user } = useAuth() || {};
   const { state, setState, loaded } = useAuctionHouse();
   const [tab, setTab] = useState("biddings");
   const [picker, setPicker] = useState(null);
   const [catalogHeroId, setCatalogHeroId] = useState(null);
   const [tick, setTick] = useState(() => Date.now());
+  const [creatorDb, setCreatorDb] = useState(null);
+  const [creatorDbError, setCreatorDbError] = useState("");
+  const [creatorDbLoading, setCreatorDbLoading] = useState(false);
+  const isCreator = Boolean(user?.isCreator);
 
   useEffect(() => {
     const id = setInterval(() => setTick(Date.now()), 30_000);
@@ -503,6 +535,24 @@ export default function AuctionHouse() {
 
   const summary = useMemo(() => auctionSummary(state), [state]);
   const alerts = useMemo(() => boardAlerts(state, tick), [state, tick]);
+  const catalogGroups = useMemo(
+    () => partitionAuctionHeroes(state),
+    [state]
+  );
+
+  async function loadCreatorDb() {
+    setCreatorDbLoading(true);
+    setCreatorDbError("");
+    try {
+      const payload = await api.getAuctionHouseAll();
+      setCreatorDb(payload.users || []);
+    } catch (err) {
+      setCreatorDb(null);
+      setCreatorDbError(err?.message || "Could not load auction database.");
+    } finally {
+      setCreatorDbLoading(false);
+    }
+  }
 
   if (!loaded) {
     return (
@@ -555,6 +605,7 @@ export default function AuctionHouse() {
           </p>
           <BiddingDraftFields
             draft={draft}
+            state={state}
             onChange={(next) => setPicker({ ...picker, draft: next })}
           />
           {editing && picker.stage === "bag" ? (
@@ -1333,34 +1384,76 @@ export default function AuctionHouse() {
               <p className="muted">
                 Tap a hero to rank preferred % (Giant Killer, Defier, …), set
                 Attack/Health/Speed priority, and importance 1–10. Strategies
-                use these when grading bids.
+                use these when grading bids. Your setups stay private to your
+                account.
               </p>
-              <div className="ah-catalog-grid">
-                {AUCTION_HEROES.map((hero) => {
-                  const pref = heroPrefOf(state, hero.id);
-                  return (
-                    <button
-                      key={hero.id}
-                      type="button"
-                      className="ah-catalog-card"
-                      onClick={() => setCatalogHeroId(hero.id)}
-                      title={`${hero.faction} · Imp ${pref.importance}/10`}
-                    >
-                      <img src={hero.icon} alt="" />
-                      <div className="ah-catalog-card-meta">
-                        <span className="muted">
-                          Imp {pref.importance}/10 · {pref.flatPriority}
-                        </span>
-                        <span className="muted">
-                          {pref.preferredStats.length
-                            ? pref.preferredStats.slice(0, 3).join(" · ")
-                            : "No % prefs yet"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {[
+                {
+                  key: "set-up",
+                  title: "Set up",
+                  heroes: catalogGroups.setUp,
+                  empty: "No heroes set up yet — tap one below.",
+                },
+                {
+                  key: "not-set-up",
+                  title: "Not set up",
+                  heroes: catalogGroups.notSetUp,
+                  empty: "Every hero is set up.",
+                },
+              ].map((group) => (
+                <div key={group.key} className="ah-catalog-group">
+                  <h3>
+                    {group.title}{" "}
+                    <span className="muted">({group.heroes.length})</span>
+                  </h3>
+                  {group.heroes.length ? (
+                    <div className="ah-catalog-grid">
+                      {group.heroes.map((hero) => {
+                        const pref = heroPrefOf(state, hero.id);
+                        const setUp = group.key === "set-up";
+                        return (
+                          <button
+                            key={hero.id}
+                            type="button"
+                            className={`ah-catalog-card${
+                              setUp ? "" : " unset"
+                            }`}
+                            onClick={() => setCatalogHeroId(hero.id)}
+                            title={
+                              setUp
+                                ? `${hero.faction} · Imp ${pref.importance}/10`
+                                : `${hero.faction} · Not set up`
+                            }
+                          >
+                            <img src={hero.icon} alt="" />
+                            <div className="ah-catalog-card-meta">
+                              {setUp ? (
+                                <>
+                                  <span className="muted">
+                                    Imp {pref.importance}/10 ·{" "}
+                                    {pref.flatPriority}
+                                  </span>
+                                  <span className="muted">
+                                    {pref.preferredStats.length
+                                      ? pref.preferredStats
+                                          .slice(0, 3)
+                                          .join(" · ")
+                                      : "No % prefs yet"}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="muted">Tap to set up</span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="muted">{group.empty}</p>
+                  )}
+                </div>
+              ))}
             </section>
           ) : null}
 
@@ -1598,6 +1691,53 @@ export default function AuctionHouse() {
                   Raise suggestions when history shows strong sell/buy uplift
                 </label>
               </div>
+              {isCreator ? (
+                <div className="ah-creator-db">
+                  <h3>Creator · full auction DB</h3>
+                  <p className="muted">
+                    Only you can load every account’s private auction house
+                    row. Other users never see each other’s setups or bids.
+                  </p>
+                  <button
+                    type="button"
+                    className="tan-btn"
+                    disabled={creatorDbLoading}
+                    onClick={loadCreatorDb}
+                  >
+                    {creatorDbLoading ? "Loading…" : "Load all users"}
+                  </button>
+                  {creatorDbError ? (
+                    <p className="error">{creatorDbError}</p>
+                  ) : null}
+                  {creatorDb ? (
+                    <div className="ah-creator-list">
+                      {creatorDb.map((row) => {
+                        const st = row.state || {};
+                        const prefs = Object.keys(st.heroPrefs || {}).length;
+                        const bids = (st.biddings || []).length;
+                        const bag = (st.bag || []).length;
+                        const listed = (st.listings || []).length;
+                        const hist = (st.history || []).length;
+                        return (
+                          <details key={row.userId} className="ah-creator-row">
+                            <summary>
+                              <strong>{row.username}</strong>
+                              <span className="muted">
+                                {" "}
+                                · set up {prefs} · bid {bids} · bag {bag} ·
+                                list {listed} · hist {hist}
+                              </span>
+                            </summary>
+                            <pre className="ah-creator-json">
+                              {JSON.stringify(st, null, 2)}
+                            </pre>
+                          </details>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </section>
           ) : null}
             </div>

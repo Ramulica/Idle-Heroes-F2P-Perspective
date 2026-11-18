@@ -96,6 +96,14 @@ export const api = {
       silent: true,
       body: JSON.stringify({ state }),
     }),
+  getAuctionHouse: () => request("/api/auction-house/"),
+  saveAuctionHouse: (state) =>
+    request("/api/auction-house/", {
+      method: "PUT",
+      silent: true,
+      body: JSON.stringify({ state }),
+    }),
+  getAuctionHouseAll: () => request("/api/auction-house/all/"),
   createOption: (payload) =>
     request("/api/options/", { method: "POST", body: JSON.stringify(payload) }),
     updateOption: (id, payload, options = {}) =>
