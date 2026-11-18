@@ -16,6 +16,16 @@ export function subscribePending(fn) {
   return () => listeners.delete(fn);
 }
 
+const API_ORIGIN = String(import.meta.env.VITE_API_ORIGIN || "").replace(
+  /\/$/,
+  ""
+);
+
+function apiUrl(path) {
+  if (!API_ORIGIN) return path;
+  return `${API_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 async function request(url, options = {}) {
   const { silent = false, ...fetchOptions } = options;
   const method = fetchOptions.method || "GET";
@@ -31,16 +41,30 @@ async function request(url, options = {}) {
     notifyPending();
   }
   try {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       credentials: "include",
       ...fetchOptions,
       headers,
     });
-    const body = await response.json();
-    if (!response.ok) {
-      throw new Error(body.error || "Request failed");
+    const text = await response.text();
+    const trimmed = text.trim();
+    let body = null;
+    if (trimmed) {
+      try {
+        body = JSON.parse(trimmed);
+      } catch {
+        if (trimmed.startsWith("<!DOCTYPE") || trimmed.startsWith("<html")) {
+          throw new Error(
+            "API is missing on this host (got an HTML page instead of JSON). Vercel only serves the frontend — deploy the Django backend (Render/Railway/Fly) or set VITE_API_ORIGIN to your API URL."
+          );
+        }
+        throw new Error("Server returned a non-JSON response.");
+      }
     }
-    return body;
+    if (!response.ok) {
+      throw new Error(body?.error || "Request failed");
+    }
+    return body ?? {};
   } finally {
     if (!silent) {
       pending = Math.max(0, pending - 1);

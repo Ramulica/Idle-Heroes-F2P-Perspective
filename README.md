@@ -47,17 +47,43 @@ After frontend edits, run `npm run build` in `frontend/` again (Django serves th
 - Completions are shared community routes. Cases belong to your account.
 - Re-seed community floors/options with `python manage.py seed_data`. Use `--reset` only if you want to wipe that seed data.
 
-## Render
+## Hosting (important)
 
-Use a **Python 3** web service on the **Free** instance.
+This app is **Django + React**. Login, Mysterious Sale, and saved calculators need the Django `/api/*` routes.
+
+**Do not deploy this repo as a plain Vercel frontend.** Vercel will serve the React UI, but `/api/login/` and `/api/bootstrap/` return `index.html`, which shows:
+
+`Unexpected token '<', "<!DOCTYPE "... is not valid JSON`
+
+### Render (Python web service)
 
 - Root Directory: empty
 - Build Command: `bash build.sh`
 - Start Command: `gunicorn ih_f2p.wsgi:application --bind 0.0.0.0:$PORT --workers 1`
 - Environment: `DEBUG=False`, a generated `SECRET_KEY`, and `PYTHON_VERSION=3.12.11`
 
-Render’s free disk is wiped on each deploy, so SQLite does not last. To keep accounts and cases, create a free Postgres database on [Neon](https://neon.tech) and add this environment variable on Render:
+### Railway / Fly / any Docker host
+
+Use the included `Dockerfile` (builds the frontend, migrates, seeds, runs gunicorn).
+
+### Database
+
+Free disk on PaaS is wiped often, so SQLite does not last. Create free Postgres on [Neon](https://neon.tech) and set:
 
 - `DATABASE_URL` = the Neon connection string (URI)
 
+Optional:
+
+- `PUBLIC_APP_URL` = `https://your-app.example.com` (CSRF)
+- `CSRF_TRUSTED_ORIGINS` = comma-separated HTTPS origins
+
 Local Cursor still uses `db.sqlite3`. Only the live site uses Neon.
+
+### Optional: Vercel UI + Django API
+
+If you keep the UI on Vercel, deploy Django elsewhere and set:
+
+- Frontend (Vercel): `VITE_API_ORIGIN=https://your-django-host`
+- Django: `CORS_ALLOWED_ORIGINS=https://your-vercel-app.vercel.app` and the same origin in `CSRF_TRUSTED_ORIGINS`
+
+Guest mode and localStorage tools (Auction House, Scratch Card, etc.) still work on a static host; account login and Mysterious Sale need the API.

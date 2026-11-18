@@ -11,9 +11,13 @@ ALLOWED_HOSTS = [
     for host in os.environ.get("ALLOWED_HOSTS", "*").split(",")
     if host.strip()
 ]
-render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
-if render_host and render_host not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(render_host)
+for env_host in (
+    os.environ.get("RENDER_EXTERNAL_HOSTNAME"),
+    os.environ.get("RAILWAY_PUBLIC_DOMAIN"),
+    os.environ.get("FLY_APP_NAME", "") and f"{os.environ['FLY_APP_NAME']}.fly.dev",
+):
+    if env_host and env_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(env_host)
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -74,16 +78,46 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8001",
     "http://localhost:8001",
 ]
-render_url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
-if render_url:
-    CSRF_TRUSTED_ORIGINS.append(render_url)
+for env_url in (
+    os.environ.get("RENDER_EXTERNAL_URL", ""),
+    os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+    and f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}",
+    os.environ.get("FLY_APP_NAME", "") and f"https://{os.environ['FLY_APP_NAME']}.fly.dev",
+    os.environ.get("PUBLIC_APP_URL", ""),
+):
+    origin = str(env_url or "").rstrip("/")
+    if origin and origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(","):
     origin = origin.strip().rstrip("/")
     if origin and origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(origin)
 
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
+# Optional split deploy: static frontend on Vercel, Django API elsewhere.
+CORS_ALLOWED_ORIGINS = [
+    o.strip().rstrip("/")
+    for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+if CORS_ALLOWED_ORIGINS:
+    MIDDLEWARE = [
+        "django.middleware.security.SecurityMiddleware",
+        "django.contrib.sessions.middleware.SessionMiddleware",
+        "guides.cors.CorsMiddleware",
+        "django.middleware.common.CommonMiddleware",
+        "django.middleware.csrf.CsrfViewMiddleware",
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    ]
+    for origin in CORS_ALLOWED_ORIGINS:
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+else:
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
