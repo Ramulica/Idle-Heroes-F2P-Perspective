@@ -3,13 +3,17 @@ import { useNavigate } from "react-router-dom";
 import HelpTip from "../components/HelpTip.jsx";
 import {
   AUCTION_HEROES,
-  AUCTION_PCT_STATS,
   AUCTION_RARITIES,
+  AUCTION_RARITY_META,
   STAR_GEM_ICON,
   SELL_COMMISSION,
   addBidding,
+  auctionBonusPool,
+  auctionBonusSlots,
   auctionHeroOf,
   auctionSummary,
+  awakeningSpeedChoices,
+  awakeningStatValue,
   bagReadyAt,
   boardAlerts,
   buyBidding,
@@ -17,6 +21,7 @@ import {
   copyTitle,
   discardBag,
   dismissBidding,
+  draftWithRarity,
   emptyBiddingDraft,
   failListing,
   formatBonuses,
@@ -31,6 +36,7 @@ import {
   netFromListPrice,
   patchSettings,
   sellListing,
+  setDraftBonus,
   suggestListPrice,
   toDatetimeLocalValue,
 } from "../auctionHouse";
@@ -85,18 +91,20 @@ function Modal({ title, children, onClose, footer = null }) {
 
 function HeroPickGrid({ value, onChange }) {
   return (
-    <div className="ah-hero-grid">
-      {AUCTION_HEROES.map((hero) => (
-        <button
-          key={hero.id}
-          type="button"
-          className={`ah-hero-pick${value === hero.id ? " on" : ""}`}
-          title={hero.name}
-          onClick={() => onChange(hero.id)}
-        >
-          <img src={hero.icon} alt={hero.name} />
-        </button>
-      ))}
+    <div className="ah-hero-grid-wrap">
+      <div className="ah-hero-grid">
+        {AUCTION_HEROES.map((hero) => (
+          <button
+            key={hero.id}
+            type="button"
+            className={`ah-hero-pick${value === hero.id ? " on" : ""}`}
+            title={hero.name}
+            onClick={() => onChange(hero.id)}
+          >
+            <img src={hero.icon} alt={hero.name} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -180,8 +188,8 @@ export default function AuctionHouse() {
           }
         >
           <p className="muted sc-modal-lead">
-            Pick a hero, rarity (C− … SSS+), two % bonuses, then Speed / Attack /
-            HP.
+            Pick a hero, awakening rank (C−…SSS — same tables as Stat Calculator),
+            then its % rolls (values fill automatically), Speed, Attack, HP.
           </p>
           <HeroPickGrid
             value={draft.heroId}
@@ -189,93 +197,139 @@ export default function AuctionHouse() {
               setPicker({ ...picker, draft: { ...draft, heroId } })
             }
           />
-          <label className="ah-field">
-            <span>Rarity</span>
-            <select
-              value={draft.rarity}
-              onChange={(e) =>
-                setPicker({
-                  ...picker,
-                  draft: { ...draft, rarity: e.target.value },
-                })
-              }
-            >
-              {AUCTION_RARITIES.map((r) => (
-                <option key={r} value={r}>
-                  {r || "·"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="ah-bonus-row">
-            {[
-              ["bonusA", "Bonus 1"],
-              ["bonusB", "Bonus 2"],
-            ].map(([key, label]) => (
-              <div key={key} className="ah-bonus-block">
-                <label className="ah-field">
-                  <span>{label}</span>
-                  <select
-                    value={draft[key]?.stat || ""}
-                    onChange={(e) =>
-                      setPicker({
-                        ...picker,
-                        draft: {
-                          ...draft,
-                          [key]: { ...draft[key], stat: e.target.value },
-                        },
-                      })
-                    }
-                  >
-                    {AUCTION_PCT_STATS.map((stat) => (
-                      <option key={stat} value={stat}>
-                        {stat}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="ah-field">
-                  <span>Value %</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    value={draft[key]?.value ?? ""}
-                    onChange={(e) =>
-                      setPicker({
-                        ...picker,
-                        draft: {
-                          ...draft,
-                          [key]: { ...draft[key], value: e.target.value },
-                        },
-                      })
-                    }
-                  />
-                </label>
-              </div>
+          <div className="ah-rarity-row">
+            {AUCTION_RARITIES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`ah-rarity-chip${draft.rarity === r ? " on" : ""}`}
+                style={{
+                  "--ah-rarity": AUCTION_RARITY_META[r]?.color || "#8a5a2a",
+                }}
+                onClick={() =>
+                  setPicker({
+                    ...picker,
+                    draft: draftWithRarity(draft, r),
+                  })
+                }
+              >
+                {r}
+              </button>
             ))}
           </div>
+          {(() => {
+            const need = auctionBonusSlots(draft.rarity);
+            const pool = auctionBonusPool(draft.rarity);
+            const bonuses = Array.from(
+              { length: need },
+              (_, i) => draft.bonuses?.[i] || { stat: "", value: 0 }
+            );
+            if (!need) {
+              return <p className="muted">This rank has no % bonus rolls.</p>;
+            }
+            return (
+              <div className="ah-bonus-row">
+                {bonuses.map((bonus, index) => {
+                  const value = bonus.stat
+                    ? awakeningStatValue(draft.rarity, bonus.stat)
+                    : null;
+                  return (
+                    <div key={index} className="ah-bonus-block">
+                      <label className="ah-field">
+                        <span>
+                          % Stat {index + 1}/{need}
+                        </span>
+                        <select
+                          value={bonus.stat || ""}
+                          onChange={(e) =>
+                            setPicker({
+                              ...picker,
+                              draft: setDraftBonus(
+                                draft,
+                                index,
+                                e.target.value
+                              ),
+                            })
+                          }
+                        >
+                          <option value="">Select…</option>
+                          {pool.map((stat) => {
+                            const used = bonuses.some(
+                              (b, i) => i !== index && b.stat === stat
+                            );
+                            const tableVal = awakeningStatValue(
+                              draft.rarity,
+                              stat
+                            );
+                            return (
+                              <option
+                                key={stat}
+                                value={stat}
+                                disabled={used}
+                              >
+                                {stat}
+                                {tableVal != null ? ` (+${tableVal}%)` : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+                      <p className="ah-bonus-value muted">
+                        {value != null ? `+${value}%` : "Pick a stat"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
           <div className="ah-flat-row">
-            {[
-              ["speed", "Speed"],
-              ["attack", "Attack"],
-              ["hp", "HP"],
-            ].map(([key, label]) => (
-              <label key={key} className="ah-field">
-                <span>{label}</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={draft[key] ?? ""}
-                  onChange={(e) =>
-                    setPicker({
-                      ...picker,
-                      draft: { ...draft, [key]: e.target.value },
-                    })
-                  }
-                />
-              </label>
-            ))}
+            <label className="ah-field">
+              <span>Speed</span>
+              <select
+                value={draft.speed ?? ""}
+                onChange={(e) =>
+                  setPicker({
+                    ...picker,
+                    draft: { ...draft, speed: e.target.value },
+                  })
+                }
+              >
+                {awakeningSpeedChoices(draft.rarity).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="ah-field">
+              <span>Attack</span>
+              <input
+                type="number"
+                min={0}
+                value={draft.attack ?? ""}
+                onChange={(e) =>
+                  setPicker({
+                    ...picker,
+                    draft: { ...draft, attack: e.target.value },
+                  })
+                }
+              />
+            </label>
+            <label className="ah-field">
+              <span>HP</span>
+              <input
+                type="number"
+                min={0}
+                value={draft.hp ?? ""}
+                onChange={(e) =>
+                  setPicker({
+                    ...picker,
+                    draft: { ...draft, hp: e.target.value },
+                  })
+                }
+              />
+            </label>
           </div>
           <label className="ah-field">
             <span>Note (optional)</span>

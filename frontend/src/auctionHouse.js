@@ -2,8 +2,17 @@
  * Idle Heroes Auction House accounting:
  * biddings → bag (7d cooldown) → listing (6h cool + 2d auction) → history.
  * 5% sell commission. Pricing learns from sold / failed tries.
+ * Copy ranks / % rolls reuse Stat Calculator awakening tables.
  */
 
+import {
+  AWAKENING_TIERS,
+  awakeningSpeedChoices,
+  awakeningSpeedRange,
+  awakeningStatCount,
+  awakeningStatPool,
+  awakeningStatValue,
+} from "./heroProgress";
 import starGemIcon from "./assets/auction/star-gem.png";
 import vulcan from "./assets/auction/heroes/vulcan.png";
 import logan from "./assets/auction/heroes/logan.png";
@@ -55,36 +64,47 @@ export const LIST_WARMUP_MS = 6 * 60 * 60 * 1000;
 export const LIST_AUCTION_MS = 2 * 24 * 60 * 60 * 1000;
 export const STALE_LIST_MS = 36 * 60 * 60 * 1000; // suggest lower after ~1.5d in auction
 
-const TIERS = ["C", "B", "A", "S", "SS", "SSS"];
-const SIGNS = ["-", "", "+"];
+/** Auction copy ranks: C−…SSS (same ids as awakening — no fake S−/SSS+). */
+const AUCTION_RARITY_START = AWAKENING_TIERS.findIndex((r) => r.id === "C-");
+const AUCTION_RARITY_END = AWAKENING_TIERS.findIndex((r) => r.id === "SSS");
+export const AUCTION_RARITIES = AWAKENING_TIERS.slice(
+  Math.max(0, AUCTION_RARITY_START),
+  AUCTION_RARITY_END >= 0 ? AUCTION_RARITY_END + 1 : undefined
+).map((r) => r.id);
 
-export const AUCTION_RARITIES = TIERS.flatMap((tier) =>
-  SIGNS.map((sign) => `${tier}${sign}`)
+export const AUCTION_RARITY_META = Object.fromEntries(
+  AWAKENING_TIERS.filter((r) => AUCTION_RARITIES.includes(r.id)).map((r) => [
+    r.id,
+    r,
+  ])
 );
 
-/** % roll options (same family as Stat Calculator / sigils). */
-export const AUCTION_PCT_STATS = [
-  "Armor Break",
-  "Precision",
-  "Crit",
-  "Crit Damage",
-  "Crit Damage Reduction",
-  "Crit Damage Offset",
-  "Block",
-  "Armor",
-  "Skill Damage",
-  "Holy Damage",
-  "Damage Reduction",
-  "All Damage Dealt",
-  "All Damage Reduction",
-  "Control Immunity",
-  "Control Immunity Offset",
-  "Dodge",
-  "Dodge Offset",
-  "Heal Effect",
-  "Effect of Being Healed",
-  "Maim",
-];
+export {
+  awakeningSpeedChoices,
+  awakeningSpeedRange,
+  awakeningStatCount,
+  awakeningStatPool,
+  awakeningStatValue,
+};
+
+export function auctionBonusSlots(rarity) {
+  return awakeningStatCount(rarity);
+}
+
+export function auctionBonusPool(rarity) {
+  return awakeningStatPool(rarity);
+}
+
+export function makeBonus(rarity, stat) {
+  const name = String(stat || "").trim();
+  if (!name) return { stat: "", value: 0, unit: "%" };
+  const value = awakeningStatValue(rarity, name);
+  return {
+    stat: name,
+    value: Number.isFinite(value) ? value : 0,
+    unit: "%",
+  };
+}
 
 export const AUCTION_HEROES = [
   { id: "vulcan", name: "Vulcan", icon: vulcan, faction: "Light" },
@@ -221,14 +241,40 @@ export function defaultSettings() {
   };
 }
 
-function normalizeBonus(raw) {
-  const stat = AUCTION_PCT_STATS.includes(raw?.stat) ? raw.stat : "";
+function normalizeBonus(raw, rarity) {
+  const stat = String(raw?.stat || "").trim();
+  if (!stat) return { stat: "", value: 0, unit: "%" };
+  const table = awakeningStatValue(rarity, stat);
+  if (Number.isFinite(table)) {
+    return { stat, value: table, unit: "%" };
+  }
   const value = Number(raw?.value);
   return {
     stat,
     value: Number.isFinite(value) && value > 0 ? value : 0,
     unit: "%",
   };
+}
+
+function normalizeBonuses(raw, rarity, legacyA, legacyB) {
+  const need = auctionBonusSlots(rarity);
+  const pool = new Set(auctionBonusPool(rarity));
+  let source = Array.isArray(raw) ? raw : null;
+  if (!source) {
+    source = [legacyA, legacyB].filter(Boolean);
+  }
+  const out = [];
+  const seen = new Set();
+  for (const row of source) {
+    if (out.length >= need) break;
+    const bonus = normalizeBonus(row, rarity);
+    if (!bonus.stat || seen.has(bonus.stat)) continue;
+    if (pool.size && !pool.has(bonus.stat)) continue;
+    seen.add(bonus.stat);
+    out.push(bonus);
+  }
+  while (out.length < need) out.push({ stat: "", value: 0, unit: "%" });
+  return out;
 }
 
 function normalizeTries(raw) {
@@ -245,12 +291,24 @@ export function normalizeCopy(raw, stage) {
   if (!raw || typeof raw !== "object") return null;
   const heroId = auctionHeroOf(raw.heroId) ? raw.heroId : null;
   if (!heroId) return null;
-  const rarity = AUCTION_RARITIES.includes(raw.rarity) ? raw.rarity : "A";
-  const speed = Math.max(0, Number(raw.speed) || 0);
+  let rarity = AUCTION_RARITIES.includes(raw.rarity) ? raw.rarity : "A";
+  // Drop invented S− / SS− / SSS± leftovers from older builds.
+  if (!AUCTION_RARITIES.includes(rarity)) rarity = "A";
+  const speedChoices = awakeningSpeedChoices(rarity);
+  let speed = Math.max(0, Number(raw.speed) || 0);
+  if (speedChoices.length) {
+    if (!speedChoices.includes(speed)) {
+      speed = speedChoices[0];
+    }
+  }
   const attack = Math.max(0, Number(raw.attack) || 0);
   const hp = Math.max(0, Number(raw.hp) || 0);
-  const bonusA = normalizeBonus(raw.bonusA || raw.bonuses?.[0]);
-  const bonusB = normalizeBonus(raw.bonusB || raw.bonuses?.[1]);
+  const bonuses = normalizeBonuses(
+    raw.bonuses,
+    rarity,
+    raw.bonusA,
+    raw.bonusB
+  );
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : newId(),
     stage,
@@ -259,8 +317,9 @@ export function normalizeCopy(raw, stage) {
     speed,
     attack,
     hp,
-    bonusA,
-    bonusB,
+    bonuses,
+    bonusA: bonuses[0] || { stat: "", value: 0, unit: "%" },
+    bonusB: bonuses[1] || { stat: "", value: 0, unit: "%" },
     note: typeof raw.note === "string" ? raw.note : "",
     // bidding
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : nowIso(),
@@ -343,17 +402,45 @@ export function writeAuctionState(state) {
   }
 }
 
-export function emptyBiddingDraft() {
+export function emptyBiddingDraft(rarity = "A") {
+  const tier = AUCTION_RARITIES.includes(rarity) ? rarity : "A";
+  const need = auctionBonusSlots(tier);
+  const speedChoices = awakeningSpeedChoices(tier);
   return {
     heroId: AUCTION_HEROES[0].id,
-    rarity: "A",
-    speed: "",
+    rarity: tier,
+    speed: speedChoices[0] ?? "",
     attack: "",
     hp: "",
-    bonusA: { stat: "Crit Damage", value: "" },
-    bonusB: { stat: "Precision", value: "" },
+    bonuses: Array.from({ length: need }, () => ({
+      stat: "",
+      value: 0,
+      unit: "%",
+    })),
     note: "",
   };
+}
+
+export function draftWithRarity(draft, rarity) {
+  const next = emptyBiddingDraft(rarity);
+  return {
+    ...next,
+    heroId: draft?.heroId || next.heroId,
+    attack: draft?.attack ?? "",
+    hp: draft?.hp ?? "",
+    note: draft?.note || "",
+  };
+}
+
+export function setDraftBonus(draft, index, stat) {
+  const rarity = draft?.rarity || "A";
+  const need = auctionBonusSlots(rarity);
+  const bonuses = Array.from({ length: need }, (_, i) => {
+    const cur = draft?.bonuses?.[i] || { stat: "", value: 0, unit: "%" };
+    if (i !== index) return cur;
+    return makeBonus(rarity, stat);
+  });
+  return { ...draft, bonuses };
 }
 
 /** Floor list price that meets min profit or margin after 5% commission. */
@@ -374,17 +461,9 @@ function rarityRank(rarity) {
   return Math.max(0, AUCTION_RARITIES.indexOf(rarity));
 }
 
-function bonusKey(b) {
-  return `${b?.stat || ""}:${Number(b?.value) || 0}`;
-}
-
-function copyFingerprint(copy) {
-  return [
-    copy.heroId,
-    copy.rarity,
-    bonusKey(copy.bonusA),
-    bonusKey(copy.bonusB),
-  ].join("|");
+function bonusList(copy) {
+  if (Array.isArray(copy?.bonuses) && copy.bonuses.length) return copy.bonuses;
+  return [copy?.bonusA, copy?.bonusB].filter(Boolean);
 }
 
 function statDistance(a, b) {
@@ -396,12 +475,20 @@ function statDistance(a, b) {
     Math.abs((a.hp || 0) - (b.hp || 0)) /
     Math.max(1, (a.hp || 0) + (b.hp || 0)) * 4;
   const rar = Math.abs(rarityRank(a.rarity) - rarityRank(b.rarity)) * 0.35;
+  const aStats = new Set(
+    bonusList(a)
+      .map((x) => x?.stat)
+      .filter(Boolean)
+  );
+  const bStats = new Set(
+    bonusList(b)
+      .map((x) => x?.stat)
+      .filter(Boolean)
+  );
+  let shared = 0;
+  for (const s of aStats) if (bStats.has(s)) shared += 1;
   const sameBonus =
-    (a.bonusA?.stat === b.bonusA?.stat ? 0 : 1) +
-    (a.bonusB?.stat === b.bonusB?.stat ? 0 : 1) +
-    (a.bonusA?.stat === b.bonusB?.stat || a.bonusB?.stat === b.bonusA?.stat
-      ? -0.4
-      : 0);
+    Math.max(aStats.size, bStats.size) - shared + (shared ? -0.2 * shared : 0);
   return spd + atk + hp + rar + sameBonus;
 }
 
@@ -753,7 +840,7 @@ export function copyTitle(copy) {
 
 export function formatBonuses(copy) {
   const parts = [];
-  for (const b of [copy?.bonusA, copy?.bonusB]) {
+  for (const b of bonusList(copy)) {
     if (b?.stat && b.value) parts.push(`${b.stat} +${b.value}%`);
   }
   return parts.join(" · ") || "No % bonuses";
