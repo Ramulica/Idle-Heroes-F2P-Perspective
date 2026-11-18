@@ -20,6 +20,7 @@ import UpgradeHero from "./pages/UpgradeHero.jsx";
 import ScratchCardCalculator from "./pages/ScratchCardCalculator.jsx";
 import FantasyFactoryCalculator from "./pages/FantasyFactoryCalculator.jsx";
 import StatCalculator from "./pages/StatCalculator.jsx";
+import AuctionHouse from "./pages/AuctionHouse.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 import { caseTotalsFromSlots } from "./caseTotals";
 
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/guides/scratch-card" element={<ScratchCardCalculator />} />
         <Route path="/guides/fantasy-factory" element={<FantasyFactoryCalculator />} />
         <Route path="/guides/stat-calculator" element={<StatCalculator />} />
+        <Route path="/guides/auction-house" element={<AuctionHouse />} />
         <Route path="/guides/mysterious-sale" element={<MysteriousSaleGate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

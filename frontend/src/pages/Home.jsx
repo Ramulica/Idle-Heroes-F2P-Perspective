@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, Fantasy Factory, and Stat Calculator tools, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, Fantasy Factory, Stat Calculator, and Auction House tools, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -425,6 +425,30 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/stat-calculator")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Auction House</h3>
+                    <HelpTip
+                      title="Auction House Accounting"
+                      steps={[
+                        "Track biddings → bag (7-day cooldown) → listings → history.",
+                        "Set min margin or min profit; suggestions include 5% sell commission.",
+                        "Failed list tries and sold history train the next price tip.",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Account for auction bids, bag cooldown, listings, and SG
+                    profit with price suggestions.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/auction-house")}
                   >
                     Open tool
                   </button>
