@@ -13,6 +13,17 @@ import {
   awakeningStatPool,
   awakeningStatValue,
 } from "./heroProgress";
+import {
+  estimatedHammerNeed,
+  flatPriorityScore,
+  FLIP_STRATEGIES,
+  normalizeHeroPref,
+  normalizeHeroPrefs,
+  preferredMatchScore,
+  strategyOf,
+} from "./auctionCatalog";
+
+const FLIP_STRATEGY_IDS = new Set(FLIP_STRATEGIES.map((s) => s.id));
 import starGemIcon from "./assets/auction/star-gem.png";
 import hammerIcon from "./assets/auction/hammer.png";
 import vulcan from "./assets/auction/heroes/vulcan.png";
@@ -242,7 +253,9 @@ export function listPriceForNet(desiredNet) {
 export function defaultSettings() {
   return {
     pricingMode: "margin", // margin | profit
-    /** Mature-phase target net margin after 5% commission. */
+    /** Active flip strategy — see auctionCatalog FLIP_STRATEGIES. */
+    strategyId: "safe_bootstrap",
+    /** Mature-phase target net margin after 5% commission (fallback / override). */
     minMarginPct: 15,
     /** Cold/building phase — safer flips while learning the market. */
     bootstrapMarginPct: 30,
@@ -359,6 +372,7 @@ export function normalizeCopy(raw, stage) {
 export function defaultAuctionState() {
   return {
     settings: defaultSettings(),
+    heroPrefs: {},
     biddings: [],
     bag: [],
     listings: [],
@@ -386,8 +400,15 @@ export function normalizeAuctionState(raw) {
     0,
     Number(settings.staleDiscountPct) || 0
   );
+  const knownIds = AUCTION_HEROES.map((h) => h.id);
+  if (!FLIP_STRATEGY_IDS.has(settings.strategyId)) {
+    settings.strategyId = "safe_bootstrap";
+  }
+  // Sync visible margin knobs from strategy when user hasn't customized oddly —
+  // keep stored values; strategy applies at evaluate time.
   return {
     settings,
+    heroPrefs: normalizeHeroPrefs(raw.heroPrefs, knownIds),
     biddings: (Array.isArray(raw.biddings) ? raw.biddings : [])
       .map((c) => normalizeCopy(c, "bidding"))
       .filter(Boolean),
@@ -582,10 +603,9 @@ function rarityLetter(rarity) {
 }
 
 /**
- * 0..1 quality prior from Attack + % rolls (Attack/% dominate).
- * No absolute SG without market — used to grade speculative bids.
+ * 0..1 quality prior from Attack + % rolls, catalog prefs, and strategy.
  */
-export function copyQualityScore(copy) {
+export function copyQualityScore(copy, state = null) {
   const letter = rarityLetter(copy?.rarity);
   const base = ATTACK_SOFT_BASE[letter] || 5000;
   const atk = Math.max(0, Number(copy?.attack) || 0);
@@ -601,15 +621,25 @@ export function copyQualityScore(copy) {
       rollScore += 0.55;
       continue;
     }
-    // Table values are fixed per rarity; having the "right" contested rolls
-    // still matters via fill + attack. Slight bump for multi-roll ranks.
     rollScore += 0.7 + 0.3 * Math.min(1, (Number(b.value) || 0) / table);
   }
   rollScore = bonuses.length ? rollScore / bonuses.length : 0.25;
 
   const rarBoost = Math.min(1, rarityRank(copy?.rarity) / 20);
-  const raw = atkScore * 0.55 + rollScore * 0.35 + rarBoost * 0.1 + fill * 0.05;
-  return Math.max(0, Math.min(1, raw / 1.1));
+  let raw = atkScore * 0.5 + rollScore * 0.3 + rarBoost * 0.1 + fill * 0.05;
+
+  if (state) {
+    const pref = heroPrefOf(state, copy?.heroId);
+    const strat = strategyOf(state.settings);
+    const prefW = Math.max(0, Math.min(0.7, Number(strat.prefWeight) || 0.35));
+    const match = preferredMatchScore(copy, pref);
+    const flat = flatPriorityScore(copy, pref);
+    const imp = Math.max(1, Math.min(10, pref.importance)) / 10;
+    raw =
+      raw * (1 - prefW) + (match * 0.55 + flat * 0.25 + imp * 0.2) * prefW;
+  }
+
+  return Math.max(0, Math.min(1, raw / 1.05));
 }
 
 export function flipMarketPhase(copy, state) {
@@ -625,11 +655,37 @@ export function flipMarketPhase(copy, state) {
 
 export function targetMarginPctFor(copy, state) {
   const settings = { ...defaultSettings(), ...(state?.settings || {}) };
+  const strat = strategyOf(settings);
   const phase = flipMarketPhase(copy, state);
   if (phase === "cold" || phase === "building") {
-    return Math.max(0, Number(settings.bootstrapMarginPct) || 30);
+    return Math.max(
+      0,
+      Number(strat.marginCold) ||
+        Number(settings.bootstrapMarginPct) ||
+        30
+    );
   }
-  return Math.max(0, Number(settings.minMarginPct) || 15);
+  return Math.max(
+    0,
+    Number(strat.marginMature) || Number(settings.minMarginPct) || 15
+  );
+}
+
+export function heroPrefOf(state, heroId) {
+  const pref = state?.heroPrefs?.[heroId];
+  return pref ? normalizeHeroPref(pref, heroId) : normalizeHeroPref(null, heroId);
+}
+
+export function setHeroPref(state, heroId, partial) {
+  const prev = heroPrefOf(state, heroId);
+  const next = normalizeHeroPref({ ...prev, ...partial, heroId }, heroId);
+  return {
+    ...state,
+    heroPrefs: {
+      ...(state.heroPrefs || {}),
+      [heroId]: next,
+    },
+  };
 }
 
 function sellDifficultyFrom(related, fails) {
@@ -662,9 +718,15 @@ function sellDifficultyFrom(related, fails) {
  */
 export function evaluateFlip(copy, state, now = Date.now()) {
   const settings = { ...defaultSettings(), ...(state?.settings || {}) };
+  const strat = strategyOf(settings);
+  const pref = heroPrefOf(state, copy?.heroId);
   const phase = flipMarketPhase(copy, state);
   const targetMarginPct = targetMarginPctFor(copy, state);
-  const quality = copyQualityScore(copy);
+  const quality = copyQualityScore(copy, state);
+  const prefMatch = preferredMatchScore(copy, pref);
+  const flatFit = flatPriorityScore(copy, pref);
+  const hammerNeed = estimatedHammerNeed(copy, pref);
+  const importance = pref.importance;
 
   const relatedAll = relatedHistory(copy, state?.history);
   const related = relatedAll.filter((r) => r.dist <= 9).slice(0, 14);
@@ -752,9 +814,26 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     const phaseCut = phase === "cold" ? 0.8 : phase === "building" ? 0.88 : 0.94;
     const hardCut = difficulty === "hard" ? 0.9 : difficulty === "easy" ? 1.02 : 1;
     const qCut = 0.88 + quality * 0.14;
+    const stratCut = Math.max(0.7, Math.min(1, Number(strat.bidHaircut) || 0.85));
+    const prefCut = 0.9 + prefMatch * 0.12;
+    const hammerCut =
+      hammerNeed <= 0.4
+        ? 1
+        : hammerNeed > strat.hammerTolerance * 6
+          ? 0.72
+          : 1 - Math.min(0.22, hammerNeed * 0.06);
     suggestBid = Math.max(
       0,
-      Math.floor(maxBid * phaseCut * hardCut * qCut * (0.82 + 0.18 * confidence))
+      Math.floor(
+        maxBid *
+          phaseCut *
+          hardCut *
+          qCut *
+          stratCut *
+          prefCut *
+          hammerCut *
+          (0.82 + 0.18 * confidence)
+      )
     );
     if (maxBid > 0) suggestBid = Math.min(suggestBid, maxBid);
   }
@@ -767,36 +846,58 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   }
 
   const reasons = [];
+  reasons.push(`Strategy · ${strat.name}`);
   if (phase === "cold") {
     reasons.push(
-      `Cold market for this hero — use ${targetMarginPct}% bootstrap margin`
+      `Cold market — ${targetMarginPct}% ${strat.name} margin`
     );
   } else if (phase === "building") {
-    reasons.push(`Building history — still targeting ${targetMarginPct}% margin`);
+    reasons.push(`Building history — ${targetMarginPct}% margin`);
   } else {
-    reasons.push(`Mature market — targeting ${targetMarginPct}% margin`);
+    reasons.push(`Mature market — ${targetMarginPct}% margin`);
   }
+  reasons.push(
+    `Catalog · importance ${importance}/10 · pref match ${Math.round(prefMatch * 100)}% · flat ${pref.flatPriority}`
+  );
   if (samples === 0) {
-    reasons.push("No close comps yet — grade is speculative from Attack/% only");
+    reasons.push("No close comps yet — grade leans on catalog + Attack/%");
   } else {
     reasons.push(
       `${samples} similar sold · ${close.length} close comps · sell looks ${difficulty}`
     );
   }
   if (fails.length) {
+    reasons.push(`Failed list ceiling near ${formatSg(fails[0].price)} SG`);
+  }
+  if (hammerNeed >= 1) {
     reasons.push(
-      `Failed list ceiling near ${formatSg(fails[0].price)} SG`
+      `Hammer pressure ~${hammerNeed.toFixed(1)} (scarce — ${strat.name} tolerance ${(strat.hammerTolerance * 100).toFixed(0)}%)`
     );
   }
-  if (quality >= 0.78) reasons.push("Strong Attack / % roll profile");
-  else if (quality <= 0.42) reasons.push("Weak Attack / % profile vs rarity");
+  if (quality >= 0.78) reasons.push("Strong Attack / % / catalog fit");
+  else if (quality <= 0.42) reasons.push("Weak Attack / % / catalog fit");
 
   // Grade
   let grade = "skip";
   let label = "Skip";
   let tone = "muted";
-  if (samples === 0) {
-    if (quality >= 0.8) {
+  const belowImportance = importance < (strat.importanceMin || 1);
+  const hammerBlocked = hammerNeed > strat.hammerTolerance * 8;
+  const qualityOk = quality >= (strat.qualityFloor || 0.4);
+
+  if (belowImportance && strat.id !== "volume_grinder") {
+    grade = "skip";
+    label = "Low priority hero";
+    tone = "muted";
+    reasons.push(
+      `Importance ${importance} below ${strat.name} floor (${strat.importanceMin})`
+    );
+  } else if (hammerBlocked && importance < 8) {
+    grade = "skip";
+    label = "Needs too many hammers";
+    tone = "muted";
+  } else if (samples === 0) {
+    if (quality >= 0.8 && qualityOk && !belowImportance) {
       grade = "ok";
       label = "Speculative";
       tone = "warn";
@@ -809,7 +910,9 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     expectedMarginPct != null &&
     expectedMarginPct >= targetMarginPct + 8 &&
     confidence >= 0.45 &&
-    difficulty !== "hard"
+    difficulty !== "hard" &&
+    qualityOk &&
+    prefMatch >= 0.35
   ) {
     grade = "strong";
     label = "Strong buy";
@@ -817,7 +920,8 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   } else if (
     expectedMarginPct != null &&
     expectedMarginPct >= targetMarginPct &&
-    confidence >= 0.3
+    confidence >= 0.3 &&
+    qualityOk
   ) {
     grade = "buy";
     label = "Buy";
@@ -839,11 +943,21 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     grade = "buy";
     label = "Buy (hard sell)";
   }
+  if (prefMatch >= 0.85 && importance >= 8 && grade === "buy") {
+    grade = "strong";
+    label = "Strong buy (meta)";
+  }
 
   return {
     phase,
+    strategyId: strat.id,
+    strategyName: strat.name,
     targetMarginPct,
     quality,
+    prefMatch,
+    flatFit,
+    importance,
+    hammerNeed,
     confidence,
     difficulty,
     grade,
@@ -880,14 +994,15 @@ export function suggestListPrice(copy, state, now = Date.now()) {
   };
 }
 
-/** Short bootstrap plan for Settings / help. */
+/** Active strategy plan (+ shared history bootstrap notes). */
 export function flipBootstrapPlan(settings) {
   const s = { ...defaultSettings(), ...(settings || {}) };
+  const strat = strategyOf(s);
   return [
-    `Phase 1 · Cold (first sales per hero): only buy when the board looks clearly good (Attack + % you like). Bid so that a realistic sell still nets ~${s.bootstrapMarginPct}% after 5% tax. Prefer fewer, cleaner flips over volume.`,
-    `Phase 2 · Building (until ${s.bootstrapSales} sold of that hero): keep logging every Buy, List, Sold, and failed X. Failed tries teach the ceiling — they matter as much as wins. Stay near ${s.bootstrapMarginPct}% margin; lower only when comps are close.`,
-    `Phase 3 · Mature (${s.bootstrapSales}+ sold): trust the suggester more. Target ~${s.minMarginPct}% net margin, bid up to Max bid, and use Sell unlocks / stale discounts. Still skip hard-sell comps unless the edge is fat.`,
-    `Always: Attack + % rolls drive comps. Log hammers. Never chase a bid past Max bid. If unsure, Skip and wait for a cleaner copy.`,
+    ...strat.plan,
+    `History phases still apply: cold → building (until ${s.bootstrapSales} sold/hero) → mature. Log Sold and failed X every time.`,
+    "Catalog: set each hero’s preferred % order, flat priority (Attack/HP/Speed), and importance 1–10 — strategies read those.",
+    "Hammers are scarce: prefer copies that already match prefs. Only Meta Sniper leans on hammers for importance 8+ near-misses.",
   ];
 }
 

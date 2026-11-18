@@ -34,6 +34,7 @@ import {
   formatSg,
   formatWhen,
   fromDatetimeLocalValue,
+  heroPrefOf,
   listFromBag,
   listingPhases,
   minListPrice,
@@ -44,12 +45,19 @@ import {
   sellListing,
   setDraftBonus,
   setHammersUsed,
+  setHeroPref,
   suggestListPrice,
   toDatetimeLocalValue,
   updateBagCopy,
   updateBidding,
   updateListingCopy,
 } from "../auctionHouse";
+import {
+  CATALOG_STAT_OPTIONS,
+  FLAT_PRIORITIES,
+  FLIP_STRATEGIES,
+  strategyOf,
+} from "../auctionCatalog";
 import { useAuctionHouse } from "../useAuctionHouse";
 
 const TABS = [
@@ -57,6 +65,7 @@ const TABS = [
   { id: "bag", label: "Bag" },
   { id: "listings", label: "Listings" },
   { id: "history", label: "History" },
+  { id: "catalog", label: "Catalog" },
   { id: "summary", label: "Summary" },
   { id: "settings", label: "Settings" },
 ];
@@ -125,6 +134,145 @@ function HeroPickGrid({ value, onChange }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function HeroCatalogModal({ hero, pref, onSave, onClose }) {
+  const [preferredStats, setPreferredStats] = useState([
+    ...(pref.preferredStats || []),
+  ]);
+  const [flatPriority, setFlatPriority] = useState(pref.flatPriority || "attack");
+  const [importance, setImportance] = useState(pref.importance || 5);
+  const dragIndex = useRef(null);
+
+  const pool = CATALOG_STAT_OPTIONS.filter((s) => !preferredStats.includes(s));
+
+  function moveStat(from, to) {
+    if (from === to || from < 0 || to < 0) return;
+    setPreferredStats((list) => {
+      const next = [...list];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  return (
+    <Modal
+      title={`${hero.name} · catalog`}
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className="tan-btn"
+          onClick={() =>
+            onSave({
+              preferredStats,
+              flatPriority,
+              importance,
+            })
+          }
+        >
+          Save prefs
+        </button>
+      }
+    >
+      <div className="ah-catalog-hero-head">
+        <img src={hero.icon} alt="" />
+        <div>
+          <strong>{hero.name}</strong>
+          <p className="muted">{hero.faction}</p>
+        </div>
+      </div>
+
+      <label className="ah-field">
+        <span>Hero importance (1–10)</span>
+        <div className="ah-importance-row">
+          <input
+            type="range"
+            min={1}
+            max={10}
+            value={importance}
+            onChange={(e) => setImportance(Number(e.target.value) || 5)}
+          />
+          <strong>{importance}</strong>
+        </div>
+      </label>
+
+      <fieldset className="ah-flat-priority">
+        <legend>Most important hard stat</legend>
+        {FLAT_PRIORITIES.map((f) => (
+          <label key={f.id} className="ah-check">
+            <input
+              type="radio"
+              name="flat-priority"
+              checked={flatPriority === f.id}
+              onChange={() => setFlatPriority(f.id)}
+            />
+            {f.label}
+          </label>
+        ))}
+      </fieldset>
+
+      <div className="ah-catalog-ranks">
+        <h4>Preferred % (top = best)</h4>
+        <p className="muted">
+          Drag to reorder. Include Giant Killer, Defier, and whatever this hero
+          wants. Strategies read this list.
+        </p>
+        <ul className="ah-rank-list">
+          {preferredStats.length ? (
+            preferredStats.map((stat, index) => (
+              <li
+                key={stat}
+                className="ah-rank-item"
+                draggable
+                onDragStart={() => {
+                  dragIndex.current = index;
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  moveStat(dragIndex.current, index);
+                  dragIndex.current = null;
+                }}
+              >
+                <span className="ah-rank-handle">☰</span>
+                <strong>
+                  #{index + 1} {stat}
+                </strong>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() =>
+                    setPreferredStats((list) => list.filter((s) => s !== stat))
+                  }
+                >
+                  ✕
+                </button>
+              </li>
+            ))
+          ) : (
+            <li className="muted">No preferred % yet — tap stats below.</li>
+          )}
+        </ul>
+        <div className="ah-stat-pool">
+          {pool.map((stat) => (
+            <button
+              key={stat}
+              type="button"
+              className="ah-stat-chip"
+              onClick={() =>
+                setPreferredStats((list) =>
+                  list.includes(stat) ? list : [...list, stat]
+                )
+              }
+            >
+              + {stat}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -346,6 +494,7 @@ export default function AuctionHouse() {
   const { state, setState, loaded } = useAuctionHouse();
   const [tab, setTab] = useState("biddings");
   const [picker, setPicker] = useState(null);
+  const [catalogHeroId, setCatalogHeroId] = useState(null);
   const [tick, setTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -679,10 +828,10 @@ export default function AuctionHouse() {
               <HelpTip
                 title="Auction House Accounting"
                 steps={[
-                  "My Biddings: each copy gets a flip grade + Max bid / Suggest bid from history (Attack + % comps). Skip past Max bid.",
-                  "Bootstrap: start with ~30% net margin until you have enough sold per hero, then mature margin applies. Log every sold and failed X.",
-                  "Bag: 7-day cooldown. Edit Bought at in the edit modal. Hammers used tracks rerolls. ← Back undoes a mistaken buy.",
-                  "Listings: ← Back = undo list. X = failed try (teaches the ceiling). Sold feeds the suggester.",
+                  "Catalog: set each hero’s preferred % order, Attack/HP/Speed priority, and importance 1–10.",
+                  "Settings: pick Safe Bootstrap, Volume Grinder, or Meta Sniper — margins, hammer strictness, and importance floors differ.",
+                  "My Biddings grades use strategy + catalog + history comps (Attack/%). Never bid past Max bid.",
+                  "Hammers are scarce: prefer copies that already match prefs. Log Sold and failed X to teach ceilings.",
                 ]}
               />
             </div>
@@ -1179,6 +1328,43 @@ export default function AuctionHouse() {
             </section>
           ) : null}
 
+          {tab === "catalog" ? (
+            <section className="ah-section">
+              <h2>Hero catalog</h2>
+              <p className="muted">
+                Tap a hero to rank preferred % (Giant Killer, Defier, …), set
+                Attack/Health/Speed priority, and importance 1–10. Strategies
+                use these when grading bids.
+              </p>
+              <div className="ah-catalog-grid">
+                {AUCTION_HEROES.map((hero) => {
+                  const pref = heroPrefOf(state, hero.id);
+                  return (
+                    <button
+                      key={hero.id}
+                      type="button"
+                      className="ah-catalog-card"
+                      onClick={() => setCatalogHeroId(hero.id)}
+                    >
+                      <img src={hero.icon} alt="" />
+                      <div className="ah-catalog-card-meta">
+                        <strong>{hero.name}</strong>
+                        <span className="muted">
+                          Imp {pref.importance}/10 · {pref.flatPriority}
+                        </span>
+                        <span className="muted">
+                          {pref.preferredStats.length
+                            ? pref.preferredStats.slice(0, 3).join(" · ")
+                            : "No % prefs yet"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {tab === "summary" ? (
             <section className="ah-section">
               <h2>Summary</h2>
@@ -1243,17 +1429,61 @@ export default function AuctionHouse() {
             <section className="ah-section">
               <h2>Pricing settings</h2>
               <p className="muted">
-                Min list price covers the 5% sell commission. Flip grades use
-                Attack + % comps, failed tries as a ceiling, and a bootstrap
-                margin until you have enough sold history per hero.
+                Pick a flip strategy, fill the Catalog, then let My Biddings
+                grade copies. Margins below still override knobs; strategy sets
+                the default cold/mature targets and hammer strictness.
               </p>
+              <div className="ah-strategy-grid">
+                {FLIP_STRATEGIES.map((s) => {
+                  const on = (state.settings.strategyId || "safe_bootstrap") === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={`ah-strategy-card${on ? " on" : ""}`}
+                      onClick={() =>
+                        setState((st) =>
+                          patchSettings(st, {
+                            strategyId: s.id,
+                            bootstrapMarginPct: s.marginCold,
+                            minMarginPct: s.marginMature,
+                          })
+                        )
+                      }
+                    >
+                      <strong>{s.name}</strong>
+                      <span className="muted">{s.tagline}</span>
+                      <span className="muted">
+                        Cold {s.marginCold}% · Mature {s.marginMature}% · Imp ≥
+                        {s.importanceMin}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
               <div className="ah-bootstrap-plan">
-                <h3>How to build history</h3>
+                <h3>
+                  Active plan · {strategyOf(state.settings).name}
+                </h3>
                 <ol>
                   {flipBootstrapPlan(state.settings).map((step, i) => (
                     <li key={i}>{step}</li>
                   ))}
                 </ol>
+              </div>
+              <div className="ah-strategy-all">
+                {FLIP_STRATEGIES.map((s) => (
+                  <details key={s.id} className="ah-strategy-details">
+                    <summary>
+                      {s.name} — full plan
+                    </summary>
+                    <ol>
+                      {s.plan.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
+                  </details>
+                ))}
               </div>
               <div className="ah-settings">
                 <label className="ah-field">
@@ -1376,6 +1606,23 @@ export default function AuctionHouse() {
         </div>
       </div>
       {renderPicker()}
+      {catalogHeroId
+        ? (() => {
+            const hero = auctionHeroOf(catalogHeroId);
+            if (!hero) return null;
+            return (
+              <HeroCatalogModal
+                hero={hero}
+                pref={heroPrefOf(state, catalogHeroId)}
+                onClose={() => setCatalogHeroId(null)}
+                onSave={(partial) => {
+                  setState((s) => setHeroPref(s, catalogHeroId, partial));
+                  setCatalogHeroId(null);
+                }}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }
