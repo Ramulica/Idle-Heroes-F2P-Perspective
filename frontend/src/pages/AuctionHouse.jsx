@@ -5,6 +5,7 @@ import {
   AUCTION_HEROES,
   AUCTION_RARITIES,
   AUCTION_RARITY_META,
+  HAMMER_ICON,
   STAR_GEM_ICON,
   SELL_COMMISSION,
   addBidding,
@@ -36,8 +37,11 @@ import {
   minListPrice,
   netFromListPrice,
   patchSettings,
+  returnBagToBidding,
+  returnListingToBag,
   sellListing,
   setDraftBonus,
+  setHammersUsed,
   suggestListPrice,
   toDatetimeLocalValue,
   updateBagCopy,
@@ -58,8 +62,17 @@ const TABS = [
 function Sg({ value, className = "" }) {
   return (
     <span className={`ah-sg ${className}`.trim()}>
-      <img src={STAR_GEM_ICON} alt="" className="ah-sg-icon" />
       <strong>{formatSg(value)}</strong>
+      <img src={STAR_GEM_ICON} alt="" className="ah-sg-icon" />
+    </span>
+  );
+}
+
+function HammerAmt({ value, className = "" }) {
+  return (
+    <span className={`ah-hammer ${className}`.trim()}>
+      <strong>{formatSg(value)}</strong>
+      <img src={HAMMER_ICON} alt="" className="ah-hammer-icon" />
     </span>
   );
 }
@@ -590,9 +603,9 @@ export default function AuctionHouse() {
                 title="Auction House Accounting"
                 steps={[
                   "My Biddings: track copies you are bidding on. X = didn’t win. Bought → Bag with date/time.",
-                  "Bag: 7-day cooldown after buy. When ready, List with a suggested price (min profit/margin + 5% commission).",
-                  "Listings: 6h warmup, then 2 days of bidding. Sold → History. X = failed try (keeps price for learning).",
-                  "History teaches the suggester: high sell/buy uplift → recommend higher next time; failed tries → recommend lower.",
+                  "Bag: 7-day cooldown after buy. Tap ← Back if you bought by mistake. Track hammers used to reroll % stats. List when ready.",
+                  "Listings: 6h warmup, then 2 days of bidding. ← Back returns to bag without a failed try. X = failed try (price learning).",
+                  "Pricing leans on Attack and % rolls first. History uplift / failed tries still adjust the suggest.",
                 ]}
               />
             </div>
@@ -759,14 +772,42 @@ export default function AuctionHouse() {
                         }
                         meta={
                           <>
-                            <p className="ah-card-date">
-                              Bought <Sg value={copy.buyPrice} /> ·{" "}
+                            <div className="ah-card-money">
+                              <span className="muted">Bought</span>
+                              <Sg value={copy.buyPrice} />
+                            </div>
+                            <p className="muted ah-card-date">
                               {formatWhen(copy.boughtAt)}
                             </p>
-                            <p className="muted">
-                              Suggest list <Sg value={tip.suggested} /> (min{" "}
-                              <Sg value={tip.floor} />)
-                            </p>
+                            <div className="ah-card-money muted">
+                              <span>Suggest</span>
+                              <Sg value={tip.suggested} />
+                              <span>(min</span>
+                              <Sg value={tip.floor} />
+                              <span>)</span>
+                            </div>
+                            <label
+                              className="ah-hammer-field"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img
+                                src={HAMMER_ICON}
+                                alt=""
+                                className="ah-hammer-icon"
+                              />
+                              <span className="muted">Hammers used</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={copy.hammersUsed || 0}
+                                onChange={(e) =>
+                                  setState((s) =>
+                                    setHammersUsed(s, copy.id, e.target.value)
+                                  )
+                                }
+                              />
+                            </label>
                             {copy.tries?.length ? (
                               <p className="muted">
                                 Failed tries:{" "}
@@ -780,6 +821,17 @@ export default function AuctionHouse() {
                         }
                         footer={
                           <>
+                            <button
+                              type="button"
+                              className="tan-btn"
+                              title="Back to My Biddings"
+                              onClick={() => {
+                                setState((s) => returnBagToBidding(s, copy.id));
+                                setTab("biddings");
+                              }}
+                            >
+                              ← Back
+                            </button>
                             <button
                               type="button"
                               className="gold-btn"
@@ -844,8 +896,11 @@ export default function AuctionHouse() {
                         }
                         meta={
                           <>
-                            <p className="ah-card-date">
-                              Listed <Sg value={copy.listPrice} /> ·{" "}
+                            <div className="ah-card-money">
+                              <span className="muted">Listed</span>
+                              <Sg value={copy.listPrice} />
+                            </div>
+                            <p className="muted ah-card-date">
                               {formatWhen(copy.listedAt)}
                             </p>
                             <p className="muted">
@@ -857,10 +912,29 @@ export default function AuctionHouse() {
                                 ? ` · bidding ${formatWhen(phase.warmupEndsAt)}`
                                 : ""}
                             </p>
+                            {copy.hammersUsed ? (
+                              <div className="ah-card-money muted">
+                                <span>Hammers</span>
+                                <HammerAmt value={copy.hammersUsed} />
+                              </div>
+                            ) : null}
                           </>
                         }
                         footer={
                           <>
+                            <button
+                              type="button"
+                              className="tan-btn"
+                              title="Back to Bag"
+                              onClick={() => {
+                                setState((s) =>
+                                  returnListingToBag(s, copy.id)
+                                );
+                                setTab("bag");
+                              }}
+                            >
+                              ← Back
+                            </button>
                             <button
                               type="button"
                               className="gold-btn"
@@ -1027,6 +1101,10 @@ export default function AuctionHouse() {
                 <div className="ah-stat">
                   <span className="muted">Bag cost basis</span>
                   <Sg value={summary.bagValue} />
+                </div>
+                <div className="ah-stat">
+                  <span className="muted">Hammers used</span>
+                  <HammerAmt value={summary.hammersUsed} />
                 </div>
               </div>
             </section>

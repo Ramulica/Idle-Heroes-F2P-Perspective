@@ -14,6 +14,7 @@ import {
   awakeningStatValue,
 } from "./heroProgress";
 import starGemIcon from "./assets/auction/star-gem.png";
+import hammerIcon from "./assets/auction/hammer.png";
 import vulcan from "./assets/auction/heroes/vulcan.png";
 import logan from "./assets/auction/heroes/logan.png";
 import hylas from "./assets/auction/heroes/hylas.png";
@@ -56,6 +57,7 @@ import aylamak from "./assets/auction/heroes/aylamak.png";
 import betty from "./assets/auction/heroes/betty.png";
 
 export const STAR_GEM_ICON = starGemIcon;
+export const HAMMER_ICON = hammerIcon;
 export const STORAGE_KEY = "ih-auction-house";
 
 export const SELL_COMMISSION = 0.05; // 5%
@@ -330,6 +332,7 @@ export function normalizeCopy(raw, stage) {
     listPrice: Math.max(0, Number(raw.listPrice) || 0),
     listedAt: typeof raw.listedAt === "string" ? raw.listedAt : null,
     tries: normalizeTries(raw.tries),
+    hammersUsed: Math.max(0, Math.round(Number(raw.hammersUsed) || 0)),
     // history
     soldPrice: Math.max(0, Number(raw.soldPrice) || 0),
     soldAt: typeof raw.soldAt === "string" ? raw.soldAt : null,
@@ -470,30 +473,40 @@ function bonusList(copy) {
   return auctionBonusList(copy);
 }
 
+/**
+ * Similarity distance for pricing. Attack and % rolls dominate;
+ * HP / Speed / rarity are weaker tie-breakers.
+ */
 function statDistance(a, b) {
-  const spd = Math.abs((a.speed || 0) - (b.speed || 0)) / 50;
   const atk =
-    Math.abs((a.attack || 0) - (b.attack || 0)) /
-    Math.max(1, (a.attack || 0) + (b.attack || 0)) * 4;
+    (Math.abs((a.attack || 0) - (b.attack || 0)) /
+      Math.max(1, (a.attack || 0) + (b.attack || 0))) *
+    16;
   const hp =
-    Math.abs((a.hp || 0) - (b.hp || 0)) /
-    Math.max(1, (a.hp || 0) + (b.hp || 0)) * 4;
-  const rar = Math.abs(rarityRank(a.rarity) - rarityRank(b.rarity)) * 0.35;
-  const aStats = new Set(
-    bonusList(a)
-      .map((x) => x?.stat)
-      .filter(Boolean)
+    (Math.abs((a.hp || 0) - (b.hp || 0)) /
+      Math.max(1, (a.hp || 0) + (b.hp || 0))) *
+    1.2;
+  const spd = Math.abs((a.speed || 0) - (b.speed || 0)) / 90;
+  const rar = Math.abs(rarityRank(a.rarity) - rarityRank(b.rarity)) * 0.2;
+
+  const aBonuses = bonusList(a).filter((x) => x?.stat);
+  const bBonuses = bonusList(b).filter((x) => x?.stat);
+  const bByStat = Object.fromEntries(
+    bBonuses.map((x) => [x.stat, Number(x.value) || 0])
   );
-  const bStats = new Set(
-    bonusList(b)
-      .map((x) => x?.stat)
-      .filter(Boolean)
-  );
-  let shared = 0;
-  for (const s of aStats) if (bStats.has(s)) shared += 1;
-  const sameBonus =
-    Math.max(aStats.size, bStats.size) - shared + (shared ? -0.2 * shared : 0);
-  return spd + atk + hp + rar + sameBonus;
+  const aNames = new Set(aBonuses.map((x) => x.stat));
+  const bNames = new Set(bBonuses.map((x) => x.stat));
+
+  let bonusDist = 0;
+  for (const name of aNames) if (!bNames.has(name)) bonusDist += 1.35;
+  for (const name of bNames) if (!aNames.has(name)) bonusDist += 1.35;
+  for (const row of aBonuses) {
+    if (bByStat[row.stat] == null) continue;
+    bonusDist += Math.abs((Number(row.value) || 0) - bByStat[row.stat]) / 35;
+  }
+  bonusDist *= 2.8;
+
+  return atk + bonusDist + hp + spd + rar;
 }
 
 export function relatedHistory(copy, history) {
@@ -509,7 +522,7 @@ export function failedTriesForHero(copy, bag, listings, history) {
   const tries = [];
   for (const row of pools) {
     if (row.heroId !== copy.heroId) continue;
-    if (statDistance(copy, row) > 2.2) continue;
+    if (statDistance(copy, row) > 6.5) continue;
     for (const t of row.tries || []) tries.push(t);
   }
   return tries.sort((a, b) => b.price - a.price);
@@ -680,6 +693,12 @@ export function auctionSummary(state) {
     holdMs.length > 0
       ? holdMs.reduce((s, x) => s + x, 0) / holdMs.length
       : null;
+  const hammersUsed = [
+    ...(state.bag || []),
+    ...(state.listings || []),
+    ...history,
+  ].reduce((s, h) => s + (Math.max(0, Number(h.hammersUsed) || 0)), 0);
+
   return {
     soldCount: sold.length,
     biddingCount: (state.biddings || []).length,
@@ -691,6 +710,7 @@ export function auctionSummary(state) {
     profit,
     bagValue,
     listedValue,
+    hammersUsed,
     avgHoldMs: avgHold,
     avgUplift:
       sold.length && spent > 0
@@ -765,6 +785,8 @@ function updateCopyFields(state, key, id, draft, stage) {
       listPrice: prev.listPrice,
       listedAt: prev.listedAt,
       tries: prev.tries,
+      hammersUsed:
+        draft?.hammersUsed != null ? draft.hammersUsed : prev.hammersUsed,
       soldPrice: prev.soldPrice,
       soldAt: prev.soldAt,
       outcome: prev.outcome,
@@ -775,6 +797,58 @@ function updateCopyFields(state, key, id, draft, stage) {
   const out = [...list];
   out[idx] = next;
   return { ...state, [key]: out };
+}
+
+export function setHammersUsed(state, id, value) {
+  const n = Math.max(0, Math.round(Number(value) || 0));
+  const idx = (state.bag || []).findIndex((c) => c.id === id);
+  if (idx < 0) return state;
+  const prev = state.bag[idx];
+  const next = normalizeCopy({ ...prev, hammersUsed: n }, "bag");
+  if (!next) return state;
+  const bag = [...state.bag];
+  bag[idx] = next;
+  return { ...state, bag };
+}
+
+/** Undo accidental buy — bag → My Biddings. */
+export function returnBagToBidding(state, id) {
+  const row = (state.bag || []).find((c) => c.id === id);
+  if (!row) return state;
+  const back = normalizeCopy(
+    {
+      ...row,
+      buyPrice: 0,
+      boughtAt: null,
+    },
+    "bidding"
+  );
+  if (!back) return state;
+  return {
+    ...state,
+    bag: state.bag.filter((c) => c.id !== id),
+    biddings: [back, ...(state.biddings || [])],
+  };
+}
+
+/** Undo accidental list — listings → bag (no failed try). */
+export function returnListingToBag(state, id) {
+  const row = (state.listings || []).find((c) => c.id === id);
+  if (!row) return state;
+  const back = normalizeCopy(
+    {
+      ...row,
+      listPrice: 0,
+      listedAt: null,
+    },
+    "bag"
+  );
+  if (!back) return state;
+  return {
+    ...state,
+    listings: state.listings.filter((c) => c.id !== id),
+    bag: [back, ...(state.bag || [])],
+  };
 }
 
 export function dismissBidding(state, id) {
