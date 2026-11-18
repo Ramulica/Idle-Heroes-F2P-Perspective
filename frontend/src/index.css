@@ -7591,8 +7591,15 @@ button.sc-aura-badge:hover .sc-aura-core {
 }
 
 .ah-hero-pick.on {
+  border-color: #f4c430;
+  border-width: 3px;
   outline: 3px solid #f4c430;
-  outline-offset: 1px;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px #2a1a0a,
+    0 0 12px rgba(244, 196, 48, 0.85);
+  transform: scale(1.06);
+  z-index: 1;
 }
 
 .ah-hero-pick img {
@@ -7657,18 +7664,32 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-weight: 700;
 }
 
-.ah-bonus-row,
+.ah-bonus-stack {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.ah-bonus-pick {
+  margin: 0;
+}
+
+.ah-bonus-pick select {
+  width: 100%;
+}
+
 .ah-flat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
 }
 
-.ah-bonus-block {
-  border: 1px solid #c9a46a;
-  border-radius: 10px;
-  padding: 8px;
-  background: #fffaf0;
+.ah-card-editable {
+  cursor: pointer;
+}
+
+.ah-card-editable:hover {
+  filter: brightness(1.02);
 }
 
 .ah-history-hint {

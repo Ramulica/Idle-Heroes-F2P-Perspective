@@ -699,6 +699,27 @@ export function auctionSummary(state) {
   };
 }
 
+export function copyToDraft(copy) {
+  const rarity = AUCTION_RARITIES.includes(copy?.rarity) ? copy.rarity : "A";
+  const need = auctionBonusSlots(rarity);
+  const existing = auctionBonusList(copy);
+  const speedChoices = awakeningSpeedChoices(rarity);
+  const speed = Number(copy?.speed);
+  return {
+    heroId: auctionHeroOf(copy?.heroId) ? copy.heroId : AUCTION_HEROES[0].id,
+    rarity,
+    speed: speedChoices.includes(speed) ? speed : speedChoices[0] ?? "",
+    attack: copy?.attack ?? "",
+    hp: copy?.hp ?? "",
+    bonuses: Array.from({ length: need }, (_, i) => {
+      const cur = existing[i];
+      if (cur?.stat) return makeBonus(rarity, cur.stat);
+      return { stat: "", value: 0, unit: "%" };
+    }),
+    note: typeof copy?.note === "string" ? copy.note : "",
+  };
+}
+
 export function addBidding(state, draft) {
   const copy = normalizeCopy(
     {
@@ -714,6 +735,46 @@ export function addBidding(state, draft) {
     ...state,
     biddings: [copy, ...(state.biddings || [])],
   };
+}
+
+export function updateBidding(state, id, draft) {
+  return updateCopyFields(state, "biddings", id, draft, "bidding");
+}
+
+export function updateBagCopy(state, id, draft) {
+  return updateCopyFields(state, "bag", id, draft, "bag");
+}
+
+export function updateListingCopy(state, id, draft) {
+  return updateCopyFields(state, "listings", id, draft, "listing");
+}
+
+function updateCopyFields(state, key, id, draft, stage) {
+  const list = state[key] || [];
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx < 0) return state;
+  const prev = list[idx];
+  const next = normalizeCopy(
+    {
+      ...prev,
+      ...draft,
+      id: prev.id,
+      createdAt: prev.createdAt,
+      buyPrice: prev.buyPrice,
+      boughtAt: prev.boughtAt,
+      listPrice: prev.listPrice,
+      listedAt: prev.listedAt,
+      tries: prev.tries,
+      soldPrice: prev.soldPrice,
+      soldAt: prev.soldAt,
+      outcome: prev.outcome,
+    },
+    stage
+  );
+  if (!next) return state;
+  const out = [...list];
+  out[idx] = next;
+  return { ...state, [key]: out };
 }
 
 export function dismissBidding(state, id) {

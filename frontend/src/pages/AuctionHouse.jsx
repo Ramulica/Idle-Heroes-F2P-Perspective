@@ -20,6 +20,7 @@ import {
   buyBidding,
   copyAlerts,
   copyTitle,
+  copyToDraft,
   discardBag,
   dismissBidding,
   draftWithRarity,
@@ -39,6 +40,9 @@ import {
   setDraftBonus,
   suggestListPrice,
   toDatetimeLocalValue,
+  updateBagCopy,
+  updateBidding,
+  updateListingCopy,
 } from "../auctionHouse";
 import { useAuctionHouse } from "../useAuctionHouse";
 
@@ -109,7 +113,111 @@ function HeroPickGrid({ value, onChange }) {
   );
 }
 
-function CopyCard({ copy, state, meta = null, footer = null }) {
+function BiddingDraftFields({ draft, onChange }) {
+  const need = auctionBonusSlots(draft.rarity);
+  const pool = auctionBonusPool(draft.rarity);
+  const bonuses = Array.from(
+    { length: need },
+    (_, i) => draft.bonuses?.[i] || { stat: "", value: 0 }
+  );
+
+  return (
+    <>
+      <HeroPickGrid
+        value={draft.heroId}
+        onChange={(heroId) => onChange({ ...draft, heroId })}
+      />
+      <div className="ah-rarity-row">
+        {AUCTION_RARITIES.map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={`ah-rarity-chip${draft.rarity === r ? " on" : ""}`}
+            style={{
+              "--ah-rarity": AUCTION_RARITY_META[r]?.color || "#8a5a2a",
+            }}
+            onClick={() => onChange(draftWithRarity(draft, r))}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      {need ? (
+        <div className="ah-bonus-stack">
+          {bonuses.map((bonus, index) => (
+            <label key={index} className="ah-field ah-bonus-pick">
+              <select
+                value={bonus.stat || ""}
+                onChange={(e) =>
+                  onChange(setDraftBonus(draft, index, e.target.value))
+                }
+              >
+                <option value="">Select…</option>
+                {pool.map((stat) => {
+                  const used = bonuses.some(
+                    (b, i) => i !== index && b.stat === stat
+                  );
+                  const tableVal = awakeningStatValue(draft.rarity, stat);
+                  return (
+                    <option key={stat} value={stat} disabled={used}>
+                      {stat}
+                      {tableVal != null ? ` (+${tableVal}%)` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">This rank has no % bonus rolls.</p>
+      )}
+      <div className="ah-flat-row">
+        <label className="ah-field">
+          <span>Speed</span>
+          <select
+            value={draft.speed ?? ""}
+            onChange={(e) => onChange({ ...draft, speed: e.target.value })}
+          >
+            {awakeningSpeedChoices(draft.rarity).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="ah-field">
+          <span>Attack</span>
+          <input
+            type="number"
+            min={0}
+            value={draft.attack ?? ""}
+            onChange={(e) => onChange({ ...draft, attack: e.target.value })}
+          />
+        </label>
+        <label className="ah-field">
+          <span>HP</span>
+          <input
+            type="number"
+            min={0}
+            value={draft.hp ?? ""}
+            onChange={(e) => onChange({ ...draft, hp: e.target.value })}
+          />
+        </label>
+      </div>
+      <label className="ah-field">
+        <span>Note (optional)</span>
+        <input
+          type="text"
+          value={draft.note || ""}
+          onChange={(e) => onChange({ ...draft, note: e.target.value })}
+        />
+      </label>
+    </>
+  );
+}
+
+function CopyCard({ copy, state, meta = null, footer = null, onEdit = null }) {
   const hero = auctionHeroOf(copy.heroId);
   const alerts = copyAlerts(copy, state);
   const rarity = copy.rarity || "?";
@@ -118,7 +226,11 @@ function CopyCard({ copy, state, meta = null, footer = null }) {
   const bonuses = auctionBonusList(copy).filter((b) => b?.stat);
 
   return (
-    <article className="ah-card">
+    <article
+      className={`ah-card${onEdit ? " ah-card-editable" : ""}`}
+      onClick={onEdit || undefined}
+      title={onEdit ? "Tap to edit" : undefined}
+    >
       <div
         className={`ah-card-rarity sc-awaken-btn filled${long ? " long" : ""}`}
         style={{ "--sc-awaken-color": rarityColor }}
@@ -170,7 +282,14 @@ function CopyCard({ copy, state, meta = null, footer = null }) {
         </ul>
       ) : null}
 
-      {footer ? <div className="ah-card-actions">{footer}</div> : null}
+      {footer ? (
+        <div
+          className="ah-card-actions"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {footer}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -205,183 +324,44 @@ export default function AuctionHouse() {
   function renderPicker() {
     if (!picker) return null;
 
-    if (picker.type === "add-bid") {
+    if (picker.type === "add-bid" || picker.type === "edit-copy") {
       const draft = picker.draft || emptyBiddingDraft();
+      const editing = picker.type === "edit-copy";
       return (
         <Modal
-          title="Add bidding"
+          title={editing ? "Edit copy" : "Add bidding"}
           onClose={() => setPicker(null)}
           footer={
             <button
               type="button"
               className="tan-btn"
               onClick={() => {
-                setState((s) => addBidding(s, draft));
+                if (editing) {
+                  const stage = picker.stage || "bidding";
+                  setState((s) => {
+                    if (stage === "bag") return updateBagCopy(s, picker.id, draft);
+                    if (stage === "listing")
+                      return updateListingCopy(s, picker.id, draft);
+                    return updateBidding(s, picker.id, draft);
+                  });
+                } else {
+                  setState((s) => addBidding(s, draft));
+                  setTab("biddings");
+                }
                 setPicker(null);
-                setTab("biddings");
               }}
             >
-              Add to biddings
+              {editing ? "Save" : "Add to biddings"}
             </button>
           }
         >
           <p className="muted sc-modal-lead">
-            Pick a hero, awakening rank (C−…SSS — same tables as Stat Calculator),
-            then its % rolls (values fill automatically), Speed, Attack, HP.
+            Hero, awakening rank, % rolls (auto values), Speed, Attack, HP.
           </p>
-          <HeroPickGrid
-            value={draft.heroId}
-            onChange={(heroId) =>
-              setPicker({ ...picker, draft: { ...draft, heroId } })
-            }
+          <BiddingDraftFields
+            draft={draft}
+            onChange={(next) => setPicker({ ...picker, draft: next })}
           />
-          <div className="ah-rarity-row">
-            {AUCTION_RARITIES.map((r) => (
-              <button
-                key={r}
-                type="button"
-                className={`ah-rarity-chip${draft.rarity === r ? " on" : ""}`}
-                style={{
-                  "--ah-rarity": AUCTION_RARITY_META[r]?.color || "#8a5a2a",
-                }}
-                onClick={() =>
-                  setPicker({
-                    ...picker,
-                    draft: draftWithRarity(draft, r),
-                  })
-                }
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-          {(() => {
-            const need = auctionBonusSlots(draft.rarity);
-            const pool = auctionBonusPool(draft.rarity);
-            const bonuses = Array.from(
-              { length: need },
-              (_, i) => draft.bonuses?.[i] || { stat: "", value: 0 }
-            );
-            if (!need) {
-              return <p className="muted">This rank has no % bonus rolls.</p>;
-            }
-            return (
-              <div className="ah-bonus-row">
-                {bonuses.map((bonus, index) => {
-                  const value = bonus.stat
-                    ? awakeningStatValue(draft.rarity, bonus.stat)
-                    : null;
-                  return (
-                    <div key={index} className="ah-bonus-block">
-                      <label className="ah-field">
-                        <span>
-                          % Stat {index + 1}/{need}
-                        </span>
-                        <select
-                          value={bonus.stat || ""}
-                          onChange={(e) =>
-                            setPicker({
-                              ...picker,
-                              draft: setDraftBonus(
-                                draft,
-                                index,
-                                e.target.value
-                              ),
-                            })
-                          }
-                        >
-                          <option value="">Select…</option>
-                          {pool.map((stat) => {
-                            const used = bonuses.some(
-                              (b, i) => i !== index && b.stat === stat
-                            );
-                            const tableVal = awakeningStatValue(
-                              draft.rarity,
-                              stat
-                            );
-                            return (
-                              <option
-                                key={stat}
-                                value={stat}
-                                disabled={used}
-                              >
-                                {stat}
-                                {tableVal != null ? ` (+${tableVal}%)` : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </label>
-                      <p className="ah-bonus-value muted">
-                        {value != null ? `+${value}%` : "Pick a stat"}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-          <div className="ah-flat-row">
-            <label className="ah-field">
-              <span>Speed</span>
-              <select
-                value={draft.speed ?? ""}
-                onChange={(e) =>
-                  setPicker({
-                    ...picker,
-                    draft: { ...draft, speed: e.target.value },
-                  })
-                }
-              >
-                {awakeningSpeedChoices(draft.rarity).map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="ah-field">
-              <span>Attack</span>
-              <input
-                type="number"
-                min={0}
-                value={draft.attack ?? ""}
-                onChange={(e) =>
-                  setPicker({
-                    ...picker,
-                    draft: { ...draft, attack: e.target.value },
-                  })
-                }
-              />
-            </label>
-            <label className="ah-field">
-              <span>HP</span>
-              <input
-                type="number"
-                min={0}
-                value={draft.hp ?? ""}
-                onChange={(e) =>
-                  setPicker({
-                    ...picker,
-                    draft: { ...draft, hp: e.target.value },
-                  })
-                }
-              />
-            </label>
-          </div>
-          <label className="ah-field">
-            <span>Note (optional)</span>
-            <input
-              type="text"
-              value={draft.note || ""}
-              onChange={(e) =>
-                setPicker({
-                  ...picker,
-                  draft: { ...draft, note: e.target.value },
-                })
-              }
-            />
-          </label>
         </Modal>
       );
     }
@@ -705,6 +685,14 @@ export default function AuctionHouse() {
                       key={copy.id}
                       copy={copy}
                       state={state}
+                      onEdit={() =>
+                        setPicker({
+                          type: "edit-copy",
+                          stage: "bidding",
+                          id: copy.id,
+                          draft: copyToDraft(copy),
+                        })
+                      }
                       meta={
                         <p className="muted ah-card-date">
                           Added {formatWhen(copy.createdAt)}
@@ -761,6 +749,14 @@ export default function AuctionHouse() {
                         key={copy.id}
                         copy={copy}
                         state={state}
+                        onEdit={() =>
+                          setPicker({
+                            type: "edit-copy",
+                            stage: "bag",
+                            id: copy.id,
+                            draft: copyToDraft(copy),
+                          })
+                        }
                         meta={
                           <>
                             <p className="ah-card-date">
@@ -838,6 +834,14 @@ export default function AuctionHouse() {
                         key={copy.id}
                         copy={copy}
                         state={state}
+                        onEdit={() =>
+                          setPicker({
+                            type: "edit-copy",
+                            stage: "listing",
+                            id: copy.id,
+                            draft: copyToDraft(copy),
+                          })
+                        }
                         meta={
                           <>
                             <p className="ah-card-date">
