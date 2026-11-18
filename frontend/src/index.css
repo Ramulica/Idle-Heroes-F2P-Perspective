@@ -7429,6 +7429,23 @@ button.sc-aura-badge:hover .sc-aura-core {
   right: 10px;
   pointer-events: none;
   z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.ah-card-rarity span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  line-height: 1;
+  text-align: center;
 }
 
 .ah-card-top {
