@@ -31,6 +31,7 @@ import {
   evaluateFlip,
   failBidding,
   failListing,
+  firstSetUpHeroId,
   flipBootstrapPlan,
   formatBonuses,
   formatDuration,
@@ -128,35 +129,36 @@ function Modal({ title, children, onClose, footer = null }) {
   );
 }
 
-function HeroPickGrid({ value, onChange, state }) {
-  const { setUp, notSetUp } = partitionAuctionHeroes(state);
-  function renderGroup(label, heroes, unset) {
-    if (!heroes.length) return null;
-    return (
-      <div className="ah-hero-group">
-        <p className="ah-hero-group-label muted">{label}</p>
-        <div className="ah-hero-grid">
-          {heroes.map((hero) => (
-            <button
-              key={hero.id}
-              type="button"
-              className={`ah-hero-pick${value === hero.id ? " on" : ""}${
-                unset ? " unset" : ""
-              }`}
-              onClick={() => onChange(hero.id)}
-              title={unset ? "Not set up in Catalog" : "Set up"}
-            >
-              <img src={hero.icon} alt="" />
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
+function HeroPickGrid({ value, onChange, state, onSetupMore }) {
+  const { setUp } = partitionAuctionHeroes(state);
   return (
     <div className="ah-hero-grid-wrap">
-      {renderGroup("Set up", setUp, false)}
-      {renderGroup("Not set up", notSetUp, true)}
+      {setUp.length ? (
+        <div className="ah-hero-group">
+          <p className="ah-hero-group-label muted">Set up</p>
+          <div className="ah-hero-grid">
+            {setUp.map((hero) => (
+              <button
+                key={hero.id}
+                type="button"
+                className={`ah-hero-pick${value === hero.id ? " on" : ""}`}
+                onClick={() => onChange(hero.id)}
+              >
+                <img src={hero.icon} alt="" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="muted">No set-up heroes yet — add setups in Catalog.</p>
+      )}
+      <button
+        type="button"
+        className="tan-btn ah-setup-more-btn"
+        onClick={onSetupMore}
+      >
+        Set up more heroes
+      </button>
     </div>
   );
 }
@@ -459,7 +461,7 @@ function HeroCatalogModal({
   );
 }
 
-function BiddingDraftFields({ draft, onChange, state }) {
+function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
   const need = auctionBonusSlots(draft.rarity);
   const pool = auctionBonusPool(draft.rarity);
   const bonuses = Array.from(
@@ -474,12 +476,11 @@ function BiddingDraftFields({ draft, onChange, state }) {
         value={draft.heroId}
         onChange={(heroId) => onChange({ ...draft, heroId })}
         state={state}
+        onSetupMore={onSetupMore}
       />
       {unset ? (
         <p className="ah-setup-warn" role="alert">
-          This hero is not set up in Catalog. Flip grades and strategy prefs
-          will be weak until you save preferred %, flat priority, and
-          importance.
+          Pick a set-up hero above, or open Catalog to add this one.
         </p>
       ) : null}
       <div className="ah-rarity-row">
@@ -735,6 +736,8 @@ export default function AuctionHouse() {
     if (picker.type === "add-bid" || picker.type === "edit-copy") {
       const draft = picker.draft || emptyBiddingDraft();
       const editing = picker.type === "edit-copy";
+      const canSave =
+        editing || (draft.heroId && isHeroSetUp(state, draft.heroId));
       return (
         <Modal
           title={editing ? "Edit copy" : "Add bidding"}
@@ -743,7 +746,9 @@ export default function AuctionHouse() {
             <button
               type="button"
               className="tan-btn"
+              disabled={!canSave}
               onClick={() => {
+                if (!canSave) return;
                 if (editing) {
                   const stage = picker.stage || "bidding";
                   setState((s) => {
@@ -770,6 +775,10 @@ export default function AuctionHouse() {
             draft={draft}
             state={state}
             onChange={(next) => setPicker({ ...picker, draft: next })}
+            onSetupMore={() => {
+              setPicker(null);
+              setTab("catalog");
+            }}
           />
           {editing && picker.stage === "bag" ? (
             <label className="ah-field">
@@ -1208,9 +1217,17 @@ export default function AuctionHouse() {
                 <button
                   type="button"
                   className="tan-btn"
-                  onClick={() =>
-                    setPicker({ type: "add-bid", draft: emptyBiddingDraft() })
-                  }
+                  onClick={() => {
+                    const heroId = firstSetUpHeroId(state);
+                    if (!heroId) {
+                      setTab("catalog");
+                      return;
+                    }
+                    setPicker({
+                      type: "add-bid",
+                      draft: emptyBiddingDraft("A", heroId),
+                    });
+                  }}
                 >
                   +
                 </button>

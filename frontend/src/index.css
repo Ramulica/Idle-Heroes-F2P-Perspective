@@ -7889,9 +7889,9 @@ button.sc-aura-badge:hover .sc-aura-core {
   font-weight: 700;
 }
 
-.ah-hero-pick.unset {
-  border-style: dashed;
-  opacity: 0.85;
+.ah-setup-more-btn {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .ah-setup-warn {

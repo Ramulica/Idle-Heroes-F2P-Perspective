@@ -455,12 +455,14 @@ export function writeAuctionState(state) {
   }
 }
 
-export function emptyBiddingDraft(rarity = "A") {
+export function emptyBiddingDraft(rarity = "A", heroId = null) {
   const tier = AUCTION_RARITIES.includes(rarity) ? rarity : "A";
   const need = auctionBonusSlots(tier);
   const speedChoices = awakeningSpeedChoices(tier);
+  const hero =
+    (heroId && auctionHeroOf(heroId) && heroId) || AUCTION_HEROES[0]?.id;
   return {
-    heroId: AUCTION_HEROES[0].id,
+    heroId: hero,
     rarity: tier,
     speed: speedChoices[0] ?? "",
     attack: "",
@@ -472,6 +474,14 @@ export function emptyBiddingDraft(rarity = "A") {
     })),
     note: "",
   };
+}
+
+/** First catalog-set-up hero id, or null. */
+export function firstSetUpHeroId(state) {
+  for (const hero of AUCTION_HEROES) {
+    if (isHeroSetUp(state, hero.id)) return hero.id;
+  }
+  return null;
 }
 
 export function draftWithRarity(draft, rarity) {
