@@ -147,6 +147,52 @@ export const AWAKENING_SPEED = {
   X: { min: 111, max: 120 },
 };
 
+/** Awakened Attack & HP ranges from game tables (same scale for both). */
+export const AWAKENING_ATTACK_HP = {
+  "E-": { min: 1, max: 199 },
+  E: { min: 200, max: 399 },
+  "E+": { min: 400, max: 599 },
+  "D-": { min: 600, max: 799 },
+  D: { min: 800, max: 999 },
+  "D+": { min: 1000, max: 1199 },
+  "C-": { min: 1200, max: 1599 },
+  C: { min: 1600, max: 2099 },
+  "C+": { min: 2100, max: 2699 },
+  "B-": { min: 2700, max: 3499 },
+  B: { min: 3500, max: 4399 },
+  "B+": { min: 4400, max: 5399 },
+  "A-": { min: 5400, max: 6299 },
+  A: { min: 6300, max: 7199 },
+  "A+": { min: 7200, max: 8099 },
+  // Game sheet groups S~SSS as 8100–9900; split for letter badges.
+  S: { min: 8100, max: 8699 },
+  SS: { min: 8700, max: 9299 },
+  SSS: { min: 9300, max: 9900 },
+  X: { min: 9901, max: 12000 },
+};
+
+/**
+ * Map a flat Attack / HP / Speed roll to its awakening letter tier.
+ * @param {"attack"|"hp"|"speed"} kind
+ * @param {number|string} value
+ */
+export function awakeningTierFromFlat(kind, value) {
+  const n = Math.max(0, Number(value) || 0);
+  if (!(n > 0)) return null;
+  const table = kind === "speed" ? AWAKENING_SPEED : AWAKENING_ATTACK_HP;
+  for (const tier of AWAKENING_TIERS) {
+    const span = table[tier.id];
+    if (!span) continue;
+    if (n >= span.min && n <= span.max) return tier;
+  }
+  // Above table → highest defined tier with a span.
+  for (let i = AWAKENING_TIERS.length - 1; i >= 0; i -= 1) {
+    const tier = AWAKENING_TIERS[i];
+    if (table[tier.id]) return tier;
+  }
+  return null;
+}
+
 const SPEED_STEP_SLACK = 3;
 
 export const AWAKENING_STAT_POOL_DC = [

@@ -68,18 +68,10 @@ import {
   normalizeFlatRank,
   strategyOf,
 } from "../auctionCatalog";
+import { awakeningTierFromFlat } from "../heroProgress";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { useAuctionHouse } from "../useAuctionHouse";
-import runeAtkIcon from "../assets/stats/monsters/rune-atk.png";
-import runeHpIcon from "../assets/stats/monsters/rune-hp.png";
-import runeSpdIcon from "../assets/stats/monsters/rune-spd.png";
-
-const FLAT_STAT_ICONS = {
-  attack: runeAtkIcon,
-  hp: runeHpIcon,
-  speed: runeSpdIcon,
-};
 
 const TABS = [
   { id: "biddings", label: "My Biddings" },
@@ -100,20 +92,27 @@ function Sg({ value, className = "" }) {
   );
 }
 
-/** Small Attack / HP / Speed rune badge. */
-function FlatStatBadge({ id, label = null, className = "" }) {
-  const icon = FLAT_STAT_ICONS[id];
+/** Tiny awakening letter (E−…SSS) for a flat Attack / HP / Speed roll. */
+function AwakenFlatBadge({ kind, value, className = "" }) {
+  const tier = awakeningTierFromFlat(kind, value);
+  if (!tier) return null;
+  return (
+    <span
+      className={`ah-awaken-flat-badge ${className}`.trim()}
+      style={{ "--ah-awaken-flat": tier.color }}
+      title={`Awakening band · ${tier.label}`}
+    >
+      {tier.label}
+    </span>
+  );
+}
+
+function FlatStatLabel({ id, label = null, className = "" }) {
   const text =
     label ??
     FLAT_PRIORITIES.find((f) => f.id === id)?.label ??
     id;
-  if (!icon) return <span className={className}>{text}</span>;
-  return (
-    <span className={`ah-flat-badge ${className}`.trim()}>
-      <img src={icon} alt="" className="ah-flat-badge-icon" />
-      <span>{text}</span>
-    </span>
-  );
+  return <span className={`ah-flat-label ${className}`.trim()}>{text}</span>;
 }
 
 function HammerAmt({ value, className = "" }) {
@@ -188,14 +187,7 @@ function HeroPickGrid({ value, onChange, state, onSetupMore }) {
   );
 }
 
-function RankList({
-  items,
-  labels,
-  icons = null,
-  onReorder,
-  onRemove = null,
-  empty,
-}) {
+function RankList({ items, labels, onReorder, onRemove = null, empty }) {
   const dragIndex = useRef(null);
   function move(from, to) {
     if (from === to || from < 0 || to < 0) return;
@@ -225,11 +217,7 @@ function RankList({
               <span className="ah-rank-handle">☰</span>
               <strong className="ah-rank-label">
                 <span className="muted">#{index + 1}</span>{" "}
-                {icons?.[id] ? (
-                  <FlatStatBadge id={id} label={labels?.[id]} />
-                ) : (
-                  labels?.[id] || id
-                )}
+                {labels?.[id] || id}
               </strong>
               {onRemove ? (
                 <button
@@ -454,17 +442,11 @@ function HeroCatalogModal({
       </label>
 
       <div className="ah-catalog-ranks">
-        <h4 className="ah-flat-title">
-          <FlatStatBadge id="attack" />
-          <FlatStatBadge id="hp" />
-          <FlatStatBadge id="speed" />
-          <span className="muted">(top = best)</span>
-        </h4>
+        <h4>Attack / HP / Speed (top = best)</h4>
         <p className="muted">Drag to rank hard flats for this role.</p>
         <RankList
           items={flatRank}
           labels={flatLabels}
-          icons={FLAT_STAT_ICONS}
           onReorder={(next) => setFlatRank(normalizeFlatRank(next))}
           empty="—"
         />
@@ -573,8 +555,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
       )}
       <div className="ah-flat-row">
         <label className="ah-field">
-          <span>
-            <FlatStatBadge id="speed" />
+          <span className="ah-flat-field-label">
+            <FlatStatLabel id="speed" />
+            <AwakenFlatBadge kind="speed" value={draft.speed} />
           </span>
           <select
             value={draft.speed ?? ""}
@@ -588,8 +571,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
           </select>
         </label>
         <label className="ah-field">
-          <span>
-            <FlatStatBadge id="attack" />
+          <span className="ah-flat-field-label">
+            <FlatStatLabel id="attack" />
+            <AwakenFlatBadge kind="attack" value={draft.attack} />
           </span>
           <input
             type="number"
@@ -599,8 +583,9 @@ function BiddingDraftFields({ draft, onChange, state, onSetupMore }) {
           />
         </label>
         <label className="ah-field">
-          <span>
-            <FlatStatBadge id="hp" label="HP" />
+          <span className="ah-flat-field-label">
+            <FlatStatLabel id="hp" label="HP" />
+            <AwakenFlatBadge kind="hp" value={draft.hp} />
           </span>
           <input
             type="number"
@@ -648,16 +633,25 @@ function CopyCard({
         <img src={hero?.icon} alt="" className="ah-card-icon" />
         <div className="ah-card-flats">
           <div className="ah-stat-row">
-            <FlatStatBadge id="attack" label="Atk" className="muted" />
-            <strong>{formatSg(copy.attack || 0)}</strong>
+            <FlatStatLabel id="attack" label="Atk" className="muted" />
+            <strong className="ah-stat-value">
+              {formatSg(copy.attack || 0)}
+              <AwakenFlatBadge kind="attack" value={copy.attack} />
+            </strong>
           </div>
           <div className="ah-stat-row">
-            <FlatStatBadge id="hp" label="HP" className="muted" />
-            <strong>{formatSg(copy.hp || 0)}</strong>
+            <FlatStatLabel id="hp" label="HP" className="muted" />
+            <strong className="ah-stat-value">
+              {formatSg(copy.hp || 0)}
+              <AwakenFlatBadge kind="hp" value={copy.hp} />
+            </strong>
           </div>
           <div className="ah-stat-row">
-            <FlatStatBadge id="speed" label="Spd" className="muted" />
-            <strong>{formatSg(copy.speed || 0)}</strong>
+            <FlatStatLabel id="speed" label="Spd" className="muted" />
+            <strong className="ah-stat-value">
+              {formatSg(copy.speed || 0)}
+              <AwakenFlatBadge kind="speed" value={copy.speed} />
+            </strong>
           </div>
         </div>
         <div
