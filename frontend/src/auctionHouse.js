@@ -744,6 +744,7 @@ export function copyToDraft(copy) {
       return { stat: "", value: 0, unit: "%" };
     }),
     note: typeof copy?.note === "string" ? copy.note : "",
+    boughtAt: typeof copy?.boughtAt === "string" ? copy.boughtAt : null,
   };
 }
 
@@ -788,7 +789,8 @@ function updateCopyFields(state, key, id, draft, stage) {
       id: prev.id,
       createdAt: prev.createdAt,
       buyPrice: prev.buyPrice,
-      boughtAt: prev.boughtAt,
+      boughtAt:
+        draft?.boughtAt !== undefined ? draft.boughtAt : prev.boughtAt,
       listPrice: prev.listPrice,
       listedAt: prev.listedAt,
       tries: prev.tries,

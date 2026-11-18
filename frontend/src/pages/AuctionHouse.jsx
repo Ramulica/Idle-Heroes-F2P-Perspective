@@ -40,7 +40,6 @@ import {
   returnBagToBidding,
   returnListingToBag,
   sellListing,
-  setBoughtAt,
   setDraftBonus,
   setHammersUsed,
   suggestListPrice,
@@ -408,6 +407,27 @@ export default function AuctionHouse() {
             draft={draft}
             onChange={(next) => setPicker({ ...picker, draft: next })}
           />
+          {editing && picker.stage === "bag" ? (
+            <label className="ah-field">
+              <span>Bought at</span>
+              <input
+                type="datetime-local"
+                value={toDatetimeLocalValue(draft.boughtAt)}
+                onChange={(e) =>
+                  setPicker({
+                    ...picker,
+                    draft: {
+                      ...draft,
+                      boughtAt: fromDatetimeLocalValue(e.target.value),
+                    },
+                  })
+                }
+              />
+              <span className="muted ah-field-hint">
+                Sell unlock is 7 days from this time.
+              </span>
+            </label>
+          ) : null}
         </Modal>
       );
     }
@@ -811,25 +831,9 @@ export default function AuctionHouse() {
                               <span className="muted">Bought</span>
                               <Sg value={copy.buyPrice} />
                             </div>
-                            <label
-                              className="ah-bought-field"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="muted">Bought at</span>
-                              <input
-                                type="datetime-local"
-                                value={toDatetimeLocalValue(copy.boughtAt)}
-                                onChange={(e) =>
-                                  setState((s) =>
-                                    setBoughtAt(
-                                      s,
-                                      copy.id,
-                                      fromDatetimeLocalValue(e.target.value)
-                                    )
-                                  )
-                                }
-                              />
-                            </label>
+                            <p className="muted ah-card-date">
+                              {formatWhen(copy.boughtAt)}
+                            </p>
                             <div className="ah-card-money muted">
                               <span>Suggest</span>
                               <Sg value={tip.suggested} />
