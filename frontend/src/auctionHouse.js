@@ -756,32 +756,83 @@ function rarityLetter(rarity) {
 }
 
 /**
+ * Intrinsic flip desirability of a % roll (market / offense bias).
+ * Catalog preferredMatch still overlays on top when setups exist.
+ */
+const STAT_MARKET_WEIGHT = {
+  "Giant Killer": 1.08,
+  Defier: 1.08,
+  Precision: 1.0,
+  "Holy Damage": 1.0,
+  "Skill Damage": 0.96,
+  "Armor Break": 0.95,
+  "Crit Damage": 0.92,
+  Crit: 0.86,
+  "Control Precision": 0.72,
+  "Damage Reduction": 0.68,
+  "Control Immunity": 0.64,
+  "Control Immunity Offset": 0.66,
+  Block: 0.58,
+  Armor: 0.55,
+  "Holy Armor": 0.7,
+  "Faction Rule": 0.72,
+  "Divine Block": 0.6,
+  "Heal Effect": 0.48,
+  "Effect of Being Healed": 0.42,
+  "Crit Damage Reduction": 0.5,
+  "Reduces Dot Received": 0.45,
+};
+
+function statMarketWeight(stat) {
+  return STAT_MARKET_WEIGHT[stat] ?? 0.62;
+}
+
+/**
  * 0..1 quality prior from Attack + % rolls, catalog prefs, and strategy.
+ * Offense / high-value % outweigh defensive junk even before catalog prefs.
  */
 export function copyQualityScore(copy, state = null) {
   const letter = rarityLetter(copy?.rarity);
   const base = ATTACK_SOFT_BASE[letter] || 5000;
   const atk = Math.max(0, Number(copy?.attack) || 0);
-  const atkScore = Math.max(0, Math.min(1.15, atk / Math.max(1, base)));
+  const hp = Math.max(0, Number(copy?.hp) || 0);
+  const spd = Math.max(0, Number(copy?.speed) || 0);
+  // Soft caps for B-tier-ish flats so A- Attack on a B+ pulls ahead of mid B+ Attack.
+  const atkScore = Math.max(0, Math.min(1.2, atk / Math.max(1, base)));
+  const hpScore = Math.max(0, Math.min(1.1, hp / Math.max(1, base * 0.92)));
+  const spdScore = Math.max(0, Math.min(1.15, spd / 55));
+  const flatScore = atkScore * 0.72 + hpScore * 0.14 + spdScore * 0.14;
 
   const bonuses = bonusList(copy).filter((b) => b?.stat);
   const need = Math.max(1, auctionBonusSlots(copy?.rarity));
-  const fill = Math.min(1, bonuses.length / need);
+  const filled = bonuses.filter((b) => (Number(b.value) || 0) > 0);
+  const fill = Math.min(1, filled.length / need);
+  // Market weight scales the score itself (Holy/Prec >> CI/CDR), not only the average.
   let rollScore = 0;
+  let slots = 0;
   for (const b of bonuses) {
-    const table = awakeningStatValue(copy?.rarity, b.stat);
-    if (!Number.isFinite(table) || table <= 0) {
-      rollScore += 0.55;
+    const w = statMarketWeight(b.stat);
+    const val = Number(b.value) || 0;
+    if (val <= 0) {
+      rollScore += 0.12 * w;
+      slots += 1;
       continue;
     }
-    rollScore += 0.7 + 0.3 * Math.min(1, (Number(b.value) || 0) / table);
+    const table = awakeningStatValue(copy?.rarity, b.stat);
+    const fillPct =
+      Number.isFinite(table) && table > 0 ? Math.min(1.05, val / table) : 0.85;
+    rollScore += fillPct * w;
+    slots += 1;
   }
-  rollScore = bonuses.length ? rollScore / bonuses.length : 0.25;
+  rollScore = slots > 0 ? rollScore / slots : 0.22;
 
   const rarBoost = Math.min(1, rarityRank(copy?.rarity) / 20);
-  let raw = atkScore * 0.5 + rollScore * 0.3 + rarBoost * 0.1 + fill * 0.05;
+  // % rolls decide most of the flip value; Attack is important but secondary.
+  let raw = rollScore * 0.52 + flatScore * 0.34 + rarBoost * 0.08 + fill * 0.06;
 
-  if (state) {
+  // Catalog prefs only blend when this hero is actually set up — otherwise
+  // empty prefs compress every copy toward 0.5 and hide real roll quality.
+  if (state && isHeroSetUp(state, copy?.heroId)) {
     const pref = bestHeroSetup(state, copy);
     const strat = strategyOf(state.settings);
     const prefW = Math.max(0, Math.min(0.7, Number(strat.prefWeight) || 0.35));
@@ -793,6 +844,67 @@ export function copyQualityScore(copy, state = null) {
   }
 
   return Math.max(0, Math.min(1, raw / 1.05));
+}
+
+/**
+ * Value this copy vs other same-hero / same-rarity copies already in bag+listings.
+ * Stops “cheap snipes” of better rolls from suggesting below worse copies you overpaid for.
+ */
+export function bagPeerAnchors(copy, state = null) {
+  const pools = [...(state?.bag || []), ...(state?.listings || [])];
+  const selfId = copy?.id;
+  const heroId = copy?.heroId;
+  const rarity = copy?.rarity;
+  if (!heroId || !rarity) return null;
+
+  const peers = pools.filter(
+    (p) =>
+      p &&
+      p.heroId === heroId &&
+      p.rarity === rarity &&
+      (Number(p.buyPrice) || 0) > 0
+  );
+  if (peers.length < 2) return null;
+
+  const selfQ = Math.max(0.18, copyQualityScore(copy, state));
+  const implied = [];
+  for (const peer of peers) {
+    if (selfId && peer.id === selfId) continue;
+    const pq = Math.max(0.18, copyQualityScore(peer, state));
+    const pBuy = Number(peer.buyPrice) || 0;
+    const value = pBuy * (selfQ / pq);
+    implied.push({
+      peer,
+      peerBuy: pBuy,
+      peerQ: pq,
+      impliedBuy: value,
+      betterThanPeer: selfQ > pq * 1.03,
+      worseThanPeer: selfQ < pq * 0.97,
+    });
+  }
+  if (!implied.length) return null;
+
+  const sorted = [...implied].map((x) => x.impliedBuy).sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const fromWorse = implied
+    .filter((x) => x.betterThanPeer)
+    .map((x) => x.impliedBuy);
+  // If this copy clearly beats bag peers, never price below what those peers imply.
+  const peerBuy = fromWorse.length
+    ? Math.max(median, Math.max(...fromWorse))
+    : median;
+
+  const beat = implied.filter((x) => x.betterThanPeer);
+  const topBeat = beat.sort((a, b) => b.peerBuy - a.peerBuy)[0] || null;
+
+  return {
+    peerBuy: Math.round(peerBuy),
+    selfQ,
+    median: Math.round(median),
+    beatCount: beat.length,
+    peerCount: implied.length,
+    topBeat,
+  };
 }
 
 export function flipMarketPhase(copy, state) {
@@ -1081,6 +1193,20 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }
   }
 
+  // Bag peers: price by quality vs what you already paid for same hero/rarity.
+  // Cheap snipes of better Attack/% must not suggest under worse expensive copies.
+  const peerAnchor = bagPeerAnchors(copy, state);
+  let peerList = null;
+  if (peerAnchor?.peerBuy > 0) {
+    peerList = minListPrice(peerAnchor.peerBuy, {
+      ...settings,
+      pricingMode: "margin",
+      minMarginPct: targetMarginPct,
+    });
+    if (expectedSell == null) expectedSell = peerList;
+    else expectedSell = Math.max(expectedSell, peerList);
+  }
+
   let suggestList = expectedSell;
   if (buy > 0) {
     suggestList = Math.max(floor, suggestList || floor);
@@ -1215,6 +1341,22 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   }
   if (quality >= 0.78) reasons.push("Strong Attack / % / catalog fit");
   else if (quality <= 0.42) reasons.push("Weak Attack / % / catalog fit");
+  if (peerAnchor?.beatCount) {
+    const beat = peerAnchor.topBeat;
+    reasons.push(
+      `Bag peer · better than ${peerAnchor.beatCount} same ${copy?.rarity || "tier"} copy${
+        peerAnchor.beatCount === 1 ? "" : "ies"
+      }${
+        beat
+          ? ` (e.g. bought ${formatSg(beat.peerBuy)} @ Q${beat.peerQ.toFixed(2)})`
+          : ""
+      } → quality-anchored list ${formatSg(peerList)}`
+    );
+  } else if (peerAnchor?.peerCount) {
+    reasons.push(
+      `Bag peer · ${peerAnchor.peerCount} same-rarity comps → quality-anchored ${formatSg(peerList)}`
+    );
+  }
 
   // Grade
   let grade = "skip";
@@ -1316,6 +1458,8 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     suggestBid,
     suggestList,
     floor,
+    peerList,
+    peerAnchor,
     expectedNet,
     expectedMarginPct,
     reasons,
