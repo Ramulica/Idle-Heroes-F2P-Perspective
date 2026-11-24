@@ -1590,7 +1590,7 @@ export function boardAlerts(state, now = Date.now()) {
   return out;
 }
 
-export function auctionSummary(state) {
+export function auctionSummary(state, now = Date.now()) {
   const history = state.history || [];
   const sold = history.filter((h) => h.outcome === "sold");
   const spent = sold.reduce((s, h) => s + (h.buyPrice || 0), 0);
@@ -1602,6 +1602,12 @@ export function auctionSummary(state) {
     (s, h) => s + (h.listPrice || 0),
     0
   );
+  const inventory = [...(state.bag || []), ...(state.listings || [])];
+  const expectSuggest = inventory.reduce((sum, copy) => {
+    const tip = suggestListPrice(copy, state, now);
+    return sum + (Number(tip.suggested) || 0);
+  }, 0);
+  const expectSuggestNet = netFromListPrice(expectSuggest);
   const holdMs = sold
     .map((h) => {
       if (!h.boughtAt || !h.soldAt) return null;
@@ -1629,6 +1635,8 @@ export function auctionSummary(state) {
     profit,
     bagValue,
     listedValue,
+    expectSuggest,
+    expectSuggestNet,
     hammersUsed,
     avgHoldMs: avgHold,
     avgUplift:

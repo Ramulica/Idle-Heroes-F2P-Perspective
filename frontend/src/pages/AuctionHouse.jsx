@@ -742,7 +742,7 @@ export default function AuctionHouse() {
     return () => clearInterval(id);
   }, []);
 
-  const summary = useMemo(() => auctionSummary(state), [state]);
+  const summary = useMemo(() => auctionSummary(state, tick), [state, tick]);
   const alerts = useMemo(() => boardAlerts(state, tick), [state, tick]);
   const catalogSetups = state.heroSetups || [];
 
@@ -2060,6 +2060,14 @@ export default function AuctionHouse() {
                 <div className="ah-stat">
                   <span className="muted">Bag cost basis</span>
                   <Sg value={summary.bagValue} />
+                </div>
+                <div className="ah-stat">
+                  <span className="muted">Expected SG (suggest)</span>
+                  <Sg value={summary.expectSuggest} />
+                </div>
+                <div className="ah-stat">
+                  <span className="muted">Expected net after 5%</span>
+                  <Sg value={summary.expectSuggestNet} />
                 </div>
                 <div className="ah-stat">
                   <span className="muted">Hammers used</span>
