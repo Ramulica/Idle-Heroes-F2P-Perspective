@@ -822,6 +822,36 @@ export default function AuctionHouse() {
               setTab("catalog");
             }}
           />
+          {editing &&
+          (picker.stage === "bag" || picker.stage === "listing") ? (
+            <label className="ah-field ah-hammer-edit">
+              <span className="ah-flat-field-label">
+                <img src={HAMMER_ICON} alt="" className="ah-hammer-icon" />
+                Hammers used
+              </span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={draft.hammersUsed ?? 0}
+                onChange={(e) =>
+                  setPicker({
+                    ...picker,
+                    draft: {
+                      ...draft,
+                      hammersUsed: Math.max(
+                        0,
+                        Math.round(Number(e.target.value) || 0)
+                      ),
+                    },
+                  })
+                }
+              />
+              <span className="muted ah-field-hint">
+                Tap the copy card to edit hammers here.
+              </span>
+            </label>
+          ) : null}
           {editing && picker.stage === "bag" ? (
             <label className="ah-field">
               <span>Bought at</span>
@@ -1708,12 +1738,13 @@ export default function AuctionHouse() {
                                 ? ` · bidding ${formatWhen(phase.warmupEndsAt)}`
                                 : ""}
                             </p>
-                            {copy.hammersUsed ? (
-                              <div className="ah-card-money muted">
-                                <span>Hammers</span>
-                                <HammerAmt value={copy.hammersUsed} />
-                              </div>
-                            ) : null}
+                            <div className="ah-card-money muted">
+                              <span>Hammers</span>
+                              <HammerAmt value={copy.hammersUsed || 0} />
+                              <span className="muted ah-card-hint">
+                                · tap card to edit
+                              </span>
+                            </div>
                           </>
                         }
                         footer={
@@ -2012,66 +2043,91 @@ export default function AuctionHouse() {
           {tab === "summary" ? (
             <section className="ah-section">
               <h2>Summary</h2>
-              <div className="ah-summary-grid">
-                <div className="ah-stat">
-                  <span className="muted">Sold</span>
-                  <strong>{summary.soldCount}</strong>
+
+              <div className="ah-summary-block">
+                <h3>Actual</h3>
+                <p className="muted ah-summary-lead">
+                  Realized from sold copies in History.
+                </p>
+                <div className="ah-summary-grid">
+                  <div className="ah-stat">
+                    <span className="muted">Sold</span>
+                    <strong>{summary.soldCount}</strong>
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Cost (SG spent)</span>
+                    <Sg value={summary.spent} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Gross sales</span>
+                    <Sg value={summary.gross} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Net after 5%</span>
+                    <Sg value={summary.net} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Profit</span>
+                    <Sg value={summary.profit} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Avg hold</span>
+                    <strong>
+                      {summary.avgHoldMs != null
+                        ? formatDuration(summary.avgHoldMs)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Avg list/buy uplift</span>
+                    <strong>
+                      {summary.avgUplift != null
+                        ? `${summary.avgUplift >= 0 ? "+" : ""}${summary.avgUplift.toFixed(0)}%`
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Hammers on sold</span>
+                    <HammerAmt value={summary.hammersActual} />
+                  </div>
                 </div>
-                <div className="ah-stat">
-                  <span className="muted">In bag</span>
-                  <strong>{summary.bagCount}</strong>
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Listed</span>
-                  <strong>{summary.listingCount}</strong>
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">SG spent (sold)</span>
-                  <Sg value={summary.spent} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">SG gross sales</span>
-                  <Sg value={summary.gross} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">SG net after 5%</span>
-                  <Sg value={summary.net} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Profit</span>
-                  <Sg value={summary.profit} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Avg hold</span>
-                  <strong>
-                    {summary.avgHoldMs != null
-                      ? formatDuration(summary.avgHoldMs)
-                      : "—"}
-                  </strong>
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Avg list/buy uplift</span>
-                  <strong>
-                    {summary.avgUplift != null
-                      ? `${summary.avgUplift >= 0 ? "+" : ""}${summary.avgUplift.toFixed(0)}%`
-                      : "—"}
-                  </strong>
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Bag cost basis</span>
-                  <Sg value={summary.bagValue} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Expected SG (suggest)</span>
-                  <Sg value={summary.expectSuggest} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Expected net after 5%</span>
-                  <Sg value={summary.expectSuggestNet} />
-                </div>
-                <div className="ah-stat">
-                  <span className="muted">Hammers used</span>
-                  <HammerAmt value={summary.hammersUsed} />
+              </div>
+
+              <div className="ah-summary-block">
+                <h3>Expected</h3>
+                <p className="muted ah-summary-lead">
+                  Bag + listings at current Suggest prices (after 5% on the way
+                  out).
+                </p>
+                <div className="ah-summary-grid">
+                  <div className="ah-stat">
+                    <span className="muted">In bag</span>
+                    <strong>{summary.bagCount}</strong>
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Listed</span>
+                    <strong>{summary.listingCount}</strong>
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Cost basis</span>
+                    <Sg value={summary.inventoryCost} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Expected SG (suggest)</span>
+                    <Sg value={summary.expectSuggest} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Expected net after 5%</span>
+                    <Sg value={summary.expectSuggestNet} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Expected profit</span>
+                    <Sg value={summary.expectProfit} />
+                  </div>
+                  <div className="ah-stat">
+                    <span className="muted">Hammers open</span>
+                    <HammerAmt value={summary.hammersOpen} />
+                  </div>
                 </div>
               </div>
             </section>

@@ -1597,17 +1597,19 @@ export function auctionSummary(state, now = Date.now()) {
   const gross = sold.reduce((s, h) => s + (h.soldPrice || 0), 0);
   const net = sold.reduce((s, h) => s + netFromListPrice(h.soldPrice), 0);
   const profit = net - spent;
-  const bagValue = (state.bag || []).reduce((s, h) => s + (h.buyPrice || 0), 0);
-  const listedValue = (state.listings || []).reduce(
-    (s, h) => s + (h.listPrice || 0),
-    0
-  );
-  const inventory = [...(state.bag || []), ...(state.listings || [])];
+  const bag = state.bag || [];
+  const listings = state.listings || [];
+  const bagValue = bag.reduce((s, h) => s + (h.buyPrice || 0), 0);
+  const listedBuyCost = listings.reduce((s, h) => s + (h.buyPrice || 0), 0);
+  const listedValue = listings.reduce((s, h) => s + (h.listPrice || 0), 0);
+  const inventoryCost = bagValue + listedBuyCost;
+  const inventory = [...bag, ...listings];
   const expectSuggest = inventory.reduce((sum, copy) => {
     const tip = suggestListPrice(copy, state, now);
     return sum + (Number(tip.suggested) || 0);
   }, 0);
   const expectSuggestNet = netFromListPrice(expectSuggest);
+  const expectProfit = expectSuggestNet - inventoryCost;
   const holdMs = sold
     .map((h) => {
       if (!h.boughtAt || !h.soldAt) return null;
@@ -1618,26 +1620,34 @@ export function auctionSummary(state, now = Date.now()) {
     holdMs.length > 0
       ? holdMs.reduce((s, x) => s + x, 0) / holdMs.length
       : null;
-  const hammersUsed = [
-    ...(state.bag || []),
-    ...(state.listings || []),
-    ...history,
-  ].reduce((s, h) => s + (Math.max(0, Number(h.hammersUsed) || 0)), 0);
+  const hammerSum = (rows) =>
+    (rows || []).reduce(
+      (s, h) => s + (Math.max(0, Number(h.hammersUsed) || 0)),
+      0
+    );
+  const hammersActual = hammerSum(sold);
+  const hammersOpen = hammerSum(bag) + hammerSum(listings);
+  const hammersUsed = hammersActual + hammersOpen + hammerSum(history.filter((h) => h.outcome !== "sold"));
 
   return {
     soldCount: sold.length,
     biddingCount: (state.biddings || []).length,
-    bagCount: (state.bag || []).length,
-    listingCount: (state.listings || []).length,
+    bagCount: bag.length,
+    listingCount: listings.length,
     spent,
     gross,
     net,
     profit,
     bagValue,
+    listedBuyCost,
     listedValue,
+    inventoryCost,
     expectSuggest,
     expectSuggestNet,
+    expectProfit,
     hammersUsed,
+    hammersActual,
+    hammersOpen,
     avgHoldMs: avgHold,
     avgUplift:
       sold.length && spent > 0
@@ -1665,6 +1675,7 @@ export function copyToDraft(copy) {
     }),
     note: typeof copy?.note === "string" ? copy.note : "",
     boughtAt: typeof copy?.boughtAt === "string" ? copy.boughtAt : null,
+    hammersUsed: Math.max(0, Math.round(Number(copy?.hammersUsed) || 0)),
   };
 }
 
@@ -1730,14 +1741,23 @@ function updateCopyFields(state, key, id, draft, stage) {
 
 export function setHammersUsed(state, id, value) {
   const n = Math.max(0, Math.round(Number(value) || 0));
-  const idx = (state.bag || []).findIndex((c) => c.id === id);
-  if (idx < 0) return state;
-  const prev = state.bag[idx];
-  const next = normalizeCopy({ ...prev, hammersUsed: n }, "bag");
+  const bagIdx = (state.bag || []).findIndex((c) => c.id === id);
+  if (bagIdx >= 0) {
+    const prev = state.bag[bagIdx];
+    const next = normalizeCopy({ ...prev, hammersUsed: n }, "bag");
+    if (!next) return state;
+    const bag = [...state.bag];
+    bag[bagIdx] = next;
+    return { ...state, bag };
+  }
+  const listIdx = (state.listings || []).findIndex((c) => c.id === id);
+  if (listIdx < 0) return state;
+  const prev = state.listings[listIdx];
+  const next = normalizeCopy({ ...prev, hammersUsed: n }, "listing");
   if (!next) return state;
-  const bag = [...state.bag];
-  bag[idx] = next;
-  return { ...state, bag };
+  const listings = [...state.listings];
+  listings[listIdx] = next;
+  return { ...state, listings };
 }
 
 export function setBoughtAt(state, id, boughtAtIso) {
