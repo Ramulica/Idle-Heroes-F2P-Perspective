@@ -8518,6 +8518,10 @@ button.sc-aura-badge:hover .sc-aura-core {
   margin: 8px 0 4px;
 }
 
+.er-banner-presets {
+  margin: 6px 0 8px;
+}
+
 .er-day-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

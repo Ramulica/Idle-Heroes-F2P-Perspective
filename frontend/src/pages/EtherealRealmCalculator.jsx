@@ -60,6 +60,43 @@ function daysMatchPreset(days, preset) {
   );
 }
 
+function FightPresetButtons({ er, patch, className = "" }) {
+  return (
+    <div className={`period-presets er-fight-presets ${className}`.trim()}>
+      <button
+        type="button"
+        className={
+          daysMatchPreset(er.days, etherealPresetZeroGemsDays())
+            ? "gold-btn"
+            : "tan-btn"
+        }
+        onClick={() =>
+          patchEthereal(patch, er, {
+            days: etherealPresetZeroGemsDays(),
+          })
+        }
+      >
+        0 gems
+      </button>
+      <button
+        type="button"
+        className={
+          daysMatchPreset(er.days, etherealPresetFullGemsDays())
+            ? "gold-btn"
+            : "tan-btn"
+        }
+        onClick={() =>
+          patchEthereal(patch, er, {
+            days: etherealPresetFullGemsDays(),
+          })
+        }
+      >
+        Full gems
+      </button>
+    </div>
+  );
+}
+
 function RewardLine({ rewards, compact = false }) {
   const bits = [
     rewards.stellar
@@ -205,6 +242,7 @@ export default function EtherealRealmCalculator() {
                 {result.unlockWarn ? (
                   <p className="er-warn">{result.unlockWarn}</p>
                 ) : null}
+                <FightPresetButtons er={er} patch={patch} className="er-banner-presets" />
                 <RewardLine rewards={result.period} />
               </div>
               <div className="pages-event-total">
@@ -399,38 +437,7 @@ export default function EtherealRealmCalculator() {
                 </span>
               </div>
 
-              <div className="period-presets er-fight-presets">
-                <button
-                  type="button"
-                  className={
-                    daysMatchPreset(er.days, etherealPresetZeroGemsDays())
-                      ? "gold-btn"
-                      : "tan-btn"
-                  }
-                  onClick={() =>
-                    patchEthereal(patch, er, {
-                      days: etherealPresetZeroGemsDays(),
-                    })
-                  }
-                >
-                  0 gems
-                </button>
-                <button
-                  type="button"
-                  className={
-                    daysMatchPreset(er.days, etherealPresetFullGemsDays())
-                      ? "gold-btn"
-                      : "tan-btn"
-                  }
-                  onClick={() =>
-                    patchEthereal(patch, er, {
-                      days: etherealPresetFullGemsDays(),
-                    })
-                  }
-                >
-                  Full gems
-                </button>
-              </div>
+              <FightPresetButtons er={er} patch={patch} />
 
               <div className="er-day-grid">
                 {er.days.map((day, i) => {
