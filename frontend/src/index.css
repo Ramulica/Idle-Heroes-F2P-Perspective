@@ -8514,6 +8514,10 @@ button.sc-aura-badge:hover .sc-aura-core {
   gap: 4px;
 }
 
+.er-fight-presets {
+  margin: 8px 0 4px;
+}
+
 .er-day-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

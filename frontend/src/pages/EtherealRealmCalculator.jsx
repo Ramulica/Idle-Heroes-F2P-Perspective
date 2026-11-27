@@ -8,6 +8,8 @@ import {
   calculateEtherealRealm,
   CORE_SHARDS_PER_CHEST,
   dayGemCost,
+  etherealPresetFullGemsDays,
+  etherealPresetZeroGemsDays,
   ETHEREAL_FREE_BATTLES,
   ETHEREAL_GEMS_PER_EXTRA,
   ETHEREAL_MAX_BATTLES,
@@ -48,6 +50,14 @@ function setDayBattles(patch, er, dayIndex, field, value) {
   if (day[other] > maxOther) day[other] = maxOther;
   days[dayIndex] = day;
   patchEthereal(patch, er, { days });
+}
+
+function daysMatchPreset(days, preset) {
+  if (!Array.isArray(days) || days.length !== preset.length) return false;
+  return days.every(
+    (d, i) =>
+      Number(d.red) === preset[i].red && Number(d.purple) === preset[i].purple
+  );
 }
 
 function RewardLine({ rewards, compact = false }) {
@@ -378,7 +388,8 @@ export default function EtherealRealmCalculator() {
                     steps={[
                       `Max ${ETHEREAL_MAX_BATTLES} battles/day (${ETHEREAL_FREE_BATTLES} free, then ${ETHEREAL_GEMS_PER_EXTRA} gems each).`,
                       "Red = Savage Warriors. Purple = Boss attacks (not the weekly kill).",
-                      "Default plan: day 1 red, day 2 purple, other days red — all free.",
+                      "0 gems: day 1 red, day 2 purple, other days red — all free.",
+                      "Full gems: same split, plus +5 red every day (uses the 5 paid battles).",
                     ]}
                   />
                 </div>
@@ -386,6 +397,39 @@ export default function EtherealRealmCalculator() {
                   {result.fights.red} red · {result.fights.purple} purple ·{" "}
                   {formatResourceAmount(result.gemsWeekly)} gems
                 </span>
+              </div>
+
+              <div className="period-presets er-fight-presets">
+                <button
+                  type="button"
+                  className={
+                    daysMatchPreset(er.days, etherealPresetZeroGemsDays())
+                      ? "gold-btn"
+                      : "tan-btn"
+                  }
+                  onClick={() =>
+                    patchEthereal(patch, er, {
+                      days: etherealPresetZeroGemsDays(),
+                    })
+                  }
+                >
+                  0 gems
+                </button>
+                <button
+                  type="button"
+                  className={
+                    daysMatchPreset(er.days, etherealPresetFullGemsDays())
+                      ? "gold-btn"
+                      : "tan-btn"
+                  }
+                  onClick={() =>
+                    patchEthereal(patch, er, {
+                      days: etherealPresetFullGemsDays(),
+                    })
+                  }
+                >
+                  Full gems
+                </button>
               </div>
 
               <div className="er-day-grid">

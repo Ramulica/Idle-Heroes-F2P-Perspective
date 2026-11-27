@@ -124,12 +124,30 @@ export function defaultEtherealDay(index = 0) {
   return { red: ETHEREAL_FREE_BATTLES, purple: 0 };
 }
 
+/** Free-only week (10 battles/day): Mon red, Tue purple, rest red. */
+export function etherealPresetZeroGemsDays() {
+  return Array.from({ length: 7 }, (_, i) => defaultEtherealDay(i));
+}
+
+/**
+ * Same split as 0 gems, plus +5 red every day (uses the 5 paid battles).
+ * Days already at cap keep purple and fill remaining slots with red.
+ */
+export function etherealPresetFullGemsDays() {
+  return etherealPresetZeroGemsDays().map((day) => {
+    const purple = Math.min(ETHEREAL_MAX_BATTLES, day.purple);
+    const room = ETHEREAL_MAX_BATTLES - purple;
+    const red = Math.min(room, day.red + 5);
+    return { red, purple };
+  });
+}
+
 export function defaultEtherealRealm() {
   return {
     stage: 20,
     killTableland: true,
     killExpanse: true,
-    days: Array.from({ length: 7 }, (_, i) => defaultEtherealDay(i)),
+    days: etherealPresetZeroGemsDays(),
   };
 }
 
