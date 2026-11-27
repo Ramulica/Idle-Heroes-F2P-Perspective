@@ -129,6 +129,21 @@ export const DEFAULT_STATE = {
     voidBossStages: Array.from({ length: 9 }, () => ({ cleared: 0, soon: 0 })),
     voidBossCountTowardNeed: true,
   },
+  // Normalized in useSgCalc via normalizeEtherealRealm.
+  etherealRealm: {
+    stage: 20,
+    killTableland: true,
+    killExpanse: true,
+    days: [
+      { red: 10, purple: 0 },
+      { red: 0, purple: 10 },
+      { red: 10, purple: 0 },
+      { red: 10, purple: 0 },
+      { red: 10, purple: 0 },
+      { red: 10, purple: 0 },
+      { red: 10, purple: 0 },
+    ],
+  },
 };
 
 export function clampMonths(value) {

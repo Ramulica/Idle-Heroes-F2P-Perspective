@@ -74,7 +74,7 @@ export default function Home() {
                   "All rewards adds up calculator income for 1 year or the period you pick.",
                   "Tick one Event Plan there to include that Mysterious Sale loot.",
                   "Simulators turns awaken income into expected rarities.",
-                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, Fantasy Factory, Stat Calculator, and Auction House tools, plus Mysterious Sale.",
+                  "Tools holds the CSG, Awakens, Pages, Monster Tickets, Treasure Coupons, Upgrade Hero, Scratch Card, Fantasy Factory, Stat Calculator, Auction House, and Ethereal Realm tools, plus Mysterious Sale.",
                   "Your username is saved on this device. Log out from the footer when you are done.",
                   "Guest mode does not save data and cannot rate.",
                 ]}
@@ -425,6 +425,31 @@ export default function Home() {
                     className="gold-btn"
                     type="button"
                     onClick={() => navigate("/guides/stat-calculator")}
+                  >
+                    Open tool
+                  </button>
+                </article>
+                <article className="guide-card">
+                  <div className="head-with-help">
+                    <h3>Ethereal Realm Calculator</h3>
+                    <HelpTip
+                      title="Ethereal Realm Calculator"
+                      steps={[
+                        "Set your stage (1–20). Plan red vs purple fights for each day of the week.",
+                        "10 free battles/day; up to 5 more at 200 gems each. Tick weekly Tableland / Expanse boss kills.",
+                        "Summary scales your week over the chosen period (default 1 year).",
+                      ]}
+                    />
+                  </div>
+                  <p>
+                    Plan Savage Warrior and Boss-attack fights plus weekly boss
+                    kills, then see stellar, subs, CoT, aurora, cores, and
+                    starsoul haul over a year.
+                  </p>
+                  <button
+                    className="gold-btn"
+                    type="button"
+                    onClick={() => navigate("/guides/ethereal-realm")}
                   >
                     Open tool
                   </button>

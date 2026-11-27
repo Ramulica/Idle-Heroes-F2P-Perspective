@@ -8467,6 +8467,94 @@ button.sc-aura-badge:hover .sc-aura-core {
   max-width: min(720px, 96vw);
 }
 
+.er-banner .er-reward-line {
+  margin-top: 8px;
+}
+
+.er-banner-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  justify-content: flex-end;
+}
+
+.er-period-gems {
+  font-size: 1.15rem;
+}
+
+.er-warn {
+  color: #8a3a10;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+.er-reward-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.er-reward-line.compact {
+  margin-top: 6px;
+  gap: 4px 8px;
+  font-size: 0.9rem;
+}
+
+.er-kill-grid {
+  margin-top: 10px;
+}
+
+.er-kill-grid .check-card {
+  align-items: flex-start;
+}
+
+.er-kill-grid .check-card > span {
+  display: grid;
+  gap: 4px;
+}
+
+.er-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.er-day-card {
+  border: 2px solid #c9a46a;
+  border-radius: 12px;
+  background: #fffaf0;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.er-day-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.er-day-field {
+  margin: 0;
+}
+
+.er-day-field span {
+  font-size: 0.8rem;
+}
+
+.er-per-fight {
+  margin-top: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.er-summary-grid {
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .ah-hero-grid {
     grid-template-columns: repeat(5, 52px);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { GUEST_SG_KEY, useAuth } from "./auth";
 import { hasHeroUpgradeProgress, normalizeHeroUpgrade } from "./heroUpgrade";
+import { normalizeEtherealRealm } from "./etherealRealm";
 import { DEFAULT_STATE, calculateSg } from "./sgCalc";
 
 let current = { ...DEFAULT_STATE };
@@ -27,6 +28,11 @@ function mergeState(saved) {
         ? incoming.heroUpgrade
         : {}),
     }),
+    etherealRealm: normalizeEtherealRealm(
+      incoming.etherealRealm && typeof incoming.etherealRealm === "object"
+        ? incoming.etherealRealm
+        : DEFAULT_STATE.etherealRealm
+    ),
   };
 }
 
@@ -86,6 +92,10 @@ function applyPatch(partial) {
       partial.heroUpgrade === undefined
         ? current.heroUpgrade
         : normalizeHeroUpgrade(partial.heroUpgrade),
+    etherealRealm:
+      partial.etherealRealm === undefined
+        ? current.etherealRealm
+        : normalizeEtherealRealm(partial.etherealRealm),
   };
   emit();
   scheduleSave();
