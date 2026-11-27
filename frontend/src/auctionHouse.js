@@ -258,6 +258,8 @@ export function defaultSettings() {
     bootstrapSales: 8,
     minProfitSg: 50,
     staleDiscountPct: 8,
+    /** “Sitting long” after this many failed lists (unsold ✕), not by clock time. */
+    sittingLongFails: 2,
     autoBumpOnHistoryUplift: true,
   };
 }
@@ -415,6 +417,10 @@ export function normalizeAuctionState(raw) {
   settings.staleDiscountPct = Math.max(
     0,
     Number(settings.staleDiscountPct) || 0
+  );
+  settings.sittingLongFails = Math.max(
+    1,
+    Math.round(Number(settings.sittingLongFails) || 2)
   );
   const knownIds = AUCTION_HEROES.map((h) => h.id);
   if (!FLIP_STRATEGY_IDS.has(settings.strategyId)) {
@@ -1521,8 +1527,22 @@ export function listingPhases(copy, now = Date.now()) {
   return { phase, warmupEndsAt, auctionEndsAt };
 }
 
+export function sittingLongFailCount(copy) {
+  return Math.max(0, (copy?.tries || []).length);
+}
+
+export function isSittingLong(copy, settings) {
+  const s = { ...defaultSettings(), ...(settings || {}) };
+  const need = Math.max(1, Math.round(Number(s.sittingLongFails) || 2));
+  return sittingLongFailCount(copy) >= need;
+}
+
 export function copyAlerts(copy, state, now = Date.now()) {
   const alerts = [];
+  const settings = state?.settings;
+  const fails = sittingLongFailCount(copy);
+  const sitting = isSittingLong(copy, settings);
+
   if (copy.stage === "bag") {
     const ready = bagReadyAt(copy);
     if (ready != null && now >= ready) {
@@ -1538,6 +1558,14 @@ export function copyAlerts(copy, state, now = Date.now()) {
         tone: "muted",
         remainingMs: ready - now,
         text: `Sell unlocks in ${formatDuration(ready - now)}`,
+      });
+    }
+    if (sitting) {
+      const tip = suggestListPrice(copy, state, now);
+      alerts.push({
+        type: "lower",
+        tone: "warn",
+        text: `Sitting long (${fails} failed list${fails === 1 ? "" : "s"}) — consider ${formatSg(tip.suggested)} SG`,
       });
     }
   }
@@ -1556,19 +1584,19 @@ export function copyAlerts(copy, state, now = Date.now()) {
         tone: left < 6 * 60 * 60 * 1000 ? "warn" : "good",
         text: `On auction · ${formatDuration(left)} left @ ${formatSg(copy.listPrice)} SG`,
       });
-      const tip = suggestListPrice(copy, state, now);
-      if (tip.suggested < copy.listPrice) {
-        alerts.push({
-          type: "lower",
-          tone: "warn",
-          text: `Sitting long — consider ${formatSg(tip.suggested)} SG`,
-        });
-      }
     } else if (phase === "ended") {
       alerts.push({
         type: "ended",
         tone: "warn",
         text: "Auction window ended — mark sold or X (failed try)",
+      });
+    }
+    if (sitting) {
+      const tip = suggestListPrice(copy, state, now);
+      alerts.push({
+        type: "lower",
+        tone: "warn",
+        text: `Sitting long (${fails} failed list${fails === 1 ? "" : "s"}) — consider ${formatSg(tip.suggested)} SG`,
       });
     }
   }
@@ -1579,7 +1607,7 @@ export function boardAlerts(state, now = Date.now()) {
   const out = [];
   for (const copy of state.bag || []) {
     for (const a of copyAlerts(copy, state, now)) {
-      if (a.type === "ready") out.push({ copy, ...a });
+      if (a.type === "ready" || a.type === "lower") out.push({ copy, ...a });
     }
   }
   for (const copy of state.listings || []) {

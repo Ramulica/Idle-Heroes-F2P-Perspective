@@ -2278,6 +2278,26 @@ export default function AuctionHouse() {
                   />
                 </label>
                 <label className="ah-field">
+                  <span>Sitting long after failed lists</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={state.settings.sittingLongFails ?? 2}
+                    onChange={(e) =>
+                      setState((s) =>
+                        patchSettings(s, {
+                          sittingLongFails: Number(e.target.value) || 2,
+                        })
+                      )
+                    }
+                  />
+                  <span className="muted ah-field-hint">
+                    Warn when a copy has this many unsold (✕) lists — default 2
+                    (~4 days of listing cycles). Not based on clock time.
+                  </span>
+                </label>
+                <label className="ah-field">
                   <span>Stale-list discount %</span>
                   <input
                     type="number"
