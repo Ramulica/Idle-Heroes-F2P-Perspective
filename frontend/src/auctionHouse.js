@@ -87,6 +87,8 @@ export const TOXIC_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
 export const LIVE_UNDERCUT_SG = 50;
 /** Treat competitor Attack as comparable if within this relative margin of ours. */
 export const LIVE_ATK_MARGIN = 0.02;
+/** Keep the strongest Attack competitors from multi-screenshot pastes. */
+export const LIVE_MARKET_MAX = 10;
 
 /** Auction copy ranks: C−…SSS (same ids as awakening — no fake S−/SSS+). */
 const AUCTION_RARITY_START = AWAKENING_TIERS.findIndex((r) => r.id === "C-");
@@ -307,28 +309,58 @@ function normalizeBonuses(raw, rarity, legacyA, legacyB) {
 }
 
 /**
- * Session-only live AH rows `{ atk, buyout }`. Never fed into History comps.
+ * Session-only live AH rows from same-tier Attack lists.
+ * Shape: `{ atk, bid, buyout, hp?, spd? }`. Never fed into History comps.
+ * Merges multi-screenshot pastes, dedupes by Attack (keeps cheapest buyout),
+ * sorts highest Attack first, keeps top LIVE_MARKET_MAX.
  */
-export function normalizeLiveMarketState(raw) {
+export function normalizeLiveMarketState(raw, opts = {}) {
+  const max = Math.max(
+    1,
+    Math.round(Number(opts.max) || LIVE_MARKET_MAX)
+  );
   if (!Array.isArray(raw)) return [];
-  const out = [];
-  const seen = new Set();
+  /** @type {Map<number, {atk:number,bid:number,buyout:number,hp:number,spd:number}>} */
+  const byAtk = new Map();
   for (const row of raw) {
     const atk = Math.max(
       0,
       Math.round(Number(row?.atk ?? row?.attack) || 0)
     );
-    const buyout = Math.max(
+    let buyout = Math.max(
       0,
       Math.round(Number(row?.buyout ?? row?.price ?? row?.listPrice) || 0)
     );
-    if (!(atk > 0 && buyout > 0)) continue;
-    const key = `${atk}:${buyout}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ atk, buyout });
+    let bid = Math.max(0, Math.round(Number(row?.bid ?? row?.bidding) || 0));
+    const hp = Math.max(0, Math.round(Number(row?.hp) || 0));
+    const spd = Math.max(0, Math.round(Number(row?.spd ?? row?.speed) || 0));
+    if (!(atk > 0)) continue;
+    if (!(buyout > 0) && bid > 0) buyout = bid;
+    if (!(buyout > 0)) continue;
+    const prev = byAtk.get(atk);
+    if (!prev) {
+      byAtk.set(atk, { atk, bid, buyout, hp, spd });
+      continue;
+    }
+    // Same Attack again (another screenshot) — keep cheapest buyout / richest meta.
+    const nextBuy = Math.min(prev.buyout, buyout);
+    const nextBid =
+      bid > 0 && prev.bid > 0
+        ? Math.min(prev.bid, bid)
+        : bid > 0
+          ? bid
+          : prev.bid;
+    byAtk.set(atk, {
+      atk,
+      bid: nextBid,
+      buyout: nextBuy,
+      hp: Math.max(prev.hp, hp),
+      spd: Math.max(prev.spd, spd),
+    });
   }
-  return out;
+  return [...byAtk.values()]
+    .sort((a, b) => b.atk - a.atk || a.buyout - b.buyout)
+    .slice(0, max);
 }
 
 function normalizeTries(raw) {

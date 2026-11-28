@@ -42,6 +42,7 @@ import {
   formatWhen,
   fromDatetimeLocalValue,
   isHeroSetUp,
+  LIVE_MARKET_MAX,
   LIVE_UNDERCUT_SG,
   listFromBag,
   listingPhases,
@@ -74,6 +75,7 @@ import {
   strategyOf,
 } from "../auctionCatalog";
 import {
+  mergeLiveMarketScreenshots,
   ocrAuctionLiveImage,
   parseAuctionLiveText,
   warmAuctionLiveOcr,
@@ -769,14 +771,28 @@ function LiveMarketPanel({
     setOcrProgress(0);
     try {
       let merged = [...(rows || [])];
-      for (const file of files) {
-        const { rows: parsed } = await ocrAuctionLiveImage(file, setOcrProgress);
-        merged = normalizeLiveMarketState([...merged, ...parsed]);
+      let added = 0;
+      for (let fi = 0; fi < files.length; fi += 1) {
+        const file = files[fi];
+        const { rows: parsed } = await ocrAuctionLiveImage(file, (p) => {
+          const base = Math.round((fi / files.length) * 100);
+          const slice = Math.round(p / files.length);
+          setOcrProgress(Math.min(99, base + slice));
+        });
+        const before = merged.length;
+        merged = mergeLiveMarketScreenshots(merged, parsed);
+        added += Math.max(0, merged.length - before);
       }
       if (!merged.length) {
         setOcrError(
-          "OCR found no Attack/buyout pairs — add rows manually or paste numbers."
+          "OCR found no Attack / bid / buyout rows — fix manually or paste another shot."
         );
+      } else if (added === 0 && files.length) {
+        setOcrError(
+          "No new Attack rows (dupes or weak OCR) — check the table / add manually."
+        );
+      } else {
+        setOcrError("");
       }
       onChange(merged);
     } catch (err) {
@@ -799,19 +815,30 @@ function LiveMarketPanel({
   }
 
   function addBlank() {
-    onChange([
-      ...(rows || []),
-      { atk: Math.round(Number(myAtk) || 5000), buyout: 1000 },
-    ]);
+    onChange(
+      normalizeLiveMarketState([
+        ...(rows || []),
+        {
+          atk: Math.round(Number(myAtk) || 5000),
+          bid: 1000,
+          buyout: 1000,
+        },
+      ])
+    );
   }
+
+  const count = (rows || []).length;
 
   return (
     <div className="ah-live-market">
       <div className="ah-live-market-head">
-        <strong>Live AH (session only)</strong>
+        <strong>
+          Live AH · top Attack ({count}/{LIVE_MARKET_MAX})
+        </strong>
         <span className="muted">
-          Undercuts suggest by {LIVE_UNDERCUT_SG} SG vs cheaper equal/better
-          Attack — never saved as History clears.
+          Same awakening list — paste several screenshots (e.g. 5 + 5) to fill
+          up to {LIVE_MARKET_MAX} highest Attack. Undercut uses buyout −{" "}
+          {LIVE_UNDERCUT_SG} SG; never saved as History clears.
         </span>
       </div>
       <div
@@ -834,9 +861,7 @@ function LiveMarketPanel({
             e.preventDefault();
             const parsed = parseAuctionLiveText(text);
             if (parsed.length) {
-              onChange(
-                normalizeLiveMarketState([...(rows || []), ...parsed])
-              );
+              onChange(mergeLiveMarketScreenshots(rows, parsed));
               setOcrError("");
             }
           }
@@ -847,9 +872,10 @@ function LiveMarketPanel({
           void ingestFiles(e.dataTransfer?.files);
         }}
       >
-        <strong>Drop / paste live AH screenshot</strong>
+        <strong>Drop / paste another AH screenshot</strong>
         <span className="muted">
-          Or pick a file — verify Attack + buyout below before listing.
+          Sorted by Attack · multi-select or paste repeatedly until you have ~
+          {LIVE_MARKET_MAX}.
         </span>
         <button
           type="button"
@@ -857,7 +883,11 @@ function LiveMarketPanel({
           disabled={ocrBusy}
           onClick={() => fileRef.current?.click()}
         >
-          {ocrBusy ? `Reading… ${ocrProgress || 0}%` : "Pick screenshot"}
+          {ocrBusy
+            ? `Reading… ${ocrProgress || 0}%`
+            : count
+              ? "Add more screenshots"
+              : "Pick screenshot(s)"}
         </button>
         <input
           ref={fileRef}
@@ -872,12 +902,14 @@ function LiveMarketPanel({
         />
       </div>
       {ocrError ? <p className="ah-live-error">{ocrError}</p> : null}
-      {(rows || []).length ? (
+      {count ? (
         <div className="ah-live-table-wrap">
           <table className="ah-live-table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Attack</th>
+                <th>Bid</th>
                 <th>Buyout</th>
                 <th />
               </tr>
@@ -891,6 +923,7 @@ function LiveMarketPanel({
                     key={`${r.atk}-${r.buyout}-${i}`}
                     className={comparable ? "ah-live-match" : undefined}
                   >
+                    <td className="muted">{i + 1}</td>
                     <td>
                       <input
                         type="number"
@@ -899,6 +932,19 @@ function LiveMarketPanel({
                         onChange={(e) =>
                           updateRow(i, {
                             atk: Math.round(Number(e.target.value) || 0),
+                          })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        value={r.bid || ""}
+                        placeholder="—"
+                        onChange={(e) =>
+                          updateRow(i, {
+                            bid: Math.round(Number(e.target.value) || 0),
                           })
                         }
                       />
@@ -931,17 +977,20 @@ function LiveMarketPanel({
             </tbody>
           </table>
           <p className="muted ah-live-hint">
-            Highlighted rows are comparable Attack (≥ your Atk − 2%).
+            Ranked by Attack. Highlighted = comparable to your copy (≥ Atk −
+            2%). Fix OCR mistakes before listing.
           </p>
         </div>
       ) : (
-        <p className="muted ah-live-hint">No live rows yet.</p>
+        <p className="muted ah-live-hint">
+          No live rows yet — paste the first same-tier Attack page.
+        </p>
       )}
       <div className="ah-live-actions">
         <button type="button" className="tan-btn" onClick={addBlank}>
           Add row
         </button>
-        {(rows || []).length ? (
+        {count ? (
           <button
             type="button"
             className="ghost-btn"

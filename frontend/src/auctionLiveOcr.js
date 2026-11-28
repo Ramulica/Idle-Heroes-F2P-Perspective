@@ -1,9 +1,15 @@
 /**
- * Browser OCR for live Auction House screenshots.
- * Parses Attack + buyout pairs for session-only undercutting — never History.
+ * Browser OCR for live Auction House screenshots (same-tier Attack list).
+ * Parses Attack + bidding/buyout for session-only undercutting — never History.
+ *
+ * Typical row: Atk · HP · Spd · timer · Bidding Price · Buyout Price
+ * Paste multiple screenshots to fill top LIVE_MARKET_MAX Attack copies.
  */
 
-import { normalizeLiveMarketState } from "./auctionHouse";
+import {
+  LIVE_MARKET_MAX,
+  normalizeLiveMarketState,
+} from "./auctionHouse";
 
 let ahOcrWorkerPromise = null;
 let ahOcrProgressHandler = null;
@@ -23,9 +29,9 @@ async function getAhOcrWorker() {
         },
       });
       await worker.setParameters({
-        tessedit_pageseg_mode: "6",
+        // Sparse / uneven AH list rows
+        tessedit_pageseg_mode: "4",
         preserve_interword_spaces: "1",
-        tessedit_char_whitelist: "0123456789., AtkHPSpdSG",
       });
       return worker;
     })().catch((err) => {
@@ -41,6 +47,7 @@ export function warmAuctionLiveOcr() {
   void getAhOcrWorker().catch(() => {});
 }
 
+/** Dark AH UI → high-contrast white-on-black (or inverted) for Tesseract. */
 async function loadImageToCanvas(fileOrBlob) {
   const url = URL.createObjectURL(fileOrBlob);
   try {
@@ -50,19 +57,29 @@ async function loadImageToCanvas(fileOrBlob) {
       el.onerror = () => reject(new Error("Could not read image"));
       el.src = url;
     });
+    const maxW = 1800;
+    const scaleUp = img.width < 900 ? 2 : img.width > maxW ? maxW / img.width : 1.25;
     const canvas = document.createElement("canvas");
-    const maxW = 1600;
-    const scale = img.width > maxW ? maxW / img.width : 1;
-    canvas.width = Math.max(1, Math.round(img.width * scale));
-    canvas.height = Math.max(1, Math.round(img.height * scale));
+    canvas.width = Math.max(1, Math.round(img.width * scaleUp));
+    canvas.height = Math.max(1, Math.round(img.height * scaleUp));
     const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    // Boost contrast for parchment / blue SG UI text.
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const d = imageData.data;
+    let sum = 0;
     for (let i = 0; i < d.length; i += 4) {
-      const g = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
-      const v = g > 140 ? 255 : g < 90 ? 0 : Math.round(g);
+      sum += 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    }
+    const avg = sum / (d.length / 4);
+    const darkUi = avg < 110;
+    for (let i = 0; i < d.length; i += 4) {
+      // Prefer green/white channel punch (timers + numbers on dark AH).
+      const g =
+        0.2 * d[i] + 0.55 * d[i + 1] + 0.1 * d[i + 2] + 0.15 * Math.max(d[i], d[i + 1]);
+      let v = g;
+      if (darkUi) v = 255 - g;
+      v = v > 150 ? 255 : v < 100 ? 0 : Math.round((v - 100) * (255 / 50));
       d[i] = d[i + 1] = d[i + 2] = v;
     }
     ctx.putImageData(imageData, 0, 0);
@@ -72,67 +89,147 @@ async function loadImageToCanvas(fileOrBlob) {
   }
 }
 
+function extractOrderedNumbers(text) {
+  return [...String(text || "").replace(/,/g, "").matchAll(/\d+/g)]
+    .map((m) => Number(m[0]))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+function isAtk(n) {
+  return n >= 3500 && n <= 22000;
+}
+function isHp(n) {
+  return n >= 2500 && n <= 25000;
+}
+function isSpd(n) {
+  return n >= 25 && n <= 90;
+}
+function isHour(n) {
+  return n >= 0 && n <= 72;
+}
+function isMinSec(n) {
+  return n >= 0 && n <= 59;
+}
+function isPrice(n) {
+  return n >= 100 && n <= 25000;
+}
+
 /**
- * Pull Attack/buyout candidates from OCR or pasted text.
- * Heuristic: on each line, pick a mid Attack (3–5 digit) and a buyout (SG).
+ * Idle Heroes AH list row scanner:
+ * Atk, HP, Spd, [HH, MM, SS], BiddingPrice, BuyoutPrice
+ */
+export function parseAuctionLiveRowsFromNumbers(nums) {
+  const rows = [];
+  let i = 0;
+  const a = Array.isArray(nums) ? nums : [];
+  while (i < a.length) {
+    const atk = a[i];
+    if (!isAtk(atk)) {
+      i += 1;
+      continue;
+    }
+    let j = i + 1;
+    // Optional HP (OCR often truncates — skip if missing)
+    let hp = 0;
+    if (j < a.length && isHp(a[j]) && a[j] !== atk) {
+      hp = a[j];
+      j += 1;
+    }
+    // Optional Speed
+    let spd = 0;
+    if (j < a.length && isSpd(a[j])) {
+      spd = a[j];
+      j += 1;
+    }
+    // Optional timer HH:MM:SS
+    if (
+      j + 2 < a.length &&
+      isHour(a[j]) &&
+      isMinSec(a[j + 1]) &&
+      isMinSec(a[j + 2])
+    ) {
+      j += 3;
+    }
+    // Bidding + Buyout (need at least one price)
+    let bid = 0;
+    let buyout = 0;
+    if (j < a.length && isPrice(a[j])) {
+      bid = a[j];
+      j += 1;
+    }
+    if (j < a.length && isPrice(a[j])) {
+      buyout = a[j];
+      j += 1;
+    }
+    // OCR sometimes swaps / drops bid — buyout alone is enough
+    if (!buyout && bid) {
+      buyout = bid;
+      bid = 0;
+    }
+    // Fix common OCR: 13000 → 3000 when atk is ~6k and buyout absurdly high
+    if (buyout > 9000 && buyout % 1000 < 50 && buyout / 10 >= 500) {
+      const fixed = Math.round(buyout / 10);
+      if (fixed >= 500 && fixed <= 6000) buyout = fixed;
+    }
+    if (buyout > 0) {
+      rows.push({ atk, hp, spd, bid, buyout });
+      i = Math.max(j, i + 1);
+      continue;
+    }
+    i += 1;
+  }
+  return rows;
+}
+
+/**
+ * Also catch "Buyout … NNNN" / "Bidding … NNNN" near an Attack value on the same chunk.
+ */
+function parseLabeledBuyouts(text) {
+  const rows = [];
+  const chunks = String(text || "").split(/\n+/);
+  for (const chunk of chunks) {
+    const flat = chunk.replace(/,/g, " ");
+    const atkMatch = flat.match(/\b([4-9]\d{3}|1\d{4})\b/);
+    if (!atkMatch) continue;
+    const atk = Number(atkMatch[1]);
+    if (!isAtk(atk)) continue;
+    const buyoutMatch =
+      flat.match(/Buyout[^0-9]{0,24}(\d{3,5})/i) ||
+      flat.match(/Buy\s*out[^0-9]{0,24}(\d{3,5})/i);
+    const bidMatch =
+      flat.match(/Bidding\s*Price[^0-9]{0,24}(\d{3,5})/i) ||
+      flat.match(/Bidding[^0-9]{0,24}(\d{3,5})/i);
+    const buyout = buyoutMatch ? Number(buyoutMatch[1]) : 0;
+    const bid = bidMatch ? Number(bidMatch[1]) : 0;
+    if (buyout >= 100 || bid >= 100) {
+      rows.push({
+        atk,
+        bid: isPrice(bid) ? bid : 0,
+        buyout: isPrice(buyout) ? buyout : isPrice(bid) ? bid : 0,
+      });
+    }
+  }
+  return rows;
+}
+
+/**
+ * Pull Attack / bid / buyout from OCR or pasted AH list text.
  */
 export function parseAuctionLiveText(text) {
-  const lines = String(text || "")
-    .replace(/\u00a0/g, " ")
-    .split(/\r?\n/);
-  const rows = [];
+  const nums = extractOrderedNumbers(text);
+  const fromPattern = parseAuctionLiveRowsFromNumbers(nums);
+  const fromLabels = parseLabeledBuyouts(text);
+  return normalizeLiveMarketState([...fromPattern, ...fromLabels]);
+}
 
-  for (const line of lines) {
-    const cleaned = line.replace(/,/g, " ").replace(/[^\d.\s]/g, " ");
-    const nums = [...cleaned.matchAll(/\d{2,6}/g)]
-      .map((m) => Number(m[0]))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    if (nums.length < 2) continue;
-
-    // Prefer larger value as Attack when one looks like flats (3k–20k) and one like SG.
-    let atk = null;
-    let buyout = null;
-    const atkLike = nums.filter((n) => n >= 2500 && n <= 25000);
-    const priceLike = nums.filter((n) => n >= 50 && n <= 20000);
-    if (atkLike.length && priceLike.length) {
-      atk = Math.max(...atkLike);
-      buyout = Math.min(
-        ...priceLike.filter((n) => n !== atk || priceLike.length === 1)
-      );
-      if (buyout === atk && priceLike.length > 1) {
-        buyout = Math.min(...priceLike.filter((n) => n < atk));
-      }
-    } else {
-      // Fallback: first = atk, last = buyout when two distinct numbers.
-      const uniq = [...new Set(nums)];
-      if (uniq.length >= 2) {
-        atk = uniq[0];
-        buyout = uniq[uniq.length - 1];
-      }
-    }
-    if (atk != null && buyout != null && atk !== buyout) {
-      rows.push({ atk, buyout });
-    }
-  }
-
-  // Whole-text pair scan if line split failed (dense OCR dump).
-  if (!rows.length) {
-    const all = [
-      ...String(text || "")
-        .replace(/,/g, "")
-        .matchAll(/\d{3,5}/g),
-    ].map((m) => Number(m[0]));
-    for (let i = 0; i + 1 < all.length; i += 1) {
-      const a = all[i];
-      const b = all[i + 1];
-      if (a >= 2500 && a <= 25000 && b >= 50 && b <= 20000 && a !== b) {
-        rows.push({ atk: a, buyout: b });
-        i += 1;
-      }
-    }
-  }
-
-  return normalizeLiveMarketState(rows);
+/**
+ * Merge another screenshot/paste into the session set (top Attack kept).
+ */
+export function mergeLiveMarketScreenshots(existing, incoming) {
+  return normalizeLiveMarketState([
+    ...(Array.isArray(existing) ? existing : []),
+    ...(Array.isArray(incoming) ? incoming : []),
+  ]);
 }
 
 export async function ocrAuctionLiveImage(fileOrBlob, onProgress) {
@@ -144,9 +241,24 @@ export async function ocrAuctionLiveImage(fileOrBlob, onProgress) {
     const {
       data: { text },
     } = await worker.recognize(canvas);
+    // Second pass: digits-only helps prices on noisy rows
+    await worker.setParameters({
+      tessedit_pageseg_mode: "6",
+      tessedit_char_whitelist: "0123456789: ",
+    });
+    const {
+      data: { text: digitText },
+    } = await worker.recognize(canvas);
+    // Restore general params for next image
+    await worker.setParameters({
+      tessedit_pageseg_mode: "4",
+      tessedit_char_whitelist: "",
+      preserve_interword_spaces: "1",
+    });
+    const combined = `${text}\n${digitText}`;
     return {
-      text: String(text || ""),
-      rows: parseAuctionLiveText(text),
+      text: combined,
+      rows: parseAuctionLiveText(combined),
     };
   } finally {
     ahOcrProgressHandler = null;
