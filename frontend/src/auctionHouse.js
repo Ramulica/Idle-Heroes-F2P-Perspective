@@ -359,7 +359,8 @@ export function normalizeCopy(raw, stage) {
     outcome:
       raw.outcome === "sold" ||
       raw.outcome === "discarded" ||
-      raw.outcome === "bid_failed"
+      raw.outcome === "bid_failed" ||
+      raw.outcome === "list_failed"
         ? raw.outcome
         : stage === "history"
           ? "sold"
@@ -597,8 +598,44 @@ export function failedTriesForHero(copy, bag, listings, history) {
     if (row.heroId !== copy.heroId) continue;
     if (statDistance(copy, row) > 6.5) continue;
     for (const t of row.tries || []) tries.push(t);
+    // Unsold listings logged to history are sell ceilings for similar rolls.
+    if (row.outcome === "list_failed") {
+      const price = Math.max(
+        0,
+        Number(row.failPrice) || Number(row.listPrice) || 0
+      );
+      if (price > 0) {
+        tries.push({
+          price,
+          at: row.soldAt || row.listedAt || row.failedAt || null,
+        });
+      }
+    }
   }
   return tries.sort((a, b) => b.price - a.price);
+}
+
+function listFailedHistoryEntry(row, failPrice, failedAtIso) {
+  const price = Math.max(0, Number(failPrice) || Number(row.listPrice) || 0);
+  const at = failedAtIso || nowIso();
+  return normalizeCopy(
+    {
+      ...row,
+      id: newId(),
+      stage: "history",
+      outcome: "list_failed",
+      failPrice: price,
+      listPrice: price,
+      soldPrice: 0,
+      soldAt: at,
+      listedAt: row.listedAt || at,
+      tries: [
+        ...(row.tries || []),
+        { price, at },
+      ],
+    },
+    "history"
+  );
 }
 
 /**
@@ -1588,7 +1625,7 @@ export function copyAlerts(copy, state, now = Date.now()) {
       alerts.push({
         type: "ended",
         tone: "warn",
-        text: "Auction window ended — mark sold or X (failed try)",
+        text: "Auction ended unsold — List again, Sold for…, or ✕ to bag",
       });
     }
     if (sitting) {
@@ -1933,10 +1970,10 @@ export function listFromBag(state, id, listPrice, listedAtIso) {
 export function failListing(state, id) {
   const row = (state.listings || []).find((c) => c.id === id);
   if (!row) return state;
-  const tries = [
-    ...(row.tries || []),
-    { price: row.listPrice, at: nowIso() },
-  ];
+  const at = nowIso();
+  const price = Math.max(0, Number(row.listPrice) || 0);
+  const tries = [...(row.tries || []), { price, at }];
+  const hist = listFailedHistoryEntry(row, price, at);
   const back = normalizeCopy(
     {
       ...row,
@@ -1951,6 +1988,40 @@ export function failListing(state, id) {
     ...state,
     listings: state.listings.filter((c) => c.id !== id),
     bag: [back, ...(state.bag || [])],
+    history: hist ? [hist, ...(state.history || [])] : state.history || [],
+  };
+}
+
+/**
+ * Timer ended / unsold — record the failed list in History, then start a fresh
+ * listing cycle. Never auto-renews; only runs when the user taps List again.
+ */
+export function relistListing(state, id, listPrice, listedAtIso) {
+  const row = (state.listings || []).find((c) => c.id === id);
+  if (!row) return state;
+  const at = nowIso();
+  const failPrice = Math.max(0, Number(row.listPrice) || 0);
+  const tries = [...(row.tries || []), { price: failPrice, at }];
+  const hist = listFailedHistoryEntry(row, failPrice, at);
+  const nextPrice = Math.max(0, Number(listPrice) || failPrice || 0);
+  const renewed = normalizeCopy(
+    {
+      ...row,
+      tries,
+      listPrice: nextPrice,
+      listedAt: listedAtIso || nowIso(),
+      stage: "listing",
+    },
+    "listing"
+  );
+  if (!renewed) return state;
+  const listings = (state.listings || []).map((c) =>
+    c.id === id ? renewed : c
+  );
+  return {
+    ...state,
+    listings,
+    history: hist ? [hist, ...(state.history || [])] : state.history || [],
   };
 }
 

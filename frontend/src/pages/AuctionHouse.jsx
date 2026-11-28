@@ -32,6 +32,7 @@ import {
   failBidding,
   failListing,
   firstSetUpHeroId,
+  relistListing,
   flipBootstrapPlan,
   formatBonuses,
   formatDuration,
@@ -1042,32 +1043,34 @@ export default function AuctionHouse() {
       );
     }
 
-    if (picker.type === "list") {
-      const copy = state.bag.find((c) => c.id === picker.id);
+    if (picker.type === "list" || picker.type === "relist") {
+      const fromBag = picker.type === "list";
+      const copy = fromBag
+        ? state.bag.find((c) => c.id === picker.id)
+        : state.listings.find((c) => c.id === picker.id);
       if (!copy) return null;
       const tip = suggestListPrice(copy, state, tick);
       return (
         <Modal
-          title={`List · ${copyTitle(copy)}`}
+          title={`${fromBag ? "List" : "List again"} · ${copyTitle(copy)}`}
           onClose={() => setPicker(null)}
           footer={
             <button
               type="button"
               className="tan-btn"
               onClick={() => {
+                const price = Number(picker.price) || tip.suggested;
+                const when = fromDatetimeLocalValue(picker.when);
                 setState((s) =>
-                  listFromBag(
-                    s,
-                    copy.id,
-                    Number(picker.price) || tip.suggested,
-                    fromDatetimeLocalValue(picker.when)
-                  )
+                  fromBag
+                    ? listFromBag(s, copy.id, price, when)
+                    : relistListing(s, copy.id, price, when)
                 );
                 setPicker(null);
                 setTab("listings");
               }}
             >
-              List copy
+              {fromBag ? "List copy" : "List again"}
             </button>
           }
         >
@@ -1076,6 +1079,12 @@ export default function AuctionHouse() {
             <Sg value={tip.floor} /> · suggest <Sg value={tip.suggested} />{" "}
             (keeps {(SELL_COMMISSION * 100).toFixed(0)}% commission in mind)
           </p>
+          {!fromBag ? (
+            <p className="muted">
+              Previous list at <Sg value={copy.listPrice} /> will be saved to
+              History as unsold and used for the next Max / Suggest.
+            </p>
+          ) : null}
           {tip.related.length ? (
             <div className="ah-history-hint">
               <strong>Similar sold</strong>
@@ -1206,8 +1215,12 @@ export default function AuctionHouse() {
       const long = String(rarity).length >= 3;
       const bonuses = auctionBonusList(copy).filter((b) => b?.stat);
       const bidFailed = copy.outcome === "bid_failed";
+      const listFailed = copy.outcome === "list_failed";
       const clearPrice = bidFailed
         ? Math.max(0, Number(copy.failPrice) || Number(copy.buyPrice) || 0)
+        : 0;
+      const unsoldPrice = listFailed
+        ? Math.max(0, Number(copy.failPrice) || Number(copy.listPrice) || 0)
         : 0;
       const pushLabel =
         copy.pushVerdict === "should_push"
@@ -1223,7 +1236,13 @@ export default function AuctionHouse() {
         copy.listedAt;
       return (
         <Modal
-          title={bidFailed ? "Bid failed · copy stats" : "History · copy stats"}
+          title={
+            bidFailed
+              ? "Bid failed · copy stats"
+              : listFailed
+                ? "List failed · copy stats"
+                : "History · copy stats"
+          }
           onClose={() => setPicker(null)}
         >
           <div className="ah-history-detail">
@@ -1242,9 +1261,11 @@ export default function AuctionHouse() {
                 <strong>
                   {bidFailed
                     ? "Market cleared"
-                    : copy.outcome === "sold"
-                      ? "Sold"
-                      : "Discarded"}
+                    : listFailed
+                      ? "Listed unsold"
+                      : copy.outcome === "sold"
+                        ? "Sold"
+                        : "Discarded"}
                 </strong>
                 <span className="muted">
                   {when ? formatWhen(when) : "—"}
@@ -1311,6 +1332,17 @@ export default function AuctionHouse() {
                   <p className="muted ah-history-detail-note">
                     This clear (these flats / %) feeds Max / Suggest for similar
                     copies of this hero.
+                  </p>
+                </>
+              ) : listFailed ? (
+                <>
+                  <p>
+                    Unsold at <Sg value={unsoldPrice} /> · buy was{" "}
+                    <Sg value={copy.buyPrice || 0} />
+                  </p>
+                  <p className="muted ah-history-detail-note">
+                    This unsold list is a sell ceiling for Max / Suggest on
+                    similar copies.
                   </p>
                 </>
               ) : copy.outcome === "sold" ? (
@@ -1706,6 +1738,10 @@ export default function AuctionHouse() {
                 <div className="ah-card-grid">
                   {state.listings.map((copy) => {
                     const phase = listingPhases(copy, tick);
+                    const ended = phase.phase === "ended";
+                    const tip = ended
+                      ? suggestListPrice(copy, state, tick)
+                      : null;
                     return (
                       <CopyCard
                         key={copy.id}
@@ -1737,6 +1773,9 @@ export default function AuctionHouse() {
                               {phase.phase === "warmup"
                                 ? ` · bidding ${formatWhen(phase.warmupEndsAt)}`
                                 : ""}
+                              {ended
+                                ? ` · ended ${formatWhen(phase.auctionEndsAt)}`
+                                : ""}
                             </p>
                             <div className="ah-card-money muted">
                               <span>Hammers</span>
@@ -1762,6 +1801,26 @@ export default function AuctionHouse() {
                             >
                               ← Back
                             </button>
+                            {ended ? (
+                              <button
+                                type="button"
+                                className="gold-btn"
+                                title="Save unsold attempt to History, then list again"
+                                onClick={() =>
+                                  setPicker({
+                                    type: "relist",
+                                    id: copy.id,
+                                    price:
+                                      tip?.suggested != null
+                                        ? tip.suggested
+                                        : copy.listPrice,
+                                    when: toDatetimeLocalValue(),
+                                  })
+                                }
+                              >
+                                List again
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               className="gold-btn"
@@ -1779,7 +1838,7 @@ export default function AuctionHouse() {
                             <button
                               type="button"
                               className="ghost-btn"
-                              title="Didn't sell — record try, back to bag"
+                              title="Didn't sell — save to History, back to bag"
                               onClick={() =>
                                 setState((s) => failListing(s, copy.id))
                               }
@@ -1800,12 +1859,14 @@ export default function AuctionHouse() {
             <section className="ah-section">
               <h2>History</h2>
               {!state.history.length ? (
-                <p className="muted">No sold / discarded / bid-failed copies yet.</p>
+                <p className="muted">
+                  No sold / discarded / bid-failed / unsold-list copies yet.
+                </p>
               ) : (
                 <div className="ah-table-wrap">
                   <p className="muted ah-history-hint-line">
                     Tap a row to see Attack / HP / Speed / %. Bid-failed clears
-                    feed Max/Suggest for similar copies.
+                    and unsold lists feed Max/Suggest for similar copies.
                   </p>
                   <table className="ah-table">
                     <thead>
@@ -1821,12 +1882,16 @@ export default function AuctionHouse() {
                     <tbody>
                       {state.history.map((copy) => {
                         const bidFailed = copy.outcome === "bid_failed";
+                        const listFailed = copy.outcome === "list_failed";
                         const net =
                           copy.outcome === "sold"
                             ? netFromListPrice(copy.soldPrice)
                             : 0;
                         const hold =
-                          !bidFailed && copy.boughtAt && copy.soldAt
+                          !bidFailed &&
+                          !listFailed &&
+                          copy.boughtAt &&
+                          copy.soldAt
                             ? new Date(copy.soldAt) - new Date(copy.boughtAt)
                             : null;
                         const uplift =
@@ -1861,9 +1926,11 @@ export default function AuctionHouse() {
                                       ? `Bid failed${
                                           pushLabel ? ` · ${pushLabel}` : ""
                                         }`
-                                      : copy.outcome === "sold"
-                                        ? formatBonuses(copy)
-                                        : "Discarded"}
+                                      : listFailed
+                                        ? "List failed · unsold"
+                                        : copy.outcome === "sold"
+                                          ? formatBonuses(copy)
+                                          : "Discarded"}
                                   </div>
                                 </div>
                               </div>
@@ -1882,6 +1949,13 @@ export default function AuctionHouse() {
                                 <Sg value={copy.soldPrice} />
                               ) : bidFailed ? (
                                 <span className="muted">Lost</span>
+                              ) : listFailed ? (
+                                <span className="muted">
+                                  Unsold @{" "}
+                                  {formatSg(
+                                    copy.failPrice || copy.listPrice || 0
+                                  )}
+                                </span>
                               ) : (
                                 "—"
                               )}
@@ -1895,6 +1969,8 @@ export default function AuctionHouse() {
                                   ~{Math.round(copy.counterfactualMarginPct)}%
                                   if bought
                                 </span>
+                              ) : listFailed ? (
+                                <span className="muted">Ceiling</span>
                               ) : (
                                 "—"
                               )}
