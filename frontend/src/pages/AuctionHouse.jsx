@@ -1759,6 +1759,10 @@ export default function AuctionHouse() {
                         meta={
                           <>
                             <div className="ah-card-money">
+                              <span className="muted">Bought</span>
+                              <Sg value={copy.buyPrice} />
+                            </div>
+                            <div className="ah-card-money">
                               <span className="muted">Listed</span>
                               <Sg value={copy.listPrice} />
                             </div>
