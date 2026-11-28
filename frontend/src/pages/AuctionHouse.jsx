@@ -1242,7 +1242,7 @@ export default function AuctionHouse() {
             bidFailed
               ? "Bid failed · copy stats"
               : listFailed
-                ? "List failed · copy stats"
+                ? `Not sold for ${formatSg(unsoldPrice)} SG`
                 : "History · copy stats"
           }
           onClose={() => setPicker(null)}
@@ -1264,7 +1264,7 @@ export default function AuctionHouse() {
                   {bidFailed
                     ? "Market cleared"
                     : listFailed
-                      ? "Listed unsold"
+                      ? `Not sold for ${formatSg(unsoldPrice)} SG`
                       : copy.outcome === "sold"
                         ? "Sold"
                         : "Discarded"}
@@ -1339,12 +1339,12 @@ export default function AuctionHouse() {
               ) : listFailed ? (
                 <>
                   <p>
-                    Unsold at <Sg value={unsoldPrice} /> · buy was{" "}
+                    {rarity} not sold for <Sg value={unsoldPrice} /> · bought{" "}
                     <Sg value={copy.buyPrice || 0} />
                   </p>
                   <p className="muted ah-history-detail-note">
-                    This unsold list is a sell ceiling for Max / Suggest on
-                    similar copies.
+                    Unsold lists are sell ceilings for Max / Suggest on similar
+                    copies.
                   </p>
                 </>
               ) : copy.outcome === "sold" ? (
@@ -1741,10 +1741,11 @@ export default function AuctionHouse() {
                   <button
                     type="button"
                     className="gold-btn"
-                    title="Mark every active listing timer as ended (no History yet)"
-                    onClick={() =>
-                      setState((s) => expireAllListingTimers(s, Date.now()))
-                    }
+                    title="End timers and save each unsold list price to History"
+                    onClick={() => {
+                      setState((s) => expireAllListingTimers(s, Date.now()));
+                      setTab("history");
+                    }}
                   >
                     Mark timers ended
                   </button>
@@ -1846,7 +1847,7 @@ export default function AuctionHouse() {
                               <button
                                 type="button"
                                 className="tan-btn"
-                                title="Mark this auction timer ended (no History yet)"
+                                title="End timer and save unsold list price to History"
                                 onClick={() =>
                                   setState((s) =>
                                     expireListingTimer(s, copy.id, Date.now())
@@ -1962,7 +1963,11 @@ export default function AuctionHouse() {
                                           pushLabel ? ` · ${pushLabel}` : ""
                                         }`
                                       : listFailed
-                                        ? "List failed · unsold"
+                                        ? `Not sold for ${formatSg(
+                                            copy.failPrice ||
+                                              copy.listPrice ||
+                                              0
+                                          )} SG`
                                         : copy.outcome === "sold"
                                           ? formatBonuses(copy)
                                           : "Discarded"}
@@ -1986,7 +1991,7 @@ export default function AuctionHouse() {
                                 <span className="muted">Lost</span>
                               ) : listFailed ? (
                                 <span className="muted">
-                                  Unsold @{" "}
+                                  Not sold for{" "}
                                   {formatSg(
                                     copy.failPrice || copy.listPrice || 0
                                   )}
@@ -2005,7 +2010,7 @@ export default function AuctionHouse() {
                                   if bought
                                 </span>
                               ) : listFailed ? (
-                                <span className="muted">Ceiling</span>
+                                <span className="muted">Sell ceiling</span>
                               ) : (
                                 "—"
                               )}

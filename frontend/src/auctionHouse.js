@@ -308,6 +308,7 @@ function normalizeTries(raw) {
     .map((t) => ({
       price: Math.max(0, Number(t?.price) || 0),
       at: typeof t?.at === "string" ? t.at : nowIso(),
+      listedAt: typeof t?.listedAt === "string" ? t.listedAt : null,
     }))
     .filter((t) => t.price > 0);
 }
@@ -386,6 +387,8 @@ export function normalizeCopy(raw, stage) {
       return Number.isFinite(n) ? n : null;
     })(),
     maxBidAtFail: Math.max(0, Number(raw.maxBidAtFail) || 0),
+    /** Current listing cycle already wrote a list_failed History row. */
+    unsoldLogged: Boolean(raw.unsoldLogged),
   };
 }
 
@@ -628,6 +631,7 @@ export function failedTriesForHero(copy, bag, listings, history) {
 
 function listFailedHistoryEntry(row, failPrice, failedAtIso) {
   const price = Math.max(0, Number(failPrice) || Number(row.listPrice) || 0);
+  if (!(price > 0)) return null;
   const at = failedAtIso || nowIso();
   const listedAt = row.listedAt || at;
   return normalizeCopy(
@@ -641,6 +645,11 @@ function listFailedHistoryEntry(row, failPrice, failedAtIso) {
       soldPrice: 0,
       soldAt: at,
       listedAt,
+      unsoldLogged: false,
+      note:
+        typeof row.note === "string" && row.note.trim()
+          ? row.note
+          : `Not sold for ${formatSg(price)} SG`,
       tries: [
         ...(row.tries || []),
         { price, at, listedAt },
@@ -648,6 +657,39 @@ function listFailedHistoryEntry(row, failPrice, failedAtIso) {
     },
     "history"
   );
+}
+
+/**
+ * Append one unsold-list History row for this listing cycle (if not already logged).
+ * Returns { state, row } with unsoldLogged set on the working copy.
+ */
+function logUnsoldListing(state, row, failPrice, failedAtIso) {
+  if (!row) return { state, row };
+  if (row.unsoldLogged) return { state, row };
+  const price = Math.max(
+    0,
+    Number(failPrice) || Number(row.listPrice) || 0
+  );
+  const at = failedAtIso || nowIso();
+  const listedAt = row.listedAt || null;
+  const hist = listFailedHistoryEntry(row, price, at);
+  const tries =
+    price > 0
+      ? [...(row.tries || []), { price, at, listedAt }]
+      : row.tries || [];
+  const nextRow = {
+    ...row,
+    tries,
+    unsoldLogged: true,
+  };
+  if (!hist) return { state, row: nextRow };
+  return {
+    state: {
+      ...state,
+      history: [hist, ...(state.history || [])],
+    },
+    row: nextRow,
+  };
 }
 
 /**
@@ -2113,49 +2155,55 @@ export function listFromBag(state, id, listPrice, listedAtIso) {
 export function failListing(state, id) {
   const row = (state.listings || []).find((c) => c.id === id);
   if (!row) return state;
-  const at = nowIso();
-  const price = Math.max(0, Number(row.listPrice) || 0);
-  const listedAt = row.listedAt || null;
-  const tries = [...(row.tries || []), { price, at, listedAt }];
-  const hist = listFailedHistoryEntry(row, price, at);
+  const logged = logUnsoldListing(state, row, row.listPrice, nowIso());
   const back = normalizeCopy(
     {
-      ...row,
-      tries,
+      ...logged.row,
       listPrice: 0,
       listedAt: null,
+      unsoldLogged: false,
       stage: "bag",
     },
     "bag"
   );
+  if (!back) return logged.state;
   return {
-    ...state,
-    listings: state.listings.filter((c) => c.id !== id),
-    bag: [back, ...(state.bag || [])],
-    history: hist ? [hist, ...(state.history || [])] : state.history || [],
+    ...logged.state,
+    listings: (logged.state.listings || []).filter((c) => c.id !== id),
+    bag: [back, ...(logged.state.bag || [])],
   };
 }
 
 /**
- * Force a listing into the ended phase by backdating listedAt.
- * Does not write History — List again / ✕ still record the unsold attempt.
+ * Force a listing into the ended phase and record the unsold attempt in History.
+ * List again / ✕ will not double-log the same cycle.
  */
 export function expireListingTimer(state, id, now = Date.now()) {
   const row = (state.listings || []).find((c) => c.id === id);
   if (!row?.listedAt) return state;
-  if (listingPhases(row, now).phase === "ended") return state;
-  const listedAt = new Date(
-    now - LIST_WARMUP_MS - LIST_AUCTION_MS - 60_000
-  ).toISOString();
-  const next = normalizeCopy({ ...row, listedAt }, "listing");
-  if (!next) return state;
+  const alreadyEnded = listingPhases(row, now).phase === "ended";
+  // Log first while listedAt is still the real auction window.
+  const logged = logUnsoldListing(state, row, row.listPrice, nowIso());
+  let listing = logged.row;
+  if (!alreadyEnded) {
+    listing = {
+      ...listing,
+      listedAt: new Date(
+        now - LIST_WARMUP_MS - LIST_AUCTION_MS - 60_000
+      ).toISOString(),
+    };
+  }
+  const next = normalizeCopy(listing, "listing");
+  if (!next) return logged.state;
   return {
-    ...state,
-    listings: (state.listings || []).map((c) => (c.id === id ? next : c)),
+    ...logged.state,
+    listings: (logged.state.listings || []).map((c) =>
+      c.id === id ? next : c
+    ),
   };
 }
 
-/** Expire every listing still in warmup/auction. */
+/** Expire every active listing timer and log each unsold price to History. */
 export function expireAllListingTimers(state, now = Date.now()) {
   let next = state;
   for (const row of state.listings || []) {
@@ -2165,39 +2213,31 @@ export function expireAllListingTimers(state, now = Date.now()) {
 }
 
 /**
- * Timer ended / unsold — record the failed list in History, then start a fresh
- * listing cycle. Never auto-renews; only runs when the user taps List again.
+ * Timer ended / unsold — ensure History has the fail, then start a fresh listing.
+ * Never auto-renews; only runs when the user taps List again.
  */
 export function relistListing(state, id, listPrice, listedAtIso) {
   const row = (state.listings || []).find((c) => c.id === id);
   if (!row) return state;
-  const at = nowIso();
   const failPrice = Math.max(0, Number(row.listPrice) || 0);
-  const prevListedAt = row.listedAt || null;
-  const tries = [
-    ...(row.tries || []),
-    { price: failPrice, at, listedAt: prevListedAt },
-  ];
-  const hist = listFailedHistoryEntry(row, failPrice, at);
+  const logged = logUnsoldListing(state, row, failPrice, nowIso());
   const nextPrice = Math.max(0, Number(listPrice) || failPrice || 0);
   const renewed = normalizeCopy(
     {
-      ...row,
-      tries,
+      ...logged.row,
       listPrice: nextPrice,
       listedAt: listedAtIso || nowIso(),
+      unsoldLogged: false,
       stage: "listing",
     },
     "listing"
   );
-  if (!renewed) return state;
-  const listings = (state.listings || []).map((c) =>
-    c.id === id ? renewed : c
-  );
+  if (!renewed) return logged.state;
   return {
-    ...state,
-    listings,
-    history: hist ? [hist, ...(state.history || [])] : state.history || [],
+    ...logged.state,
+    listings: (logged.state.listings || []).map((c) =>
+      c.id === id ? renewed : c
+    ),
   };
 }
 
