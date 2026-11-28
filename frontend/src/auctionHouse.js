@@ -1993,6 +1993,34 @@ export function failListing(state, id) {
 }
 
 /**
+ * Force a listing into the ended phase by backdating listedAt.
+ * Does not write History — List again / ✕ still record the unsold attempt.
+ */
+export function expireListingTimer(state, id, now = Date.now()) {
+  const row = (state.listings || []).find((c) => c.id === id);
+  if (!row?.listedAt) return state;
+  if (listingPhases(row, now).phase === "ended") return state;
+  const listedAt = new Date(
+    now - LIST_WARMUP_MS - LIST_AUCTION_MS - 60_000
+  ).toISOString();
+  const next = normalizeCopy({ ...row, listedAt }, "listing");
+  if (!next) return state;
+  return {
+    ...state,
+    listings: (state.listings || []).map((c) => (c.id === id ? next : c)),
+  };
+}
+
+/** Expire every listing still in warmup/auction. */
+export function expireAllListingTimers(state, now = Date.now()) {
+  let next = state;
+  for (const row of state.listings || []) {
+    next = expireListingTimer(next, row.id, now);
+  }
+  return next;
+}
+
+/**
  * Timer ended / unsold — record the failed list in History, then start a fresh
  * listing cycle. Never auto-renews; only runs when the user taps List again.
  */

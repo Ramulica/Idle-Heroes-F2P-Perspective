@@ -30,6 +30,8 @@ import {
   emptyBiddingDraft,
   evaluateFlip,
   failBidding,
+  expireAllListingTimers,
+  expireListingTimer,
   failListing,
   firstSetUpHeroId,
   relistListing,
@@ -1731,7 +1733,23 @@ export default function AuctionHouse() {
 
           {tab === "listings" ? (
             <section className="ah-section">
-              <h2>Listings</h2>
+              <div className="ah-section-head">
+                <h2>Listings</h2>
+                {state.listings.some(
+                  (c) => listingPhases(c, tick).phase !== "ended"
+                ) ? (
+                  <button
+                    type="button"
+                    className="gold-btn"
+                    title="Mark every active listing timer as ended (no History yet)"
+                    onClick={() =>
+                      setState((s) => expireAllListingTimers(s, Date.now()))
+                    }
+                  >
+                    Mark timers ended
+                  </button>
+                ) : null}
+              </div>
               {!state.listings.length ? (
                 <p className="muted">Nothing listed right now.</p>
               ) : (
@@ -1824,7 +1842,20 @@ export default function AuctionHouse() {
                               >
                                 List again
                               </button>
-                            ) : null}
+                            ) : (
+                              <button
+                                type="button"
+                                className="tan-btn"
+                                title="Mark this auction timer ended (no History yet)"
+                                onClick={() =>
+                                  setState((s) =>
+                                    expireListingTimer(s, copy.id, Date.now())
+                                  )
+                                }
+                              >
+                                Timer ended
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="gold-btn"
