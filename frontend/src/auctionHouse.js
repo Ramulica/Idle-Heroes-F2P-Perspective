@@ -80,7 +80,9 @@ export const SELL_COMMISSION = 0.05; // 5%
 export const BUY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 export const LIST_WARMUP_MS = 6 * 60 * 60 * 1000;
 export const LIST_AUCTION_MS = 2 * 24 * 60 * 60 * 1000;
-export const STALE_LIST_MS = 36 * 60 * 60 * 1000; // suggest lower after ~1.5d in auction
+export const STALE_LIST_MS = 36 * 60 * 60 * 1000; // default / Q<0.60 patience
+/** After this hold, stale discounts may cut into target margin (toxic liquidation). */
+export const TOXIC_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** Auction copy ranks: C−…SSS (same ids as awakening — no fake S−/SSS+). */
 const AUCTION_RARITY_START = AWAKENING_TIERS.findIndex((r) => r.id === "C-");
@@ -597,7 +599,15 @@ export function failedTriesForHero(copy, bag, listings, history) {
   for (const row of pools) {
     if (row.heroId !== copy.heroId) continue;
     if (statDistance(copy, row) > 6.5) continue;
-    for (const t of row.tries || []) tries.push(t);
+    for (const t of row.tries || []) {
+      const price = Math.max(0, Number(t?.price) || 0);
+      if (price <= 0) continue;
+      tries.push({
+        price,
+        at: t.at || null,
+        listedAt: t.listedAt || row.listedAt || null,
+      });
+    }
     // Unsold listings logged to history are sell ceilings for similar rolls.
     if (row.outcome === "list_failed") {
       const price = Math.max(
@@ -608,6 +618,7 @@ export function failedTriesForHero(copy, bag, listings, history) {
         tries.push({
           price,
           at: row.soldAt || row.listedAt || row.failedAt || null,
+          listedAt: row.listedAt || null,
         });
       }
     }
@@ -618,6 +629,7 @@ export function failedTriesForHero(copy, bag, listings, history) {
 function listFailedHistoryEntry(row, failPrice, failedAtIso) {
   const price = Math.max(0, Number(failPrice) || Number(row.listPrice) || 0);
   const at = failedAtIso || nowIso();
+  const listedAt = row.listedAt || at;
   return normalizeCopy(
     {
       ...row,
@@ -628,14 +640,63 @@ function listFailedHistoryEntry(row, failPrice, failedAtIso) {
       listPrice: price,
       soldPrice: 0,
       soldAt: at,
-      listedAt: row.listedAt || at,
+      listedAt,
       tries: [
         ...(row.tries || []),
-        { price, at },
+        { price, at, listedAt },
       ],
     },
     "history"
   );
+}
+
+/**
+ * Solds + bid clears for this hero whose event time falls in [fromMs, toMs].
+ * Used to detect dead ("unlucky") listing windows vs true price rejection.
+ */
+export function heroMarketEventsBetween(heroId, history, fromMs, toMs) {
+  if (!heroId || !Number.isFinite(fromMs) || !Number.isFinite(toMs)) return 0;
+  const lo = Math.min(fromMs, toMs);
+  const hi = Math.max(fromMs, toMs);
+  let n = 0;
+  for (const h of Array.isArray(history) ? history : []) {
+    if (h?.heroId !== heroId) continue;
+    if (h.outcome !== "sold" && h.outcome !== "bid_failed") continue;
+    const t = new Date(
+      h.soldAt || h.boughtAt || h.listedAt || 0
+    ).getTime();
+    if (!Number.isFinite(t)) continue;
+    if (t >= lo && t <= hi) n += 1;
+  }
+  return n;
+}
+
+/** True when no sold/clear activity happened during a listing window. */
+export function isUnluckyListingPeriod(heroId, history, listedAtIso, endIsoOrMs) {
+  const from = listedAtIso ? new Date(listedAtIso).getTime() : NaN;
+  const to =
+    typeof endIsoOrMs === "number"
+      ? endIsoOrMs
+      : endIsoOrMs
+        ? new Date(endIsoOrMs).getTime()
+        : NaN;
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return false;
+  return heroMarketEventsBetween(heroId, history, from, to) === 0;
+}
+
+/**
+ * Quality-scaled stale patience: dump junk fast, sit on premium copies.
+ * Q<0.60 → 36h/8%; 0.60–0.85 → 48h/6%; Q>0.85 → 72h/4%.
+ */
+export function stalePatienceForQuality(quality) {
+  const q = Math.max(0, Math.min(1, Number(quality) || 0));
+  if (q > 0.85) {
+    return { staleMs: 72 * 60 * 60 * 1000, discountPct: 4 };
+  }
+  if (q >= 0.6) {
+    return { staleMs: 48 * 60 * 60 * 1000, discountPct: 6 };
+  }
+  return { staleMs: STALE_LIST_MS, discountPct: 8 };
 }
 
 /**
@@ -1200,12 +1261,41 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }
   }
 
-  if (fails.length && expectedSell != null) {
-    const cap = Math.floor(fails[0].price * 0.94);
+  // Step D — fail ceiling, unless the fail sat in a dead ("unlucky") market.
+  let unluckyFailBypass = false;
+  let activeFailCeiling = null;
+  for (const fail of fails) {
+    const failAt = fail.at || null;
+    const failListed =
+      fail.listedAt ||
+      (failAt
+        ? new Date(
+            new Date(failAt).getTime() - LIST_WARMUP_MS - LIST_AUCTION_MS
+          ).toISOString()
+        : null);
+    const unlucky = isUnluckyListingPeriod(
+      copy?.heroId,
+      state?.history,
+      failListed,
+      failAt || now
+    );
+    if (unlucky) {
+      unluckyFailBypass = true;
+      continue;
+    }
+    activeFailCeiling = fail;
+    break;
+  }
+  if (activeFailCeiling && expectedSell != null) {
+    const cap = Math.floor(activeFailCeiling.price * 0.94);
     if (cap > 0) expectedSell = Math.min(expectedSell, cap);
-  } else if (fails.length && expectedSell == null && fails[0].price > 0) {
+  } else if (
+    activeFailCeiling &&
+    expectedSell == null &&
+    activeFailCeiling.price > 0
+  ) {
     // Only know what did NOT sell — treat as soft ceiling, not a market.
-    expectedSell = Math.floor(fails[0].price * 0.9);
+    expectedSell = Math.floor(activeFailCeiling.price * 0.9);
   }
 
   // Already owned: never suggest below margin floor on your buy.
@@ -1255,12 +1345,43 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     suggestList = Math.max(floor, suggestList || floor);
   }
 
+  // Step G — quality-scaled patience; skip stale cut on dead-market windows;
+  // floor discount so we keep (targetMargin − 5%) unless held past toxic window.
+  const patience = stalePatienceForQuality(quality);
+  let staleApplied = false;
+  let staleUnluckySkip = false;
+  let marginFloorHeld = false;
   if (copy?.stage === "listing" && copy.listedAt && suggestList != null) {
     const listed = new Date(copy.listedAt).getTime();
     const auctionStart = listed + LIST_WARMUP_MS;
-    if (now >= auctionStart + STALE_LIST_MS) {
-      const disc = Math.max(0, Number(settings.staleDiscountPct) || 0) / 100;
-      suggestList = Math.max(floor, Math.floor(suggestList * (1 - disc)));
+    const listingUnlucky = isUnluckyListingPeriod(
+      copy?.heroId,
+      state?.history,
+      copy.listedAt,
+      now
+    );
+    if (listingUnlucky) {
+      staleUnluckySkip = true;
+    } else if (now >= auctionStart + patience.staleMs) {
+      const disc = Math.max(0, Number(patience.discountPct) || 0) / 100;
+      const discounted = Math.floor(suggestList * (1 - disc));
+      let next = Math.max(floor, discounted);
+      const boughtMs = copy.boughtAt
+        ? new Date(copy.boughtAt).getTime()
+        : NaN;
+      const heldToxic =
+        Number.isFinite(boughtMs) && now - boughtMs > TOXIC_HOLD_MS;
+      if (buy > 0 && !heldToxic) {
+        const minAcceptableList = Math.ceil(
+          listPriceForNet(buy * (1 + (targetMarginPct - 5) / 100))
+        );
+        if (next < minAcceptableList) {
+          next = Math.max(next, minAcceptableList);
+          marginFloorHeld = true;
+        }
+      }
+      if (next !== suggestList) staleApplied = true;
+      suggestList = next;
     }
   }
 
@@ -1281,7 +1402,9 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     const net = netFromListPrice(suggestList);
     maxBid = Math.floor(net / (1 + targetMarginPct / 100));
     const phaseCut = phase === "cold" ? 0.8 : phase === "building" ? 0.88 : 0.94;
-    const hardCut = difficulty === "hard" ? 0.9 : difficulty === "easy" ? 1.02 : 1;
+    // Hard-sell heroes (high failRatio / long holds): squeeze Max→Suggest harder.
+    const hardCut =
+      difficulty === "hard" ? 0.85 : difficulty === "easy" ? 1.02 : 1;
     const qCut = 0.88 + quality * 0.14;
     const stratCut = Math.max(0.7, Math.min(1, Number(strat.bidHaircut) || 0.85));
     const prefCut = 0.9 + prefMatch * 0.12;
@@ -1363,8 +1486,28 @@ export function evaluateFlip(copy, state, now = Date.now()) {
       } · ${close.length} close sold · sell looks ${difficulty}`
     );
   }
-  if (fails.length) {
-    reasons.push(`Failed list ceiling near ${formatSg(fails[0].price)} SG`);
+  if (activeFailCeiling) {
+    reasons.push(
+      `Failed list ceiling near ${formatSg(activeFailCeiling.price)} SG`
+    );
+  } else if (unluckyFailBypass && fails.length) {
+    reasons.push(
+      `Unlucky period — no solds/clears during fail window; kept suggest (bypassed ${formatSg(fails[0].price)} SG ceiling)`
+    );
+  }
+  if (staleUnluckySkip) {
+    reasons.push(
+      "Unlucky period — no market events this listing; holding suggest (no stale cut)"
+    );
+  } else if (staleApplied) {
+    reasons.push(
+      `Stale after ${Math.round(patience.staleMs / 3600000)}h @ Q${quality.toFixed(2)} → −${patience.discountPct}%${
+        marginFloorHeld ? " (floored at target−5% margin)" : ""
+      }`
+    );
+  }
+  if (difficulty === "hard") {
+    reasons.push("Hard sell — Max bid haircut squeezed to 85%");
   }
   if (lostBids.length) {
     const top = lostBids[0];
@@ -1972,7 +2115,8 @@ export function failListing(state, id) {
   if (!row) return state;
   const at = nowIso();
   const price = Math.max(0, Number(row.listPrice) || 0);
-  const tries = [...(row.tries || []), { price, at }];
+  const listedAt = row.listedAt || null;
+  const tries = [...(row.tries || []), { price, at, listedAt }];
   const hist = listFailedHistoryEntry(row, price, at);
   const back = normalizeCopy(
     {
@@ -2029,7 +2173,11 @@ export function relistListing(state, id, listPrice, listedAtIso) {
   if (!row) return state;
   const at = nowIso();
   const failPrice = Math.max(0, Number(row.listPrice) || 0);
-  const tries = [...(row.tries || []), { price: failPrice, at }];
+  const prevListedAt = row.listedAt || null;
+  const tries = [
+    ...(row.tries || []),
+    { price: failPrice, at, listedAt: prevListedAt },
+  ];
   const hist = listFailedHistoryEntry(row, failPrice, at);
   const nextPrice = Math.max(0, Number(listPrice) || failPrice || 0);
   const renewed = normalizeCopy(

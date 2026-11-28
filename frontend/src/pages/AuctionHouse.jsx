@@ -2409,7 +2409,7 @@ export default function AuctionHouse() {
                   </span>
                 </label>
                 <label className="ah-field">
-                  <span>Stale-list discount %</span>
+                  <span>Stale-list discount % (legacy)</span>
                   <input
                     type="number"
                     min={0}
@@ -2422,6 +2422,12 @@ export default function AuctionHouse() {
                       )
                     }
                   />
+                  <span className="muted ah-field-hint">
+                    Pricing now scales by copy quality: Q&lt;0.60 → 36h / 8%,
+                    Q 0.60–0.85 → 48h / 6%, Q&gt;0.85 → 72h / 4%. Dead-market
+                    windows skip the cut; margin floored at target−5% until 14d
+                    hold.
+                  </span>
                 </label>
                 <label className="ah-check">
                   <input
