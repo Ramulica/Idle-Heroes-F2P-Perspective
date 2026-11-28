@@ -42,10 +42,12 @@ import {
   formatWhen,
   fromDatetimeLocalValue,
   isHeroSetUp,
+  LIVE_UNDERCUT_SG,
   listFromBag,
   listingPhases,
   minListPrice,
   netFromListPrice,
+  normalizeLiveMarketState,
   partitionAuctionHeroes,
   patchSettings,
   returnBagToBidding,
@@ -71,6 +73,11 @@ import {
   normalizeFlatRank,
   strategyOf,
 } from "../auctionCatalog";
+import {
+  ocrAuctionLiveImage,
+  parseAuctionLiveText,
+  warmAuctionLiveOcr,
+} from "../auctionLiveOcr";
 import { awakeningTierFromFlat } from "../heroProgress";
 import { api } from "../api";
 import { useAuth } from "../auth";
@@ -727,6 +734,227 @@ function CopyCard({
   );
 }
 
+/**
+ * Session-only live AH competition for one List / List again modal.
+ * Never written into History clears — only squeezes suggest + try snapshots.
+ */
+function LiveMarketPanel({
+  rows,
+  myAtk,
+  onChange,
+  ocrBusy,
+  ocrProgress,
+  ocrError,
+  setOcrBusy,
+  setOcrProgress,
+  setOcrError,
+}) {
+  const fileRef = useRef(null);
+  const pasteRef = useRef(null);
+
+  useEffect(() => {
+    warmAuctionLiveOcr();
+  }, []);
+
+  async function ingestFiles(fileList) {
+    const files = [...(fileList || [])].filter((f) =>
+      String(f.type || "").startsWith("image/")
+    );
+    if (!files.length) {
+      setOcrError("Drop or paste an Auction House screenshot.");
+      return;
+    }
+    setOcrBusy(true);
+    setOcrError("");
+    setOcrProgress(0);
+    try {
+      let merged = [...(rows || [])];
+      for (const file of files) {
+        const { rows: parsed } = await ocrAuctionLiveImage(file, setOcrProgress);
+        merged = normalizeLiveMarketState([...merged, ...parsed]);
+      }
+      if (!merged.length) {
+        setOcrError(
+          "OCR found no Attack/buyout pairs — add rows manually or paste numbers."
+        );
+      }
+      onChange(merged);
+    } catch (err) {
+      setOcrError(err?.message || "OCR failed");
+    } finally {
+      setOcrBusy(false);
+      setOcrProgress(0);
+    }
+  }
+
+  function updateRow(index, patch) {
+    const next = (rows || []).map((r, i) =>
+      i === index ? { ...r, ...patch } : r
+    );
+    onChange(normalizeLiveMarketState(next));
+  }
+
+  function removeRow(index) {
+    onChange((rows || []).filter((_, i) => i !== index));
+  }
+
+  function addBlank() {
+    onChange([
+      ...(rows || []),
+      { atk: Math.round(Number(myAtk) || 5000), buyout: 1000 },
+    ]);
+  }
+
+  return (
+    <div className="ah-live-market">
+      <div className="ah-live-market-head">
+        <strong>Live AH (session only)</strong>
+        <span className="muted">
+          Undercuts suggest by {LIVE_UNDERCUT_SG} SG vs cheaper equal/better
+          Attack — never saved as History clears.
+        </span>
+      </div>
+      <div
+        className="ah-live-drop"
+        tabIndex={0}
+        ref={pasteRef}
+        onPaste={(e) => {
+          const items = [...(e.clipboardData?.items || [])];
+          const images = items
+            .filter((it) => it.type.startsWith("image/"))
+            .map((it) => it.getAsFile())
+            .filter(Boolean);
+          if (images.length) {
+            e.preventDefault();
+            void ingestFiles(images);
+            return;
+          }
+          const text = e.clipboardData?.getData("text");
+          if (text && /\d/.test(text)) {
+            e.preventDefault();
+            const parsed = parseAuctionLiveText(text);
+            if (parsed.length) {
+              onChange(
+                normalizeLiveMarketState([...(rows || []), ...parsed])
+              );
+              setOcrError("");
+            }
+          }
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          void ingestFiles(e.dataTransfer?.files);
+        }}
+      >
+        <strong>Drop / paste live AH screenshot</strong>
+        <span className="muted">
+          Or pick a file — verify Attack + buyout below before listing.
+        </span>
+        <button
+          type="button"
+          className="tan-btn"
+          disabled={ocrBusy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {ocrBusy ? `Reading… ${ocrProgress || 0}%` : "Pick screenshot"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(e) => {
+            void ingestFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      {ocrError ? <p className="ah-live-error">{ocrError}</p> : null}
+      {(rows || []).length ? (
+        <div className="ah-live-table-wrap">
+          <table className="ah-live-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Buyout</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {(rows || []).map((r, i) => {
+                const comparable =
+                  myAtk > 0 && r.atk >= myAtk * 0.98;
+                return (
+                  <tr
+                    key={`${r.atk}-${r.buyout}-${i}`}
+                    className={comparable ? "ah-live-match" : undefined}
+                  >
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        value={r.atk}
+                        onChange={(e) =>
+                          updateRow(i, {
+                            atk: Math.round(Number(e.target.value) || 0),
+                          })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        value={r.buyout}
+                        onChange={(e) =>
+                          updateRow(i, {
+                            buyout: Math.round(Number(e.target.value) || 0),
+                          })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        title="Remove"
+                        onClick={() => removeRow(i)}
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="muted ah-live-hint">
+            Highlighted rows are comparable Attack (≥ your Atk − 2%).
+          </p>
+        </div>
+      ) : (
+        <p className="muted ah-live-hint">No live rows yet.</p>
+      )}
+      <div className="ah-live-actions">
+        <button type="button" className="tan-btn" onClick={addBlank}>
+          Add row
+        </button>
+        {(rows || []).length ? (
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => onChange([])}
+          >
+            Clear live data
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function AuctionHouse() {
   const navigate = useNavigate();
   const { user } = useAuth() || {};
@@ -738,12 +966,24 @@ export default function AuctionHouse() {
   const [creatorDb, setCreatorDb] = useState(null);
   const [creatorDbError, setCreatorDbError] = useState("");
   const [creatorDbLoading, setCreatorDbLoading] = useState(false);
+  const [liveOcrBusy, setLiveOcrBusy] = useState(false);
+  const [liveOcrProgress, setLiveOcrProgress] = useState(0);
+  const [liveOcrError, setLiveOcrError] = useState("");
   const isCreator = Boolean(user?.isCreator);
 
   useEffect(() => {
     const id = setInterval(() => setTick(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (picker?.type === "list" || picker?.type === "relist") {
+      warmAuctionLiveOcr();
+      setLiveOcrError("");
+      setLiveOcrBusy(false);
+      setLiveOcrProgress(0);
+    }
+  }, [picker?.type, picker?.id]);
 
   const summary = useMemo(() => auctionSummary(state, tick), [state, tick]);
   const alerts = useMemo(() => boardAlerts(state, tick), [state, tick]);
@@ -1051,7 +1291,8 @@ export default function AuctionHouse() {
         ? state.bag.find((c) => c.id === picker.id)
         : state.listings.find((c) => c.id === picker.id);
       if (!copy) return null;
-      const tip = suggestListPrice(copy, state, tick);
+      const liveMarket = normalizeLiveMarketState(picker.liveMarket);
+      const tip = suggestListPrice(copy, state, tick, liveMarket);
       return (
         <Modal
           title={`${fromBag ? "List" : "List again"} · ${copyTitle(copy)}`}
@@ -1063,10 +1304,11 @@ export default function AuctionHouse() {
               onClick={() => {
                 const price = Number(picker.price) || tip.suggested;
                 const when = fromDatetimeLocalValue(picker.when);
+                const snap = normalizeLiveMarketState(picker.liveMarket);
                 setState((s) =>
                   fromBag
-                    ? listFromBag(s, copy.id, price, when)
-                    : relistListing(s, copy.id, price, when)
+                    ? listFromBag(s, copy.id, price, when, snap)
+                    : relistListing(s, copy.id, price, when, snap)
                 );
                 setPicker(null);
                 setTab("listings");
@@ -1080,6 +1322,11 @@ export default function AuctionHouse() {
             Bought for <Sg value={copy.buyPrice} /> · min{" "}
             <Sg value={tip.floor} /> · suggest <Sg value={tip.suggested} />{" "}
             (keeps {(SELL_COMMISSION * 100).toFixed(0)}% commission in mind)
+            {tip.liveUndercutApplied ? (
+              <span className="ah-live-badge" title="Step H live AH squeeze">
+                Price adjusted by live competition
+              </span>
+            ) : null}
           </p>
           {!fromBag ? (
             <p className="muted">
@@ -1111,11 +1358,33 @@ export default function AuctionHouse() {
                 {tip.failedTries.map((t, i) => (
                   <li key={i}>
                     {formatSg(t.price)} SG · {formatWhen(t.at)}
+                    {t.ah_snapshot_at_listing?.length
+                      ? ` · live snap ${t.ah_snapshot_at_listing.length}`
+                      : ""}
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
+          <LiveMarketPanel
+            rows={liveMarket}
+            myAtk={copy.attack}
+            ocrBusy={liveOcrBusy}
+            ocrProgress={liveOcrProgress}
+            ocrError={liveOcrError}
+            setOcrBusy={setLiveOcrBusy}
+            setOcrProgress={setLiveOcrProgress}
+            setOcrError={setLiveOcrError}
+            onChange={(next) => {
+              const snap = normalizeLiveMarketState(next);
+              const nextTip = suggestListPrice(copy, state, tick, snap);
+              setPicker({
+                ...picker,
+                liveMarket: snap,
+                price: nextTip.suggested,
+              });
+            }}
+          />
           <label className="ah-field">
             <span>List price (SG)</span>
             <input
@@ -1124,6 +1393,17 @@ export default function AuctionHouse() {
               value={picker.price ?? tip.suggested}
               onChange={(e) => setPicker({ ...picker, price: e.target.value })}
             />
+            {tip.liveUndercutApplied ? (
+              <span className="ah-live-badge">
+                Price adjusted by live competition
+                {tip.liveCompetitorBuyout != null
+                  ? ` · beat ${formatSg(tip.liveCompetitorBuyout)}`
+                  : ""}
+                {tip.suggestListBeforeLive != null
+                  ? ` (was ${formatSg(tip.suggestListBeforeLive)})`
+                  : ""}
+              </span>
+            ) : null}
           </label>
           <label className="ah-field">
             <span>Listed at</span>
@@ -1706,6 +1986,7 @@ export default function AuctionHouse() {
                                   id: copy.id,
                                   price: tip.suggested,
                                   when: toDatetimeLocalValue(),
+                                  liveMarket: [],
                                 })
                               }
                             >
@@ -1838,6 +2119,7 @@ export default function AuctionHouse() {
                                         ? tip.suggested
                                         : copy.listPrice,
                                     when: toDatetimeLocalValue(),
+                                    liveMarket: [],
                                   })
                                 }
                               >

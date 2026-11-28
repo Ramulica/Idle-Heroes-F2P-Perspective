@@ -8573,3 +8573,105 @@ button.sc-aura-badge:hover .sc-aura-core {
     height: 52px;
   }
 }
+
+/* Live AH undercutting (list modal session only) */
+.ah-live-market {
+  margin: 10px 0 12px;
+  padding: 10px;
+  border: 1px solid #c9a46a;
+  border-radius: 12px;
+  background: #fff8e8;
+}
+
+.ah-live-market-head {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.ah-live-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 110px;
+  padding: 12px;
+  border: 2px dashed #8a5a2a;
+  border-radius: 12px;
+  background: #fffaf0;
+  text-align: center;
+  cursor: text;
+  outline: none;
+}
+
+.ah-live-drop:focus {
+  border-color: #c47a12;
+  background: #fff3d6;
+}
+
+.ah-live-error {
+  color: #9b1c1c;
+  margin: 8px 0 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.ah-live-table-wrap {
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.ah-live-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.ah-live-table th,
+.ah-live-table td {
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.ah-live-table input {
+  width: 100%;
+  min-width: 72px;
+  border: 1px solid #8a5a2a;
+  border-radius: 8px;
+  padding: 4px 6px;
+  background: #fffaf0;
+  font-weight: 700;
+}
+
+.ah-live-table tr.ah-live-match {
+  background: #e8f6d8;
+}
+
+.ah-live-hint {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+}
+
+.ah-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ah-live-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #2f6b2f;
+  color: #f4ffe8;
+  font-size: 0.75rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.ah-field .ah-live-badge {
+  margin: 4px 0 0;
+  margin-left: 0;
+}

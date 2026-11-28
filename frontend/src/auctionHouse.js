@@ -83,6 +83,10 @@ export const LIST_AUCTION_MS = 2 * 24 * 60 * 60 * 1000;
 export const STALE_LIST_MS = 36 * 60 * 60 * 1000; // default / Q<0.60 patience
 /** After this hold, stale discounts may cut into target margin (toxic liquidation). */
 export const TOXIC_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
+/** Live AH undercut step (SG) when matching/better Attack is listed cheaper. */
+export const LIVE_UNDERCUT_SG = 50;
+/** Treat competitor Attack as comparable if within this relative margin of ours. */
+export const LIVE_ATK_MARGIN = 0.02;
 
 /** Auction copy ranks: C−…SSS (same ids as awakening — no fake S−/SSS+). */
 const AUCTION_RARITY_START = AWAKENING_TIERS.findIndex((r) => r.id === "C-");
@@ -302,6 +306,31 @@ function normalizeBonuses(raw, rarity, legacyA, legacyB) {
   return out;
 }
 
+/**
+ * Session-only live AH rows `{ atk, buyout }`. Never fed into History comps.
+ */
+export function normalizeLiveMarketState(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const row of raw) {
+    const atk = Math.max(
+      0,
+      Math.round(Number(row?.atk ?? row?.attack) || 0)
+    );
+    const buyout = Math.max(
+      0,
+      Math.round(Number(row?.buyout ?? row?.price ?? row?.listPrice) || 0)
+    );
+    if (!(atk > 0 && buyout > 0)) continue;
+    const key = `${atk}:${buyout}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ atk, buyout });
+  }
+  return out;
+}
+
 function normalizeTries(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -309,8 +338,79 @@ function normalizeTries(raw) {
       price: Math.max(0, Number(t?.price) || 0),
       at: typeof t?.at === "string" ? t.at : nowIso(),
       listedAt: typeof t?.listedAt === "string" ? t.listedAt : null,
+      // Read-only lookback of live AH competition at that listing — not a clear.
+      ah_snapshot_at_listing: normalizeLiveMarketState(
+        t?.ah_snapshot_at_listing
+      ),
     }))
     .filter((t) => t.price > 0);
+}
+
+/** Snapshot live rows onto a try entry (failed / relist cycle). */
+export function tryWithLiveSnapshot(tryRow, liveMarketState) {
+  const snap = normalizeLiveMarketState(liveMarketState);
+  return {
+    price: Math.max(0, Number(tryRow?.price) || 0),
+    at: typeof tryRow?.at === "string" ? tryRow.at : nowIso(),
+    listedAt:
+      typeof tryRow?.listedAt === "string" ? tryRow.listedAt : null,
+    ah_snapshot_at_listing: snap,
+  };
+}
+
+/**
+ * Step H — squeeze suggestList under cheaper equal/better Attack on the live AH.
+ * Pure: does not touch History. Returns adjusted suggest + diagnostics.
+ */
+export function applyLiveCompetitionSqueeze(
+  suggestList,
+  floor,
+  copy,
+  liveMarketState
+) {
+  const live = normalizeLiveMarketState(liveMarketState);
+  const base = suggestList != null ? Number(suggestList) : null;
+  const floorN = Math.max(0, Number(floor) || 0);
+  const myAtk = Math.max(0, Number(copy?.attack) || 0);
+  const empty = {
+    suggestList: base,
+    liveUndercutApplied: false,
+    liveCompetitorBuyout: null,
+    liveUndercutPrice: null,
+    liveMatchCount: 0,
+    suggestListBeforeLive: base,
+  };
+  if (!(base > 0) || !live.length || !(myAtk > 0)) return empty;
+
+  const atkFloor = myAtk * (1 - LIVE_ATK_MARGIN);
+  const matches = live.filter((r) => r.atk >= atkFloor);
+  if (!matches.length) return { ...empty, liveMatchCount: 0 };
+
+  const competitorBuyout = Math.min(...matches.map((r) => r.buyout));
+  if (!(competitorBuyout > 0) || !(competitorBuyout < base)) {
+    return {
+      ...empty,
+      liveMatchCount: matches.length,
+      liveCompetitorBuyout: competitorBuyout,
+    };
+  }
+
+  const smartUndercut = Math.max(0, competitorBuyout - LIVE_UNDERCUT_SG);
+  const next =
+    smartUndercut >= floorN
+      ? smartUndercut
+      : floorN > 0
+        ? floorN
+        : smartUndercut;
+  const applied = next < base;
+  return {
+    suggestList: next,
+    liveUndercutApplied: applied,
+    liveCompetitorBuyout: competitorBuyout,
+    liveUndercutPrice: smartUndercut,
+    liveMatchCount: matches.length,
+    suggestListBeforeLive: base,
+  };
 }
 
 export function normalizeCopy(raw, stage) {
@@ -389,6 +489,11 @@ export function normalizeCopy(raw, stage) {
     maxBidAtFail: Math.max(0, Number(raw.maxBidAtFail) || 0),
     /** Current listing cycle already wrote a list_failed History row. */
     unsoldLogged: Boolean(raw.unsoldLogged),
+    /**
+     * Live AH snapshot captured at list time (session data for try lookback).
+     * Never used as a sold/clear in expectedSell math.
+     */
+    ahSnapshot: normalizeLiveMarketState(raw.ahSnapshot),
   };
 }
 
@@ -652,8 +757,9 @@ function listFailedHistoryEntry(row, failPrice, failedAtIso) {
           : `Not sold for ${formatSg(price)} SG`,
       tries: [
         ...(row.tries || []),
-        { price, at, listedAt },
+        tryWithLiveSnapshot({ price, at, listedAt }, row.ahSnapshot),
       ],
+      ahSnapshot: [],
     },
     "history"
   );
@@ -675,7 +781,13 @@ function logUnsoldListing(state, row, failPrice, failedAtIso) {
   const hist = listFailedHistoryEntry(row, price, at);
   const tries =
     price > 0
-      ? [...(row.tries || []), { price, at, listedAt }]
+      ? [
+          ...(row.tries || []),
+          tryWithLiveSnapshot(
+            { price, at, listedAt },
+            row.ahSnapshot
+          ),
+        ]
       : row.tries || [];
   const nextRow = {
     ...row,
@@ -1229,8 +1341,16 @@ function sellDifficultyFrom(related, fails) {
  * Full flip advice: max bid, suggest bid/list, grade, difficulty.
  * Attack + % similarity drive comps; failed tries cap sell; bootstrap
  * margin protects early history building.
+ *
+ * @param {object|null} liveMarketState  Session-only live AH rows `{atk,buyout}[]`.
+ *   Never written into History clears — only squeezes suggestList (Step H).
  */
-export function evaluateFlip(copy, state, now = Date.now()) {
+export function evaluateFlip(
+  copy,
+  state,
+  now = Date.now(),
+  liveMarketState = null
+) {
   const settings = { ...defaultSettings(), ...(state?.settings || {}) };
   const strat = strategyOf(settings);
   const pref = bestHeroSetup(state, copy);
@@ -1427,6 +1547,20 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     }
   }
 
+  // Step H — Live Competition Squeeze (session OCR / paste only; not History).
+  const liveSqueeze = applyLiveCompetitionSqueeze(
+    suggestList,
+    floor,
+    copy,
+    liveMarketState
+  );
+  suggestList = liveSqueeze.suggestList;
+  const liveUndercutApplied = liveSqueeze.liveUndercutApplied;
+  const liveCompetitorBuyout = liveSqueeze.liveCompetitorBuyout;
+  const liveUndercutPrice = liveSqueeze.liveUndercutPrice;
+  const liveMatchCount = liveSqueeze.liveMatchCount;
+  const suggestListBeforeLive = liveSqueeze.suggestListBeforeLive;
+
   const confidence = Math.min(
     1,
     ((samples + Math.min(6, lostBids.length) * 0.85) / 8) *
@@ -1550,6 +1684,15 @@ export function evaluateFlip(copy, state, now = Date.now()) {
   }
   if (difficulty === "hard") {
     reasons.push("Hard sell — Max bid haircut squeezed to 85%");
+  }
+  if (liveUndercutApplied) {
+    reasons.push(
+      `Live AH · undercut ${formatSg(liveCompetitorBuyout)} → ${formatSg(suggestList)} (was ${formatSg(suggestListBeforeLive)}; ${liveMatchCount} comparable Atk)`
+    );
+  } else if (liveMatchCount > 0 && liveCompetitorBuyout != null) {
+    reasons.push(
+      `Live AH · ${liveMatchCount} comparable Atk · cheapest ${formatSg(liveCompetitorBuyout)} (no squeeze)`
+    );
   }
   if (lostBids.length) {
     const top = lostBids[0];
@@ -1690,6 +1833,11 @@ export function evaluateFlip(copy, state, now = Date.now()) {
     peerAnchor,
     expectedNet,
     expectedMarginPct,
+    liveUndercutApplied,
+    liveCompetitorBuyout,
+    liveUndercutPrice,
+    liveMatchCount,
+    suggestListBeforeLive,
     reasons,
     related: related.slice(0, 5).map((r) => r.row),
     failedTries: fails.slice(0, 5),
@@ -1704,9 +1852,15 @@ export function evaluateFlip(copy, state, now = Date.now()) {
 
 /**
  * Recommended list price from floor + history uplift − failed-try ceiling.
+ * Optional liveMarketState only squeezes suggest (Step H) — never History.
  */
-export function suggestListPrice(copy, state, now = Date.now()) {
-  const flip = evaluateFlip(copy, state, now);
+export function suggestListPrice(
+  copy,
+  state,
+  now = Date.now(),
+  liveMarketState = null
+) {
+  const flip = evaluateFlip(copy, state, now, liveMarketState);
   const floor = flip.floor || minListPrice(copy.buyPrice, state?.settings);
   const suggested = Math.max(floor, flip.suggestList || floor);
   return {
@@ -1714,6 +1868,10 @@ export function suggestListPrice(copy, state, now = Date.now()) {
     suggested,
     related: flip.related,
     failedTries: flip.failedTries,
+    liveUndercutApplied: Boolean(flip.liveUndercutApplied),
+    liveCompetitorBuyout: flip.liveCompetitorBuyout,
+    liveUndercutPrice: flip.liveUndercutPrice,
+    suggestListBeforeLive: flip.suggestListBeforeLive,
     flip,
   };
 }
@@ -2128,7 +2286,13 @@ export function buyBidding(state, id, buyPrice, boughtAtIso) {
   };
 }
 
-export function listFromBag(state, id, listPrice, listedAtIso) {
+export function listFromBag(
+  state,
+  id,
+  listPrice,
+  listedAtIso,
+  liveMarketState = null
+) {
   const row = (state.bag || []).find((c) => c.id === id);
   if (!row) return state;
   const ready = bagReadyAt(row);
@@ -2136,11 +2300,14 @@ export function listFromBag(state, id, listPrice, listedAtIso) {
   if (ready != null && when < ready) {
     // still allow override if user forces a past/future date that clears it
   }
+  const ahSnapshot = normalizeLiveMarketState(liveMarketState);
   const listed = normalizeCopy(
     {
       ...row,
       listPrice,
       listedAt: listedAtIso || nowIso(),
+      ahSnapshot,
+      unsoldLogged: false,
       stage: "listing",
     },
     "listing"
@@ -2216,17 +2383,25 @@ export function expireAllListingTimers(state, now = Date.now()) {
  * Timer ended / unsold — ensure History has the fail, then start a fresh listing.
  * Never auto-renews; only runs when the user taps List again.
  */
-export function relistListing(state, id, listPrice, listedAtIso) {
+export function relistListing(
+  state,
+  id,
+  listPrice,
+  listedAtIso,
+  liveMarketState = null
+) {
   const row = (state.listings || []).find((c) => c.id === id);
   if (!row) return state;
   const failPrice = Math.max(0, Number(row.listPrice) || 0);
   const logged = logUnsoldListing(state, row, failPrice, nowIso());
   const nextPrice = Math.max(0, Number(listPrice) || failPrice || 0);
+  const ahSnapshot = normalizeLiveMarketState(liveMarketState);
   const renewed = normalizeCopy(
     {
       ...logged.row,
       listPrice: nextPrice,
       listedAt: listedAtIso || nowIso(),
+      ahSnapshot,
       unsoldLogged: false,
       stage: "listing",
     },
