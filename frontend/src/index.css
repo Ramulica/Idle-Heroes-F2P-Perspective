@@ -8675,3 +8675,22 @@ button.sc-aura-badge:hover .sc-aura-core {
   margin: 4px 0 0;
   margin-left: 0;
 }
+
+.ah-live-bulk textarea {
+  width: 100%;
+  min-height: 88px;
+  border: 2px solid #8a5a2a;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fffaf0;
+  color: #4a2c14;
+  font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.ah-live-bulk .gold-btn {
+  margin-top: 6px;
+  justify-self: start;
+}

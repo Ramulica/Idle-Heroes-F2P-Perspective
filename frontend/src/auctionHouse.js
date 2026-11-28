@@ -314,6 +314,14 @@ function normalizeBonuses(raw, rarity, legacyA, legacyB) {
  * Merges multi-screenshot pastes, dedupes by Attack (keeps cheapest buyout),
  * sorts highest Attack first, keeps top LIVE_MARKET_MAX.
  */
+/** Competitive list price from a live row (buyout, else bid if no buyout / ∞). */
+export function liveRowCompetePrice(row) {
+  const buyout = Math.max(0, Number(row?.buyout) || 0);
+  const bid = Math.max(0, Number(row?.bid) || 0);
+  if (buyout > 0) return buyout;
+  return bid;
+}
+
 export function normalizeLiveMarketState(raw, opts = {}) {
   const max = Math.max(
     1,
@@ -327,23 +335,27 @@ export function normalizeLiveMarketState(raw, opts = {}) {
       0,
       Math.round(Number(row?.atk ?? row?.attack) || 0)
     );
-    let buyout = Math.max(
+    const buyout = Math.max(
       0,
       Math.round(Number(row?.buyout ?? row?.price ?? row?.listPrice) || 0)
     );
-    let bid = Math.max(0, Math.round(Number(row?.bid ?? row?.bidding) || 0));
+    const bid = Math.max(0, Math.round(Number(row?.bid ?? row?.bidding) || 0));
     const hp = Math.max(0, Math.round(Number(row?.hp) || 0));
     const spd = Math.max(0, Math.round(Number(row?.spd ?? row?.speed) || 0));
     if (!(atk > 0)) continue;
-    if (!(buyout > 0) && bid > 0) buyout = bid;
-    if (!(buyout > 0)) continue;
+    // Allow bid-only rows (AH buyout = ∞ / --).
+    if (!(buyout > 0) && !(bid > 0)) continue;
     const prev = byAtk.get(atk);
     if (!prev) {
       byAtk.set(atk, { atk, bid, buyout, hp, spd });
       continue;
     }
-    // Same Attack again (another screenshot) — keep cheapest buyout / richest meta.
-    const nextBuy = Math.min(prev.buyout, buyout);
+    const nextBuy =
+      prev.buyout > 0 && buyout > 0
+        ? Math.min(prev.buyout, buyout)
+        : buyout > 0
+          ? buyout
+          : prev.buyout;
     const nextBid =
       bid > 0 && prev.bid > 0
         ? Math.min(prev.bid, bid)
@@ -359,7 +371,11 @@ export function normalizeLiveMarketState(raw, opts = {}) {
     });
   }
   return [...byAtk.values()]
-    .sort((a, b) => b.atk - a.atk || a.buyout - b.buyout)
+    .sort(
+      (a, b) =>
+        b.atk - a.atk ||
+        liveRowCompetePrice(a) - liveRowCompetePrice(b)
+    )
     .slice(0, max);
 }
 
@@ -415,10 +431,14 @@ export function applyLiveCompetitionSqueeze(
   if (!(base > 0) || !live.length || !(myAtk > 0)) return empty;
 
   const atkFloor = myAtk * (1 - LIVE_ATK_MARGIN);
-  const matches = live.filter((r) => r.atk >= atkFloor);
+  const matches = live.filter(
+    (r) => r.atk >= atkFloor && liveRowCompetePrice(r) > 0
+  );
   if (!matches.length) return { ...empty, liveMatchCount: 0 };
 
-  const competitorBuyout = Math.min(...matches.map((r) => r.buyout));
+  const competitorBuyout = Math.min(
+    ...matches.map((r) => liveRowCompetePrice(r))
+  );
   if (!(competitorBuyout > 0) || !(competitorBuyout < base)) {
     return {
       ...empty,

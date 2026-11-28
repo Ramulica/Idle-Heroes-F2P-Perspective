@@ -753,6 +753,7 @@ function LiveMarketPanel({
 }) {
   const fileRef = useRef(null);
   const pasteRef = useRef(null);
+  const [bulkText, setBulkText] = useState("");
 
   useEffect(() => {
     warmAuctionLiveOcr();
@@ -785,11 +786,11 @@ function LiveMarketPanel({
       }
       if (!merged.length) {
         setOcrError(
-          "OCR found no Attack / bid / buyout rows — fix manually or paste another shot."
+          "OCR missed the rows — paste lines below as: Attack Bid Buyout"
         );
       } else if (added === 0 && files.length) {
         setOcrError(
-          "No new Attack rows (dupes or weak OCR) — check the table / add manually."
+          "No new Attack rows — edit the table or use bulk paste (Atk Bid Buyout)."
         );
       } else {
         setOcrError("");
@@ -801,6 +802,19 @@ function LiveMarketPanel({
       setOcrBusy(false);
       setOcrProgress(0);
     }
+  }
+
+  function applyBulkPaste() {
+    const parsed = parseAuctionLiveText(bulkText);
+    if (!parsed.length) {
+      setOcrError(
+        "Need lines like: 6026 1800 2200   (Attack Bid Buyout). Bid-only: 5590 1500"
+      );
+      return;
+    }
+    onChange(mergeLiveMarketScreenshots(rows, parsed));
+    setBulkText("");
+    setOcrError("");
   }
 
   function updateRow(index, patch) {
@@ -836,11 +850,31 @@ function LiveMarketPanel({
           Live AH · top Attack ({count}/{LIVE_MARKET_MAX})
         </strong>
         <span className="muted">
-          Same awakening list — paste several screenshots (e.g. 5 + 5) to fill
-          up to {LIVE_MARKET_MAX} highest Attack. Undercut uses buyout −{" "}
-          {LIVE_UNDERCUT_SG} SG; never saved as History clears.
+          Same-tier Attack list. Prefer bulk paste if OCR glitches. Undercut =
+          buyout (or bid if no buyout) − {LIVE_UNDERCUT_SG} SG. Not History.
         </span>
       </div>
+      <label className="ah-field ah-live-bulk">
+        <span>Bulk paste (most reliable)</span>
+        <textarea
+          rows={4}
+          placeholder={"6026 1800 2200\n5704 1000 1410\n5590 1500\n5154 550 1410\n5067 600 1410"}
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+        />
+        <span className="muted ah-field-hint">
+          One copy per line: Attack Bid Buyout. No buyout / ∞ → omit buyout
+          (Attack Bid only).
+        </span>
+        <button
+          type="button"
+          className="gold-btn"
+          disabled={!bulkText.trim()}
+          onClick={applyBulkPaste}
+        >
+          Add pasted rows
+        </button>
+      </label>
       <div
         className="ah-live-drop"
         tabIndex={0}
@@ -953,7 +987,9 @@ function LiveMarketPanel({
                       <input
                         type="number"
                         min={0}
-                        value={r.buyout}
+                        value={r.buyout || ""}
+                        placeholder="∞"
+                        title="Empty = no buyout on AH"
                         onChange={(e) =>
                           updateRow(i, {
                             buyout: Math.round(Number(e.target.value) || 0),
